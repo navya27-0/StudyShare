@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyShare — Design System Style Tile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Base Colors - Warm Paper Palette */
+      --bg-canvas: #FBF9F5;
+      --bg-surface: #FFFFFF;
+      --bg-subdued: #F3EFEA;
+      --bg-muted: #EAE4DC;
+      --border-subtle: #E5DFD5;
+      --border-strong: #C8BFB2;
+
+      /* Ink / Text */
+      --text-primary: #1E1B18;
+      --text-secondary: #5C554E;
+      --text-muted: #8C827A;
+
+      /* Accent: Burnt Terracotta */
+      --accent-core: #C85A32;
+      --accent-hover: #A84723;
+      --accent-tint: #FDF1EB;
+      --accent-border: #E8A287;
+
+      /* Functional / Domain Tokens */
+      --status-verified: #2A6A4E;
+      --status-verified-bg: #EAF4EE;
+      --status-exam: #B87318;
+      --status-exam-bg: #FDF6E8;
+      --status-lab: #286474;
+      --status-lab-bg: #E9F3F6;
+      --status-danger: #BD2B2B;
+      --status-danger-bg: #FCEBEB;
+      --status-danger-border: #EAB8B8;
+
+      /* Typography */
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Elevation & Shadows */
+      --shadow-sm: 0 1px 2px rgba(30, 27, 24, 0.04);
+      --shadow-md: 0 3px 6px -1px rgba(30, 27, 24, 0.08), 0 1px 3px rgba(30, 27, 24, 0.04);
+      
+      /* Radius */
+      --radius-sm: 3px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+    }
+
+    [data-theme="dark"] {
+      --bg-canvas: #121110;
+      --bg-surface: #1B1917;
+      --bg-subdued: #24211E;
+      --bg-muted: #2E2A26;
+      --border-subtle: #2F2B26;
+      --border-strong: #453F38;
+
+      --text-primary: #F2EFE9;
+      --text-secondary: #A8A196;
+      --text-muted: #70685E;
+
+      --accent-core: #E06D44;
+      --accent-hover: #F07E55;
+      --accent-tint: #2B1D16;
+      --accent-border: #6E3924;
+
+      --status-verified: #56B386;
+      --status-verified-bg: #132B1E;
+      --status-exam: #E6A242;
+      --status-exam-bg: #2E210D;
+      --status-lab: #5BB1CA;
+      --status-lab-bg: #142830;
+      --status-danger: #F06A6A;
+      --status-danger-bg: #301717;
+      --status-danger-border: #6B2727;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: 40px 24px;
+      transition: background-color 100ms ease, color 100ms ease;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    /* Header & Theme Bar */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--border-strong);
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .brand-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-core);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 4px;
+      max-width: 620px;
+    }
+
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 80ms ease;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--bg-subdued);
+    }
+
+    /* Section Structure */
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+
+    .section-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-core);
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    /* 1. Palette Grid */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .swatch-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .swatch-preview {
+      height: 64px;
+      width: 100%;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .swatch-info {
+      padding: 10px 12px;
+    }
+
+    .swatch-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: block;
+    }
+
+    .swatch-hex {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: block;
+    }
+
+    .swatch-role {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    /* 2. Typography Scale */
+    .type-specimen-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .type-specimen-table th {
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--bg-subdued);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .type-specimen-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: middle;
+    }
+
+    .type-specimen-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .type-token {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-core);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .type-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* 3. Button & Form States */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .control-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+
+    .control-panel-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 80ms ease, background-color 80ms ease, border-color 80ms ease, color 80ms ease;
+      user-select: none;
+      border: 1px solid transparent;
+      line-height: 1;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background-color: var(--accent-core);
+      color: #FFFFFF;
+      box-shadow: 0 1px 2px rgba(200, 90, 50, 0.2);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-surface);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--bg-subdued);
+    }
+
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background-color: var(--bg-subdued);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background-color: var(--status-danger-bg);
+      color: var(--status-danger);
+      border-color: var(--status-danger-border);
+    }
+
+    .btn-danger:hover {
+      background-color: var(--status-danger);
+      color: #FFFFFF;
+    }
+
+    .btn-disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+      background-color: var(--bg-muted);
+      color: var(--text-muted);
+    }
+
+    /* Inputs */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 80ms ease, box-shadow 80ms ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent-core);
+      box-shadow: 0 0 0 1px var(--accent-core);
+      background: var(--bg-surface);
+    }
+
+    .input-field.input-error {
+      border-color: var(--status-danger);
+      box-shadow: 0 0 0 1px var(--status-danger);
+    }
+
+    .input-helper-error {
+      font-size: 11px;
+      color: var(--status-danger);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .search-bar-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-pos {
+      position: absolute;
+      left: 10px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-bar-input {
+      width: 100%;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding: 8px 12px 8px 32px;
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+
+    .search-bar-input:focus {
+      border-color: var(--accent-core);
+      background: var(--bg-surface);
+    }
+
+    .kbd-shortcut {
+      position: absolute;
+      right: 8px;
+      background: var(--bg-subdued);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    /* Badges & Pills */
+    .badge-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      line-height: 1.3;
+      border: 1px solid transparent;
+      font-family: var(--font-mono);
+    }
+
+    .pill-subject {
+      background: var(--bg-subdued);
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+    }
+
+    .pill-unit {
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      border-color: var(--border-strong);
+    }
+
+    .pill-verified {
+      background: var(--status-verified-bg);
+      color: var(--status-verified);
+      border-color: rgba(42, 106, 78, 0.2);
+    }
+
+    .pill-exam {
+      background: var(--status-exam-bg);
+      color: var(--status-exam);
+      border-color: rgba(184, 115, 24, 0.2);
+    }
+
+    .pill-lab {
+      background: var(--status-lab-bg);
+      color: var(--status-lab);
+      border-color: rgba(40, 100, 116, 0.2);
+    }
+
+    .pill-danger {
+      background: var(--status-danger-bg);
+      color: var(--status-danger);
+      border-color: var(--status-danger-border);
+    }
+
+    /* 4. Resource Card States */
+    .cards-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .state-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .state-indicator-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .state-indicator-dot.active { background: var(--accent-core); }
+    .state-indicator-dot.alert { background: var(--status-danger); }
+    .state-indicator-dot.dim { background: var(--text-muted); }
+
+    /* The Canonical StudyShare Resource Card */
+    .resource-card {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      transition: border-color 80ms ease, box-shadow 80ms ease, transform 80ms ease, opacity 80ms ease;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .card-spine {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-top-left-radius: var(--radius-md);
+      border-bottom-left-radius: var(--radius-md);
+      background: transparent;
+    }
+
+    /* Vote Column */
+    .vote-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-subdued);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      min-width: 44px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 80ms ease;
+    }
+
+    .vote-column:hover {
+      background: var(--bg-muted);
+      border-color: var(--border-strong);
+    }
+
+    .vote-btn-icon {
+      width: 14px;
+      height: 14px;
+      color: var(--text-secondary);
+    }
+
+    .vote-score {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 2px 0;
+      line-height: 1;
+    }
+
+    /* Card Main Content */
+    .card-body {
+      min-width: 0;
+    }
+
+    .card-taxonomy-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .card-metadata-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .meta-separator {
+      color: var(--border-strong);
+    }
+
+    /* Card Right Actions */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-action-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 80ms ease;
+    }
+
+    .icon-action-btn:hover {
+      background: var(--bg-subdued);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    /* STATE VARIANT 1: HOVER PREVIEW */
+    .card-variant-hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* STATE VARIANT 2: UPVOTED (User Voted) */
+    .card-variant-upvoted {
+      border-color: var(--accent-border);
+    }
+
+    .card-variant-upvoted .card-spine {
+      background: var(--accent-core);
+    }
+
+    .card-variant-upvoted .vote-column {
+      background: var(--accent-tint);
+      border-color: var(--accent-core);
+    }
+
+    .card-variant-upvoted .vote-btn-icon {
+      color: var(--accent-core);
+    }
+
+    .card-variant-upvoted .vote-score {
+      color: var(--accent-core);
+    }
+
+    /* STATE VARIANT 3: DOWNVOTED / LOW SCORE */
+    .card-variant-downvoted {
+      opacity: 0.65;
+      background: var(--bg-subdued);
+      border-color: var(--border-subtle);
+    }
+
+    .card-variant-downvoted .card-title {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .card-variant-downvoted .vote-column {
+      background: var(--bg-muted);
+      border-color: var(--border-subtle);
+    }
+
+    .card-variant-downvoted .vote-score {
+      color: var(--text-muted);
+    }
+
+    /* STATE VARIANT 4: REPORTED / FLAGGED */
+    .card-variant-reported {
+      background: var(--status-danger-bg);
+      border-color: var(--status-danger-border);
+    }
+
+    .card-variant-reported .card-spine {
+      background: var(--status-danger);
+    }
+
+    .flag-banner {
+      background: rgba(189, 43, 43, 0.08);
+      border: 1px dashed var(--status-danger);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--status-danger);
+      font-weight: 500;
+    }
+
+    /* STATE VARIANT 5: BOOKMARKED */
+    .card-variant-bookmarked {
+      border-color: var(--accent-border);
+      background: linear-gradient(to right, var(--bg-surface), var(--accent-tint) 150%);
+    }
+
+    .bookmark-ribbon {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent-core);
+      color: #FFFFFF;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.03em;
+    }
+
+    /* SVGs */
+    svg.icon {
+      width: 15px;
+      height: 15px;
+      stroke-width: 1.75;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div>
+        <div class="brand-eyebrow">StudyShare • Design System Reference</div>
+        <h1 class="brand-title">Archival Ledger Style Tile</h1>
+        <p class="brand-subtitle">
+          Engineered for high-density academic cataloging. Warm archival paper, Space Grotesk technical display, Plus Jakarta Sans workhorse UI, and a single burnt terracotta accent.
+        </p>
+      </div>
+      <div>
+        <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <span id="theme-label">Switch to Dark</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- SECTION 1: PALETTE -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">Color Palette & Neutrals</h2>
+        <span class="section-desc">Warm archival paper neutrals + Burnt Terracotta accent</span>
+      </div>
+
+      <div class="swatch-grid">
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #FBF9F5;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Paper Canvas</span>
+            <span class="swatch-hex">#FBF9F5</span>
+            <p class="swatch-role">Body viewport background</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #FFFFFF;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Paper Surface</span>
+            <span class="swatch-hex">#FFFFFF</span>
+            <p class="swatch-role">Card & modal surface</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #F3EFEA;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Paper Subdued</span>
+            <span class="swatch-hex">#F3EFEA</span>
+            <p class="swatch-role">Sidebar rail & filter tray</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #1E1B18;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Espresso Ink</span>
+            <span class="swatch-hex">#1E1B18</span>
+            <p class="swatch-role">Primary headings & titles</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #C85A32;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Terracotta Core</span>
+            <span class="swatch-hex">#C85A32</span>
+            <p class="swatch-role">Primary accent, active upvote</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #2A6A4E;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Laurel Green</span>
+            <span class="swatch-hex">#2A6A4E</span>
+            <p class="swatch-role">Verified syllabus, answer keys</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #B87318;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Ochre Gold</span>
+            <span class="swatch-hex">#B87318</span>
+            <p class="swatch-role">Question banks & PYQs</p>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-preview" style="background: #BD2B2B;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Crimson Ink</span>
+            <span class="swatch-hex">#BD2B2B</span>
+            <p class="swatch-role">Reported, obsolete syllabus</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: TYPOGRAPHY -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">Typography Scale</h2>
+        <span class="section-desc">Space Grotesk (Display & Indexes) + Plus Jakarta Sans (Workhorse UI)</span>
+      </div>
+
+      <table class="type-specimen-table">
+        <thead>
+          <tr>
+            <th style="width: 140px;">Level</th>
+            <th style="width: 160px;">Specs</th>
+            <th>Specimen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="type-token">display-1</span></td>
+            <td><span class="type-meta">Space Grotesk 700 / 32px</span></td>
+            <td><div style="font-family: var(--font-display); font-size: 32px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em;">CS302: Data Structures & Algorithms</div></td>
+          </tr>
+          <tr>
+            <td><span class="type-token">h1</span></td>
+            <td><span class="type-meta">Space Grotesk 600 / 24px</span></td>
+            <td><div style="font-family: var(--font-display); font-size: 24px; font-weight: 600; line-height: 1.25;">Unit 03: Balanced Search Trees & Heaps</div></td>
+          </tr>
+          <tr>
+            <td><span class="type-token">h2</span></td>
+            <td><span class="type-meta">Space Grotesk 600 / 18px</span></td>
+            <td><div style="font-family: var(--font-display); font-size: 18px; font-weight: 600;">Midterm Past Question Bank (2021–2024 Solved)</div></td>
+          </tr>
+          <tr>
+            <td><span class="type-token">body-base</span></td>
+            <td><span class="type-meta">Plus Jakarta Sans 400 / 15px</span></td>
+            <td><div>Includes complete proof derivations for Red-Black tree rotations and worst-case time complexity analysis notes curated from Prof. Sharma's blackboard discussions.</div></td>
+          </tr>
+          <tr>
+            <td><span class="type-token">body-medium</span></td>
+            <td><span class="type-meta">Plus Jakarta Sans 500 / 14px</span></td>
+            <td><div style="font-weight: 500;">Contributed by Arvind Raman (Semester 5) • 42 pages • Verified against 2024 syllabus</div></td>
+          </tr>
+          <tr>
+            <td><span class="type-token">caption-mono</span></td>
+            <td><span class="type-meta">JetBrains Mono 500 / 12px</span></td>
+            <td><div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">COURSE_CODE: CS-204-R22 | CRC32: 9E4F01A2 | SIZE: 8.4MB</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SECTION 3: CONTROLS & FORM STATES -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">Controls, Inputs & Taxonomy Badges</h2>
+        <span class="section-desc">Tactile buttons, dense search inputs, and domain-specific pills</span>
+      </div>
+
+      <div class="controls-grid">
+        <!-- Buttons & Actions -->
+        <div class="control-panel">
+          <div class="control-panel-title">Button Hierarchy</div>
+          
+          <div class="button-row">
+            <button class="btn btn-primary">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Resource
+            </button>
+            <button class="btn btn-secondary">
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              Filter Units
+            </button>
+            <button class="btn btn-ghost">Cancel</button>
+          </div>
+
+          <div class="button-row">
+            <button class="btn btn-danger">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Report Resource
+            </button>
+            <button class="btn btn-disabled">Action Disabled</button>
+          </div>
+
+          <div class="control-panel-title" style="margin-top: 24px;">Taxonomy & Status Pills</div>
+          <div class="badge-cloud">
+            <span class="pill pill-subject">CS201 DATA STRUCTURES</span>
+            <span class="pill pill-unit">UNIT 03</span>
+            <span class="pill pill-verified">✓ SYLLABUS VERIFIED</span>
+            <span class="pill pill-exam">PYQ SOLVED</span>
+            <span class="pill pill-lab">LAB RECORD</span>
+            <span class="pill pill-danger">⚠ FLAGGED</span>
+          </div>
+        </div>
+
+        <!-- Inputs & Search -->
+        <div class="control-panel">
+          <div class="control-panel-title">Input Fields & Search</div>
+          
+          <div class="form-group">
+            <label class="form-label">Instant Resource Search</label>
+            <div class="search-bar-wrap">
+              <svg class="icon search-icon-pos" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" class="search-bar-input" placeholder="Search by topic, unit name, or professor...">
+              <span class="kbd-shortcut">⌘K</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Subject Code / Title</label>
+            <input type="text" class="input-field" value="CS301: Database Management Systems">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Unit Number (Error State Example)</label>
+            <input type="text" class="input-field input-error" value="Unit 99 (Out of syllabus range)">
+            <div class="input-helper-error">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Specified unit exceeds syllabus curriculum (Max units: 5)
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: THE 5 COMPONENT STATES (RESOURCE CARD) -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">Resource Card State Matrix</h2>
+        <span class="section-desc">Default, Hover, Upvoted, Low Rating / Downvoted, Flagged, Bookmarked</span>
+      </div>
+
+      <div class="cards-stack">
+
+        <!-- 1. DEFAULT STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot"></span>
+            STATE A: DEFAULT (Standard Catalog Entry)
+          </div>
+          <div class="resource-card">
+            <div class="card-spine"></div>
+            <div class="vote-column" title="Upvote resource">
+              <svg class="icon vote-btn-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+              <span class="vote-score">84</span>
+            </div>
+            <div class="card-body">
+              <div class="card-taxonomy-row">
+                <span class="pill pill-subject">CS201</span>
+                <span class="pill pill-unit">UNIT 02</span>
+                <span class="pill pill-verified">✓ SYLLABUS VERIFIED</span>
+              </div>
+              <h3 class="card-title">AVL Trees & B-Tree Balanced Indexing Complete Lecture Notes</h3>
+              <div class="card-metadata-row">
+                <span class="meta-item">By Sneha Rao (Sec A)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">4 days ago</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">PDF • 3.8 MB (32 pages)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">142 downloads</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-action-btn" title="Save Bookmark">
+                <svg class="icon" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </button>
+              <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                PDF
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. HOVER PREVIEW STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot"></span>
+            STATE B: HOVER (Micro-lift, Crisp Border Darken, Action Emphasis)
+          </div>
+          <div class="resource-card card-variant-hover">
+            <div class="card-spine"></div>
+            <div class="vote-column">
+              <svg class="icon vote-btn-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+              <span class="vote-score">84</span>
+            </div>
+            <div class="card-body">
+              <div class="card-taxonomy-row">
+                <span class="pill pill-subject">CS201</span>
+                <span class="pill pill-unit">UNIT 02</span>
+                <span class="pill pill-verified">✓ SYLLABUS VERIFIED</span>
+              </div>
+              <h3 class="card-title">AVL Trees & B-Tree Balanced Indexing Complete Lecture Notes</h3>
+              <div class="card-metadata-row">
+                <span class="meta-item">By Sneha Rao (Sec A)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">4 days ago</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">PDF • 3.8 MB (32 pages)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">142 downloads</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-action-btn" title="Save Bookmark" style="color: var(--text-primary); border-color: var(--border-strong);">
+                <svg class="icon" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </button>
+              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. UPVOTED STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot active"></span>
+            STATE C: UPVOTED BY STUDENT (3px Solid Terracotta Left Spine, Terracotta Filled Pillar)
+          </div>
+          <div class="resource-card card-variant-upvoted">
+            <div class="card-spine"></div>
+            <div class="vote-column">
+              <svg class="icon vote-btn-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+              <span class="vote-score">85</span>
+            </div>
+            <div class="card-body">
+              <div class="card-taxonomy-row">
+                <span class="pill pill-subject">CS201</span>
+                <span class="pill pill-unit">UNIT 04</span>
+                <span class="pill pill-exam">PREVIOUS YEAR QUESTIONS</span>
+              </div>
+              <h3 class="card-title">Graph Algorithms & Topological Sort — Solved 5-Year Question Bank</h3>
+              <div class="card-metadata-row">
+                <span class="meta-item">By Devansh M. (Topper Batch '23)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Yesterday</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">PDF • 5.1 MB (26 pages)</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item" style="color: var(--accent-core); font-weight: 600;">You upvoted this</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-action-btn" title="Save Bookmark">
+                <svg class="icon" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </button>
+              <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                PDF
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. DOWNVOTED / LOW SCORE STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot dim"></span>
+            STATE D: DOWNVOTED / LOW SCORE (Dimmed 65% Opacity, Muted Stone Surface, Discredited Alert)
+          </div>
+          <div class="resource-card card-variant-downvoted">
+            <div class="card-spine"></div>
+            <div class="vote-column">
+              <svg class="icon vote-btn-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="vote-score">-3</span>
+            </div>
+            <div class="card-body">
+              <div class="card-taxonomy-row">
+                <span class="pill pill-unit">UNIT 01</span>
+                <span class="pill" style="background: var(--bg-muted); color: var(--text-muted);">LOW COMMUNITY RATING</span>
+              </div>
+              <h3 class="card-title">Quick Handwritten Class Notes (Blurry Photos, Missing Pages 4–11)</h3>
+              <div class="card-metadata-row">
+                <span class="meta-item">By Anonymous</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">3 months ago</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Downvoted by 7 peers: "Incomplete notes, pages cut off"</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-ghost" style="font-size: 11px; padding: 4px 8px;">Show Details</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. REPORTED / FLAGGED STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot alert"></span>
+            STATE E: REPORTED / FLAGGED (Hazard Stripe/Crimson Spine, Gated Content Warning)
+          </div>
+          <div class="resource-card card-variant-reported">
+            <div class="card-spine"></div>
+            <div class="vote-column" style="background: transparent; border-color: var(--status-danger-border);">
+              <svg class="icon" style="color: var(--status-danger);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span class="vote-score" style="color: var(--status-danger);">FLAG</span>
+            </div>
+            <div class="card-body">
+              <div class="flag-banner">
+                <span>⚠ REPORTED: Outdated Syllabus (R18 Curriculum — Removed in current R22 Regulation)</span>
+                <button class="btn btn-danger" style="padding: 2px 8px; font-size: 11px;">Review Report</button>
+              </div>
+              <h3 class="card-title" style="color: var(--status-danger);">2018 Mid-Semester Exam Paper & Solutions</h3>
+              <div class="card-metadata-row" style="color: var(--status-danger);">
+                <span class="meta-item">Flagged by 4 students</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Pending moderator review</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Downloads temporarily paused</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">
+                Ignore Warning
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. BOOKMARKED STATE -->
+        <div>
+          <div class="state-label">
+            <span class="state-indicator-dot active"></span>
+            STATE F: BOOKMARKED / SAVED (Terracotta Ribbon Pill, Warm Highlight Border, Quick Revision Queue)
+          </div>
+          <div class="resource-card card-variant-bookmarked">
+            <div class="card-spine" style="background: var(--accent-core);"></div>
+            <div class="vote-column">
+              <svg class="icon vote-btn-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+              <span class="vote-score">112</span>
+            </div>
+            <div class="card-body">
+              <div class="card-taxonomy-row">
+                <span class="pill pill-subject">CS201</span>
+                <span class="pill pill-lab">LAB RECORD & VIVA</span>
+                <span class="bookmark-ribbon">
+                  <svg class="icon" style="width: 11px; height: 11px; fill: currentColor;" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                  SAVED FOR EXAM REVISION
+                </span>
+              </div>
+              <h3 class="card-title">Data Structures Lab Manual: All 12 Programs with Clean Output Snapshots</h3>
+              <div class="card-metadata-row">
+                <span class="meta-item">By Lab Assistant T. Joseph</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Updated last week</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">ZIP / C Code • 1.4 MB</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-item">Saved in your "End-Sem Prep" collection</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-action-btn" title="Remove Bookmark" style="color: var(--accent-core); border-color: var(--accent-border); background: var(--accent-tint);">
+                <svg class="icon" style="fill: var(--accent-core);" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </button>
+              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
+                Open Collection
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      
+      const label = document.getElementById('theme-label');
+      label.textContent = next === 'dark' ? 'Switch to Light' : 'Switch to Dark';
+    }
+  </script>
+</body>
+</html>
