@@ -7,6 +7,17 @@ from app.schemas.auth import (
     UserResponse,
     UserSignupRequest,
 )
+from app.schemas.interactions import (
+    BookmarkResponse,
+    RatingRequest,
+    RatingResponse,
+    ReportRequest,
+    ReportResponse,
+    UserBookmarkItemResponse,
+    UserBookmarksListResponse,
+    VoteRequest,
+    VoteResponse,
+)
 from app.schemas.resource import (
     BreadcrumbHierarchy,
     ResourceCreateForm,
@@ -40,4 +51,13 @@ __all__ = [
     "ResourceListResponse",
     "ResourceCreateForm",
     "ResourceUpdateForm",
+    "VoteRequest",
+    "VoteResponse",
+    "RatingRequest",
+    "RatingResponse",
+    "BookmarkResponse",
+    "UserBookmarkItemResponse",
+    "UserBookmarksListResponse",
+    "ReportRequest",
+    "ReportResponse",
 ]

@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.resources import router as resources_router
+from app.api.users import router as users_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -46,7 +47,10 @@ app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
 # Wire up routers
 app.include_router(health_router)
 app.include_router(auth_router)
-app.include_router(resources_router)
+app.include_router(resources_router, prefix="/api/resources")
+app.include_router(resources_router, prefix="/resources")
+app.include_router(users_router, prefix="/api/users")
+app.include_router(users_router, prefix="/users")
 
 
 @app.get("/")
