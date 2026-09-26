@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
+from app.api.resources import router as resources_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -12,9 +15,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic: verify configurations
+    # Ensure upload directory exists
+    upload_path = Path(settings.UPLOAD_DIR).resolve()
+    upload_path.mkdir(parents=True, exist_ok=True)
     yield
-    # Shutdown logic: cleanup engine if needed
 
 
 app = FastAPI(
@@ -34,9 +38,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Static file serving for uploads
+upload_dir = Path(settings.UPLOAD_DIR).resolve()
+upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+
 # Wire up routers
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(resources_router)
 
 
 @app.get("/")

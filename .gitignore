@@ -48,6 +48,8 @@ pnpm-debug.log*
 
 # Docker / Volumes
 postgres_data/
+uploads/
+backend/uploads/
 
 # OS and Editor
 .DS_Store

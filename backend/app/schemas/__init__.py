@@ -7,6 +7,19 @@ from app.schemas.auth import (
     UserResponse,
     UserSignupRequest,
 )
+from app.schemas.resource import (
+    BreadcrumbHierarchy,
+    ResourceCreateForm,
+    ResourceDetailResponse,
+    ResourceListItemResponse,
+    ResourceListResponse,
+    ResourceUpdateForm,
+    ResourceVersionResponse,
+    SubjectBriefResponse,
+    TopicBriefResponse,
+    UnitBriefResponse,
+    UploaderBriefResponse,
+)
 
 __all__ = [
     "UserSignupRequest",
@@ -16,4 +29,15 @@ __all__ = [
     "ContributorProfileResponse",
     "UserResponse",
     "AuthSuccessResponse",
+    "UploaderBriefResponse",
+    "SubjectBriefResponse",
+    "UnitBriefResponse",
+    "TopicBriefResponse",
+    "BreadcrumbHierarchy",
+    "ResourceVersionResponse",
+    "ResourceListItemResponse",
+    "ResourceDetailResponse",
+    "ResourceListResponse",
+    "ResourceCreateForm",
+    "ResourceUpdateForm",
 ]
