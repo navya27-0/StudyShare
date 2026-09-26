@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.resources import router as resources_router
@@ -51,6 +52,8 @@ app.include_router(resources_router, prefix="/api/resources")
 app.include_router(resources_router, prefix="/resources")
 app.include_router(users_router, prefix="/api/users")
 app.include_router(users_router, prefix="/users")
+app.include_router(admin_router, prefix="/api/admin")
+app.include_router(admin_router, prefix="/admin")
 
 
 @app.get("/")

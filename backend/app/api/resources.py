@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.config import get_settings
+from app.core.ranking import compute_ranking_score, get_ranking_sql_expression
 from app.core.storage import StorageProvider, get_storage_provider
 from app.database import get_db_session
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
@@ -65,6 +66,16 @@ def _serialize_resource_item(resource: Resource) -> ResourceListItemResponse:
     breadcrumbs = (
         _build_breadcrumbs(resource.topic) if resource.topic and resource.topic.unit else None
     )
+    score = compute_ranking_score(
+        rating_avg=resource.rating_avg,
+        rating_count=resource.rating_count,
+        upvotes_count=resource.upvotes_count,
+        downvotes_count=resource.downvotes_count,
+        downloads_count=resource.downloads_count,
+        views_count=resource.views_count,
+        is_verified=resource.is_verified,
+        created_at=resource.created_at,
+    )
     return ResourceListItemResponse(
         id=resource.id,
         topic_id=resource.topic_id,
@@ -83,6 +94,8 @@ def _serialize_resource_item(resource: Resource) -> ResourceListItemResponse:
         views_count=resource.views_count,
         downloads_count=resource.downloads_count,
         is_verified=resource.is_verified,
+        is_deleted=resource.is_deleted,
+        ranking_score=score,
         created_at=resource.created_at,
         updated_at=resource.updated_at,
         uploader=UploaderBriefResponse.model_validate(resource.uploader),
@@ -118,9 +131,9 @@ async def list_resources(
         None, min_length=1, description="Full-text search query across title & description"
     ),
     sort_by: str = Query(
-        "recent",
-        enum=["recent", "highest_rated", "most_upvoted", "most_downloaded"],
-        description="Sorting criteria",
+        "ranked",
+        enum=["ranked", "recent", "highest_rated", "most_upvoted", "most_downloaded"],
+        description="Sorting criteria ('ranked' uses composite quality + recency score)",
     ),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -129,8 +142,14 @@ async def list_resources(
     List resources with dynamic multi-level filtering (Subject -> Unit -> Topic),
     PostgreSQL full-text search, and multiple sorting dimensions.
     """
-    # Base query joining Topic, Unit, Subject for taxonomy filters
-    base_stmt = select(Resource).join(Resource.topic).join(Topic.unit).join(Unit.subject)
+    # Base query joining Topic, Unit, Subject for taxonomy filters, excluding deleted items
+    base_stmt = (
+        select(Resource)
+        .join(Resource.topic)
+        .join(Topic.unit)
+        .join(Unit.subject)
+        .where(Resource.is_deleted.is_(False))
+    )
 
     # 1. Taxonomy & Domain Filters
     if topic_id is not None:
@@ -186,8 +205,12 @@ async def list_resources(
         base_stmt = base_stmt.order_by(Resource.upvotes_count.desc(), Resource.created_at.desc())
     elif sort_by == "most_downloaded":
         base_stmt = base_stmt.order_by(Resource.downloads_count.desc(), Resource.created_at.desc())
-    else:  # recent
+    elif sort_by == "recent":
         base_stmt = base_stmt.order_by(Resource.created_at.desc())
+    else:  # "ranked" (default)
+        base_stmt = base_stmt.order_by(
+            get_ranking_sql_expression(Resource).desc(), Resource.created_at.desc()
+        )
 
     # 5. Pagination
     offset = (page - 1) * page_size
@@ -238,7 +261,7 @@ async def get_resource(
     result = await db.execute(stmt)
     resource = result.scalar_one_or_none()
 
-    if not resource:
+    if not resource or resource.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Resource with ID {resource_id} was not found.",

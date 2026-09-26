@@ -64,6 +64,7 @@ class Resource(Base):
     views_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     downloads_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

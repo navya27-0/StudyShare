@@ -68,3 +68,15 @@ async def other_auth_headers(client: AsyncClient):
     assert login_res.status_code == 200, f"Login failed: {login_res.text}"
     token = login_res.json()["tokens"]["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def admin_auth_headers(client: AsyncClient):
+    """Obtain auth headers for administrator (Prof. Sharma)."""
+    login_res = await client.post(
+        "/api/auth/login",
+        json={"email": "prof.sharma@university.edu", "password": "StudyShare2024!"},
+    )
+    assert login_res.status_code == 200, f"Admin login failed: {login_res.text}"
+    token = login_res.json()["tokens"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}

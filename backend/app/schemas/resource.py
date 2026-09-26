@@ -78,6 +78,8 @@ class ResourceListItemResponse(BaseModel):
     views_count: int
     downloads_count: int
     is_verified: bool
+    is_deleted: bool = False
+    ranking_score: float | None = None
     created_at: datetime
     updated_at: datetime
     uploader: UploaderBriefResponse

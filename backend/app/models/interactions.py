@@ -173,11 +173,14 @@ class ModerationAction(Base):
     admin_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    resource_id: Mapped[int] = mapped_column(
+    resource_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("resources.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
+    )
+    target_user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -192,9 +195,15 @@ class ModerationAction(Base):
     admin: Mapped[Optional["User"]] = relationship(
         "User", back_populates="moderation_actions", foreign_keys=[admin_id]
     )
-    resource: Mapped["Resource"] = relationship("Resource", back_populates="moderation_actions")
+    resource: Mapped[Optional["Resource"]] = relationship(
+        "Resource", back_populates="moderation_actions", foreign_keys=[resource_id]
+    )
+    target_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[target_user_id])
 
-    __table_args__ = (Index("ix_moderation_res_created", "resource_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_moderation_res_created", "resource_id", "created_at"),
+        Index("ix_moderation_user_created", "target_user_id", "created_at"),
+    )
 
     def __repr__(self) -> str:
-        return f"<ModerationAction id={self.id} action={self.action} res={self.resource_id}>"
+        return f"<ModerationAction id={self.id} action={self.action} res={self.resource_id} target_user={self.target_user_id}>"
