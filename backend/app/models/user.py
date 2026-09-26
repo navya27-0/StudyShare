@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,6 +9,7 @@ from app.models.enums import UserRole
 
 if TYPE_CHECKING:
     from app.models.interactions import Bookmark, ModerationAction, Rating, Report, Vote
+    from app.models.profile import ContributorProfile
     from app.models.resource import Resource, ResourceVersion
 
 
@@ -61,6 +62,12 @@ class User(Base):
         "ModerationAction",
         back_populates="admin",
         foreign_keys="ModerationAction.admin_id",
+    )
+    contributor_profile: Mapped[Optional["ContributorProfile"]] = relationship(
+        "ContributorProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

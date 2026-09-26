@@ -5,10 +5,12 @@ Revises: 0001_initial
 Create Date: 2026-09-26 00:20:00.000000
 
 """
+
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0002_full_schema"
@@ -116,9 +118,15 @@ def upgrade() -> None:
     op.create_index("ix_resources_rating_avg", "resources", ["rating_avg"], unique=False)
     op.create_index("ix_resources_is_verified", "resources", ["is_verified"], unique=False)
     op.create_index("ix_resources_created_at", "resources", ["created_at"], unique=False)
-    op.create_index("ix_resources_topic_recency", "resources", ["topic_id", "created_at"], unique=False)
-    op.create_index("ix_resources_topic_votes", "resources", ["topic_id", "upvotes_count"], unique=False)
-    op.create_index("ix_resources_topic_rating", "resources", ["topic_id", "rating_avg"], unique=False)
+    op.create_index(
+        "ix_resources_topic_recency", "resources", ["topic_id", "created_at"], unique=False
+    )
+    op.create_index(
+        "ix_resources_topic_votes", "resources", ["topic_id", "upvotes_count"], unique=False
+    )
+    op.create_index(
+        "ix_resources_topic_rating", "resources", ["topic_id", "rating_avg"], unique=False
+    )
 
     # 6. Resource Versions Table
     op.create_table(
@@ -137,8 +145,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("resource_id", "version_number", name="uq_resource_version_number"),
     )
-    op.create_index("ix_resource_versions_resource_id", "resource_versions", ["resource_id"], unique=False)
-    op.create_index("ix_resource_versions_uploaded_by", "resource_versions", ["uploaded_by"], unique=False)
+    op.create_index(
+        "ix_resource_versions_resource_id", "resource_versions", ["resource_id"], unique=False
+    )
+    op.create_index(
+        "ix_resource_versions_uploaded_by", "resource_versions", ["uploaded_by"], unique=False
+    )
 
     # Add foreign key from resources to resource_versions (current_version_id)
     op.create_foreign_key(
@@ -220,7 +232,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_bookmarks_user_id", "bookmarks", ["user_id"], unique=False)
     op.create_index("ix_bookmarks_resource_id", "bookmarks", ["resource_id"], unique=False)
-    op.create_index("ix_bookmarks_user_created", "bookmarks", ["user_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_bookmarks_user_created", "bookmarks", ["user_id", "created_at"], unique=False
+    )
 
     # 11. Moderation Actions Table
     op.create_table(
@@ -235,9 +249,18 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["resource_id"], ["resources.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_moderation_actions_admin_id", "moderation_actions", ["admin_id"], unique=False)
-    op.create_index("ix_moderation_actions_resource_id", "moderation_actions", ["resource_id"], unique=False)
-    op.create_index("ix_moderation_res_created", "moderation_actions", ["resource_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_moderation_actions_admin_id", "moderation_actions", ["admin_id"], unique=False
+    )
+    op.create_index(
+        "ix_moderation_actions_resource_id", "moderation_actions", ["resource_id"], unique=False
+    )
+    op.create_index(
+        "ix_moderation_res_created",
+        "moderation_actions",
+        ["resource_id", "created_at"],
+        unique=False,
+    )
 
     # 12. Full-Text Search GIN Index on Resources
     # Executes PostgreSQL native tsvector index
