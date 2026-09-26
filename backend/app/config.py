@@ -9,9 +9,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     BACKEND_PORT: int = 8000
     DATABASE_URL: str = "sqlite+aiosqlite:///./studyshare.db"
-    CORS_ORIGINS: str = (
-        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
-    )
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -21,11 +19,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        return [
-            origin.strip()
-            for origin in self.CORS_ORIGINS.split(",")
-            if origin.strip()
-        ]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 @lru_cache

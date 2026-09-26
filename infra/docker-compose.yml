@@ -8,14 +8,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studyshare_dev}
       POSTGRES_DB: ${POSTGRES_DB:-studyshare_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studyshare} -d ${POSTGRES_DB:-studyshare_db}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   backend:
     build:
@@ -24,8 +24,8 @@ services:
     container_name: studyshare-backend
     restart: unless-stopped
     environment:
-      ENVIRONMENT: ${ENVIRONMENT:-production}
-      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-True}
       BACKEND_PORT: 8000
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studyshare}:${POSTGRES_PASSWORD:-studyshare_dev}@postgres:5432/${POSTGRES_DB:-studyshare_db}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:80,http://localhost,http://127.0.0.1:5173}
