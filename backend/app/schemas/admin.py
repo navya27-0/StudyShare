@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ReportStatus
+from app.schemas.auth import UserResponse
 from app.schemas.resource import ResourceListItemResponse, UploaderBriefResponse
 
 
@@ -50,7 +51,9 @@ class ModerationActionResponse(BaseModel):
     admin_id: int | None = None
     admin_name: str | None = None
     resource_id: int | None = None
+    resource_title: str | None = None
     target_user_id: int | None = None
+    target_user_name: str | None = None
     action: str
     note: str | None = None
     created_at: datetime
@@ -63,6 +66,13 @@ class ModerationActionListResponse(BaseModel):
     page: int
     page_size: int
     items: list[ModerationActionResponse]
+
+
+class AdminUserListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    items: list[UserResponse]
 
 
 class AdminActionSuccessResponse(BaseModel):

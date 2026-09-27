@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,12 +18,14 @@ from app.schemas.admin import (
     AdminActionSuccessResponse,
     AdminReportListResponse,
     AdminReportResponse,
+    AdminUserListResponse,
     ModerationActionListResponse,
     ModerationActionResponse,
     ReportActionRequest,
     ResourceModerationRequest,
     UserBanRequest,
 )
+from app.schemas.auth import UserResponse
 from app.schemas.resource import UploaderBriefResponse
 
 router = APIRouter(tags=["Admin"])
@@ -334,6 +336,91 @@ async def unban_user(
     )
 
 
+@router.post("/users/{user_id}/warn", response_model=AdminActionSuccessResponse)
+async def warn_user(
+    user_id: int,
+    payload: UserBanRequest | None,
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """
+    Issue an official administrative warning to a user account.
+    Records a moderation audit entry.
+    """
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with ID {user_id} was not found.",
+        )
+
+    note_text = payload.note if payload and payload.note else "Official warning issued by administrator"
+    audit_entry = ModerationAction(
+        admin_id=current_admin.id,
+        target_user_id=user.id,
+        action="user_warned",
+        note=note_text,
+    )
+    db.add(audit_entry)
+    await db.commit()
+
+    return AdminActionSuccessResponse(
+        message=f"Official warning issued to user '{user.display_name}'.",
+        details={"user_id": user_id, "action": "user_warned"},
+    )
+
+
+@router.get("/users", response_model=AdminUserListResponse)
+async def list_admin_users(
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    q: str | None = Query(None, description="Search query by name or email"),
+    role: str | None = Query(None, description="Filter by role ('student' or 'admin')"),
+    is_active: bool | None = Query(None, description="Filter by active status"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+):
+    """
+    Administrative directory to search, inspect, and manage user accounts and roles.
+    """
+    base_stmt = select(User)
+    count_stmt = select(func.count(User.id))
+
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        filter_clause = or_(User.display_name.ilike(term), User.email.ilike(term))
+        base_stmt = base_stmt.where(filter_clause)
+        count_stmt = count_stmt.where(filter_clause)
+
+    if role and role.strip():
+        base_stmt = base_stmt.where(User.role == role.strip().lower())
+        count_stmt = count_stmt.where(User.role == role.strip().lower())
+
+    if is_active is not None:
+        base_stmt = base_stmt.where(User.is_active == is_active)
+        count_stmt = count_stmt.where(User.is_active == is_active)
+
+    total = (await db.execute(count_stmt)).scalar_one()
+
+    offset = (page - 1) * page_size
+    stmt = (
+        base_stmt.order_by(User.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .options(selectinload(User.contributor_profile))
+    )
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+
+    items = [UserResponse.model_validate(u) for u in users]
+    return AdminUserListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=items,
+    )
+
+
 # ==============================================================================
 # 4. Moderation Actions Log (Accountability Audit Trail)
 # ==============================================================================
@@ -370,7 +457,11 @@ async def list_moderation_actions(
         base_stmt.order_by(ModerationAction.created_at.desc())
         .offset(offset)
         .limit(page_size)
-        .options(selectinload(ModerationAction.admin))
+        .options(
+            selectinload(ModerationAction.admin),
+            selectinload(ModerationAction.resource),
+            selectinload(ModerationAction.target_user),
+        )
     )
     result = await db.execute(stmt)
     actions = result.scalars().all()
@@ -381,7 +472,9 @@ async def list_moderation_actions(
             admin_id=act.admin_id,
             admin_name=act.admin.display_name if act.admin else None,
             resource_id=act.resource_id,
+            resource_title=act.resource.title if act.resource else None,
             target_user_id=act.target_user_id,
+            target_user_name=act.target_user.display_name if act.target_user else None,
             action=act.action,
             note=act.note,
             created_at=act.created_at,
@@ -395,3 +488,4 @@ async def list_moderation_actions(
         page_size=page_size,
         items=items,
     )
+

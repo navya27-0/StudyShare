@@ -12,7 +12,7 @@ import { ResourceDetailView } from './pages/ResourceDetailView';
 import { UploadView } from './pages/UploadView';
 import { ProfileView } from './pages/ProfileView';
 import { BookmarksView } from './pages/BookmarksView';
-import { AdminPlaceholder } from './pages/AdminPlaceholder';
+import { AdminDashboardView } from './pages/AdminDashboardView';
 
 export const App: React.FC = () => {
   return (
@@ -42,7 +42,7 @@ export const App: React.FC = () => {
                 path="/admin"
                 element={
                   <AdminRoute>
-                    <AdminPlaceholder />
+                    <AdminDashboardView />
                   </AdminRoute>
                 }
               />

@@ -232,4 +232,58 @@ export interface UserBookmarksListResponse {
   items: UserBookmarkItem[];
 }
 
+// Admin & Moderation Types
+export interface AdminReport {
+  id: number;
+  resource_id: number;
+  reporter_id: number;
+  reason: string;
+  status: 'open' | 'reviewed' | 'dismissed';
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: number | null;
+  reporter: UploaderBrief | null;
+  resource: ResourceListItem | null;
+}
+
+export interface AdminReportListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: AdminReport[];
+}
+
+export interface AdminUserListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: User[];
+}
+
+export interface ModerationActionItem {
+  id: number;
+  admin_id: number | null;
+  admin_name: string | null;
+  resource_id: number | null;
+  resource_title: string | null;
+  target_user_id: number | null;
+  target_user_name: string | null;
+  action: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface ModerationActionListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: ModerationActionItem[];
+}
+
+export interface AdminActionSuccess {
+  success: boolean;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
 

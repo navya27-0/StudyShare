@@ -193,3 +193,53 @@ async def test_admin_user_ban_and_unban_lifecycle(
     actions = [item["action"] for item in log_res.json()["items"]]
     assert "user_banned" in actions
     assert "user_unbanned" in actions
+
+
+@pytest.mark.asyncio
+async def test_admin_user_directory_and_warn(
+    client: AsyncClient, admin_auth_headers: dict, auth_headers: dict
+):
+    """
+    Test user directory search, filtering, and warning actions:
+    1. Verify non-admin gets 403 on /api/admin/users.
+    2. Admin searches users by keyword and filters by role.
+    3. Admin warns user and verifies audit log contains 'user_warned'.
+    """
+    # 1. Non-admin gets 403
+    forbidden = await client.get("/api/admin/users", headers=auth_headers)
+    assert forbidden.status_code == 403
+
+    # 2. Admin lists users
+    user_res = await client.get("/api/admin/users?page=1&page_size=10", headers=admin_auth_headers)
+    assert user_res.status_code == 200
+    data = user_res.json()
+    assert data["total"] >= 1
+    assert len(data["items"]) >= 1
+
+    target_user = data["items"][0]
+
+    # Search by display name substring
+    search_res = await client.get(
+        f"/api/admin/users?q={target_user['display_name'][:3]}", headers=admin_auth_headers
+    )
+    assert search_res.status_code == 200
+    assert search_res.json()["total"] >= 1
+
+    # 3. Warn user
+    warn_res = await client.post(
+        f"/api/admin/users/{target_user['id']}/warn",
+        json={"note": "First warning for uploading duplicate exam paper."},
+        headers=admin_auth_headers,
+    )
+    assert warn_res.status_code == 200
+    assert warn_res.json()["details"]["action"] == "user_warned"
+
+    # Verify audit log includes warning
+    log_res = await client.get(
+        f"/api/admin/moderation-actions?target_user_id={target_user['id']}",
+        headers=admin_auth_headers,
+    )
+    assert log_res.status_code == 200
+    actions = [item["action"] for item in log_res.json()["items"]]
+    assert "user_warned" in actions
+
