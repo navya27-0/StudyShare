@@ -32,12 +32,23 @@ class UnitBriefResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UnitCreateRequest(BaseModel):
+    subject_id: int
+    title: str = Field(..., min_length=2, max_length=255)
+    unit_number: int | None = Field(None, ge=1, le=20)
+
+
 class TopicBriefResponse(BaseModel):
     id: int
     title: str
     unit_id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TopicCreateRequest(BaseModel):
+    unit_id: int
+    title: str = Field(..., min_length=2, max_length=255)
 
 
 class TopicTreeItem(BaseModel):

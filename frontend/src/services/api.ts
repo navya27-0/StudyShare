@@ -2,9 +2,14 @@ import type {
   AuthSuccessResponse,
   AuthTokens,
   BookmarkResponse,
+  RatingResponse,
+  ReportResponse,
+  ResourceDetail,
   ResourceFilterParams,
   ResourceListResponse,
   SubjectItem,
+  TopicItem,
+  UnitItem,
   User,
   VoteResponse,
 } from '../types';
@@ -50,8 +55,9 @@ export async function apiRequest<T>(
   const url = `${API_BASE}${endpoint}`;
   const token = getStoredAccessToken();
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -269,10 +275,62 @@ export const resourcesApi = {
     return apiRequest<ResourceListResponse>(endpoint);
   },
 
+  get: async (resourceId: number): Promise<ResourceDetail> => {
+    return apiRequest<ResourceDetail>(`/api/resources/${resourceId}`);
+  },
+
+  create: async (formData: FormData): Promise<ResourceDetail> => {
+    return apiRequest<ResourceDetail>('/api/resources', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  update: async (resourceId: number, formData: FormData): Promise<ResourceDetail> => {
+    return apiRequest<ResourceDetail>(`/api/resources/${resourceId}`, {
+      method: 'PUT',
+      body: formData,
+    });
+  },
+
+  rate: async (resourceId: number, stars: number): Promise<RatingResponse> => {
+    return apiRequest<RatingResponse>(`/api/resources/${resourceId}/rating`, {
+      method: 'POST',
+      body: JSON.stringify({ stars }),
+    });
+  },
+
+  report: async (resourceId: number, reason: string): Promise<ReportResponse> => {
+    return apiRequest<ReportResponse>(`/api/resources/${resourceId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  recordDownload: async (resourceId: number): Promise<{ resource_id: number; downloads_count: number }> => {
+    return apiRequest<{ resource_id: number; downloads_count: number }>(`/api/resources/${resourceId}/download`, {
+      method: 'POST',
+    });
+  },
+
+  createUnit: async (subjectId: number, title: string, unitNumber?: number): Promise<UnitItem> => {
+    return apiRequest<UnitItem>('/api/resources/units', {
+      method: 'POST',
+      body: JSON.stringify({ subject_id: subjectId, title, unit_number: unitNumber }),
+    });
+  },
+
+  createTopic: async (unitId: number, title: string): Promise<TopicItem> => {
+    return apiRequest<TopicItem>('/api/resources/topics', {
+      method: 'POST',
+      body: JSON.stringify({ unit_id: unitId, title }),
+    });
+  },
+
   vote: async (resourceId: number, voteType: 'up' | 'down'): Promise<VoteResponse> => {
     return apiRequest<VoteResponse>(`/api/resources/${resourceId}/vote`, {
       method: 'POST',
-      body: JSON.stringify({ vote_type: voteType }),
+      body: JSON.stringify({ value: voteType, vote_type: voteType }),
     });
   },
 
@@ -297,4 +355,5 @@ export const resourcesApi = {
     }
   },
 };
+
 

@@ -8,8 +8,8 @@ import { AppShell } from './components/layout/AppShell';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { BrowseView } from './pages/BrowseView';
-import { ResourceDetailPlaceholder } from './pages/ResourceDetailPlaceholder';
-import { UploadPlaceholder } from './pages/UploadPlaceholder';
+import { ResourceDetailView } from './pages/ResourceDetailView';
+import { UploadView } from './pages/UploadView';
 import { ProfilePlaceholder } from './pages/ProfilePlaceholder';
 import { BookmarksPlaceholder } from './pages/BookmarksPlaceholder';
 import { AdminPlaceholder } from './pages/AdminPlaceholder';
@@ -33,8 +33,8 @@ export const App: React.FC = () => {
               }
             >
               <Route path="/" element={<BrowseView />} />
-              <Route path="/resources/:id" element={<ResourceDetailPlaceholder />} />
-              <Route path="/upload" element={<UploadPlaceholder />} />
+              <Route path="/resources/:id" element={<ResourceDetailView />} />
+              <Route path="/upload" element={<UploadView />} />
               <Route path="/profile" element={<ProfilePlaceholder />} />
               <Route path="/bookmarks" element={<BookmarksPlaceholder />} />
               <Route

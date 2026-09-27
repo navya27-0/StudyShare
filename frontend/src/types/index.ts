@@ -165,3 +165,38 @@ export interface BookmarkResponse {
   resource_id: number;
   bookmarked: boolean;
 }
+
+export interface ResourceVersion {
+  id: number;
+  resource_id: number;
+  version_number: number;
+  file_url: string;
+  changelog: string | null;
+  file_size_bytes: number | null;
+  page_count: number | null;
+  uploaded_by: number;
+  created_at: string;
+}
+
+export interface ResourceDetail extends ResourceListItem {
+  current_version: ResourceVersion | null;
+  versions: ResourceVersion[];
+}
+
+export interface RatingResponse {
+  user_id: number;
+  resource_id: number;
+  score: number;
+  rating_avg: number;
+  rating_count: number;
+}
+
+export interface ReportResponse {
+  id: number;
+  resource_id: number;
+  reporter_id: number;
+  reason: string;
+  status: string;
+  created_at: string;
+}
+

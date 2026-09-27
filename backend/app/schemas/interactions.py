@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import ReportStatus, VoteType
 from app.schemas.resource import ResourceListItemResponse
@@ -9,6 +10,14 @@ from app.schemas.resource import ResourceListItemResponse
 # --- Vote Schemas ---
 class VoteRequest(BaseModel):
     value: VoteType = Field(..., description="Vote direction: 'up' or 'down'")
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_vote_type_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "vote_type" in data and "value" not in data:
+                data["value"] = data["vote_type"]
+        return data
 
 
 class VoteResponse(BaseModel):

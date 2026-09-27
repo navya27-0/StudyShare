@@ -45,7 +45,9 @@ from app.schemas.resource import (
     SubjectBriefResponse,
     SubjectTreeItem,
     TopicBriefResponse,
+    TopicCreateRequest,
     UnitBriefResponse,
+    UnitCreateRequest,
     UploaderBriefResponse,
 )
 
@@ -260,6 +262,75 @@ async def get_taxonomy_tree(
     result = await db.execute(stmt)
     subjects = result.scalars().all()
     return subjects
+
+
+@router.post("/units", response_model=UnitBriefResponse, status_code=status.HTTP_201_CREATED)
+async def create_unit(
+    payload: UnitCreateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """Create a new academic unit under a subject (e.g. inline during resource upload)."""
+    subject = await db.get(Subject, payload.subject_id)
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Subject with ID {payload.subject_id} was not found.",
+        )
+
+    # Determine unit number if omitted
+    unit_num = payload.unit_number
+    if unit_num is None:
+        max_unit_stmt = select(func.max(Unit.unit_number)).where(Unit.subject_id == payload.subject_id)
+        max_unit = (await db.execute(max_unit_stmt)).scalar() or 0
+        unit_num = max_unit + 1
+
+    # Check for duplicate unit_number in this subject
+    dup_stmt = select(Unit).where(Unit.subject_id == payload.subject_id, Unit.unit_number == unit_num)
+    if (await db.execute(dup_stmt)).scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Unit {unit_num} already exists in subject {subject.code}.",
+        )
+
+    new_unit = Unit(
+        subject_id=payload.subject_id,
+        unit_number=unit_num,
+        title=payload.title.strip(),
+        ordering=unit_num,
+    )
+    db.add(new_unit)
+    await db.commit()
+    await db.refresh(new_unit)
+    return UnitBriefResponse.model_validate(new_unit)
+
+
+@router.post("/topics", response_model=TopicBriefResponse, status_code=status.HTTP_201_CREATED)
+async def create_topic(
+    payload: TopicCreateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """Create a new topic under a unit (e.g. inline during resource upload)."""
+    unit = await db.get(Unit, payload.unit_id)
+    if not unit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Unit with ID {payload.unit_id} was not found.",
+        )
+
+    max_order_stmt = select(func.max(Topic.ordering)).where(Topic.unit_id == payload.unit_id)
+    max_order = (await db.execute(max_order_stmt)).scalar() or 0
+
+    new_topic = Topic(
+        unit_id=payload.unit_id,
+        title=payload.title.strip(),
+        ordering=max_order + 1,
+    )
+    db.add(new_topic)
+    await db.commit()
+    await db.refresh(new_topic)
+    return TopicBriefResponse.model_validate(new_topic)
 
 
 @router.get("/{resource_id}", response_model=ResourceDetailResponse)
@@ -797,3 +868,24 @@ async def report_resource(
         created_at=report.created_at,
         message="Report submitted successfully and is pending moderator review.",
     )
+
+
+@router.post("/{resource_id}/download")
+async def record_download(
+    resource_id: int,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """
+    Increment download counter on resource.
+    """
+    resource = await db.get(Resource, resource_id)
+    if not resource or resource.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource with ID {resource_id} was not found.",
+        )
+
+    resource.downloads_count += 1
+    await db.commit()
+    return {"resource_id": resource_id, "downloads_count": resource.downloads_count}
+
