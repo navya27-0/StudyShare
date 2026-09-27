@@ -146,6 +146,7 @@ export interface ResourceFilterParams {
   semester?: number;
   type?: ResourceType;
   min_rating?: number;
+  uploader_id?: number;
   q?: string;
   sort_by?: SortByOption;
   page?: number;
@@ -199,4 +200,36 @@ export interface ReportResponse {
   status: string;
   created_at: string;
 }
+
+export interface UserActivityItem {
+  id: string;
+  action: 'uploaded' | 'rated' | 'bookmarked';
+  title: string;
+  resource_id: number;
+  resource_title: string;
+  timestamp: string;
+  badge?: string | null;
+}
+
+export interface UserActivityListResponse {
+  user_id: number;
+  items: UserActivityItem[];
+}
+
+export interface UserBookmarkItem {
+  id: number;
+  user_id: number;
+  resource_id: number;
+  created_at: string;
+  resource: ResourceListItem;
+}
+
+export interface UserBookmarksListResponse {
+  user_id: number;
+  total: number;
+  page: number;
+  page_size: number;
+  items: UserBookmarkItem[];
+}
+
 

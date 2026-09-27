@@ -18,6 +18,7 @@ import { ResourceFilterBar } from '../components/resources/ResourceFilterBar';
 import { ResourceCard } from '../components/resources/ResourceCard';
 import { ResourceSkeletonList } from '../components/resources/ResourceSkeletonList';
 import { ResourceEmptyState } from '../components/resources/ResourceEmptyState';
+import { MostUsefulModule } from '../components/resources/MostUsefulModule';
 
 export const BrowseView: React.FC = () => {
   const { user } = useAuth();
@@ -388,6 +389,9 @@ export const BrowseView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Prominent "Most Useful This Week" Algorithmic Ranking Module */}
+      <MostUsefulModule />
 
       {/* Filter and Search Toolbar */}
       <ResourceFilterBar

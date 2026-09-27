@@ -58,3 +58,19 @@ class UserResponse(BaseModel):
 class AuthSuccessResponse(BaseModel):
     user: UserResponse
     tokens: TokenResponse
+
+
+class UserActivityItem(BaseModel):
+    id: str
+    action: str  # 'uploaded', 'rated', 'bookmarked'
+    title: str
+    resource_id: int
+    resource_title: str
+    timestamp: datetime
+    badge: str | None = None
+
+
+class UserActivityListResponse(BaseModel):
+    user_id: int
+    items: list[UserActivityItem]
+

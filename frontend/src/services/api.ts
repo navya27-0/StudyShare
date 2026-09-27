@@ -11,6 +11,8 @@ import type {
   TopicItem,
   UnitItem,
   User,
+  UserActivityListResponse,
+  UserBookmarksListResponse,
   VoteResponse,
 } from '../types';
 
@@ -265,6 +267,7 @@ export const resourcesApi = {
     if (params.semester) search.set('semester', String(params.semester));
     if (params.type) search.set('type', params.type);
     if (params.min_rating) search.set('min_rating', String(params.min_rating));
+    if (params.uploader_id) search.set('uploader_id', String(params.uploader_id));
     if (params.q && params.q.trim()) search.set('q', params.q.trim());
     if (params.sort_by) search.set('sort_by', params.sort_by);
     if (params.page) search.set('page', String(params.page));
@@ -355,5 +358,21 @@ export const resourcesApi = {
     }
   },
 };
+
+// Users API methods
+export const usersApi = {
+  getProfile: async (userId: number): Promise<User> => {
+    return apiRequest<User>(`/api/users/${userId}`);
+  },
+
+  getActivity: async (userId: number, limit = 20): Promise<UserActivityListResponse> => {
+    return apiRequest<UserActivityListResponse>(`/api/users/${userId}/activity?limit=${limit}`);
+  },
+
+  getBookmarks: async (userId: number, page = 1, pageSize = 20): Promise<UserBookmarksListResponse> => {
+    return apiRequest<UserBookmarksListResponse>(`/api/users/${userId}/bookmarks?page=${page}&page_size=${pageSize}`);
+  },
+};
+
 
 
