@@ -4,6 +4,8 @@ import {
   ChevronRight,
   X,
   ChevronLeft,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import type {
   ResourceFilterParams,
@@ -501,25 +503,50 @@ export const BrowseView: React.FC = () => {
         onViewModeChange={setViewMode}
       />
 
-      {/* Error Banner */}
-      {error && (
-        <div
-          style={{
-            backgroundColor: 'var(--status-danger-bg)',
-            border: '1px solid var(--status-danger-border)',
-            color: 'var(--status-danger)',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '13.5px',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
       {/* Resource Feed Area */}
       {isLoading ? (
         <ResourceSkeletonList count={6} viewMode={viewMode} />
+      ) : error ? (
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--status-danger-border)',
+            borderLeft: '4px solid var(--status-danger)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '40px 24px',
+            textAlign: 'center',
+            margin: '12px 0',
+          }}
+        >
+          <AlertTriangle size={36} color="var(--status-danger)" style={{ margin: '0 auto 12px' }} />
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, margin: '0 0 8px', color: 'var(--text-primary)' }}>
+            Failed to Retrieve Academic Records
+          </h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 20px', lineHeight: 1.5 }}>
+            {error}
+          </p>
+          <button
+            type="button"
+            onClick={fetchResources}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              padding: '8px 20px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--accent-core)',
+              color: '#FFFFFF',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={14} />
+            <span>RETRY CONNECTION</span>
+          </button>
+        </div>
       ) : resources.length === 0 ? (
         <ResourceEmptyState
           searchQuery={currentQ}

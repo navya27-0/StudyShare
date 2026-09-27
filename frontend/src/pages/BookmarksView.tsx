@@ -8,12 +8,14 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { usersApi } from '../services/api';
 import { ResourceCard } from '../components/resources/ResourceCard';
 import type { ResourceListItem, ResourceType } from '../types';
 
 export const BookmarksView: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [savedItems, setSavedItems] = useState<ResourceListItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<ResourceListItem[]>([]);
@@ -86,6 +88,7 @@ export const BookmarksView: React.FC = () => {
     if (!isBookmarked) {
       setSavedItems((prev) => prev.filter((item) => item.id !== resourceId));
       setTotalCount((prev) => Math.max(0, prev - 1));
+      showToast('Resource removed from your saved bookmarks.', 'info');
     }
   };
 
@@ -158,16 +161,38 @@ export const BookmarksView: React.FC = () => {
       {error && (
         <div
           style={{
-            padding: '12px 16px',
+            padding: '14px 18px',
             backgroundColor: 'var(--status-danger-bg)',
             border: '1px solid var(--status-danger-border)',
             borderRadius: 'var(--radius-sm)',
             color: 'var(--status-danger)',
             fontSize: '13px',
             marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}
         >
-          {error}
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={loadBookmarks}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: 'var(--status-danger)',
+              color: '#FFFFFF',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12px',
+              fontWeight: 600,
+              fontFamily: 'var(--font-mono)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Retry Loading
+          </button>
         </div>
       )}
 
@@ -293,7 +318,7 @@ export const BookmarksView: React.FC = () => {
             Clear Filters
           </button>
         </div>
-      ) : (
+      ) : !error ? (
         /* Empty Library */
         <div
           style={{
@@ -344,7 +369,7 @@ export const BookmarksView: React.FC = () => {
             <BookOpen size={16} /> Browse Course Catalog <ArrowRight size={15} />
           </Link>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

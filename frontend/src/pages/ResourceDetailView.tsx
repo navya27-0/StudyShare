@@ -27,12 +27,14 @@ import {
 } from 'lucide-react';
 import { resourcesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import type { ResourceDetail, ResourceType } from '../types';
 
 export const ResourceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [resource, setResource] = useState<ResourceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,8 +206,8 @@ export const ResourceDetailView: React.FC = () => {
       setUpvotes(res.upvotes_count);
       setDownvotes(res.downvotes_count);
       setUserVote(res.vote_type);
-    } catch {
-      // Ignore or show toast
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Unable to record vote. Please check your network connection.', 'error');
     } finally {
       setIsVoting(false);
     }
@@ -222,8 +224,11 @@ export const ResourceDetailView: React.FC = () => {
       setRatingAvg(res.rating_avg);
       setRatingCount(res.rating_count);
       setRatingFeedback(`You rated this ${stars} star${stars > 1 ? 's' : ''}`);
-    } catch {
-      setRatingFeedback('Failed to submit rating. Please try again.');
+      showToast(`Submitted ${stars}-star rating. Thank you!`, 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit rating. Please try again.';
+      setRatingFeedback(msg);
+      showToast(msg, 'error');
     } finally {
       setIsRating(false);
     }
@@ -236,8 +241,9 @@ export const ResourceDetailView: React.FC = () => {
     try {
       const res = await resourcesApi.toggleBookmark(resource.id, isBookmarked);
       setIsBookmarked(res.bookmarked);
-    } catch {
-      // Revert if error
+      showToast(res.bookmarked ? 'Resource saved to your bookmarks library.' : 'Resource removed from your bookmarks.', 'info');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to update bookmark status.', 'error');
     } finally {
       setIsBookmarking(false);
     }
@@ -265,9 +271,13 @@ export const ResourceDetailView: React.FC = () => {
         link.click();
         document.body.removeChild(link);
       }
-    } catch {
+    } catch (err: unknown) {
       // Fallback: trigger download directly
-      window.open(resolveFileUrl(resource.file_url), '_blank');
+      try {
+        window.open(resolveFileUrl(resource.file_url), '_blank');
+      } catch {
+        showToast(err instanceof Error ? err.message : 'Failed to download resource file.', 'error');
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -294,13 +304,16 @@ export const ResourceDetailView: React.FC = () => {
     try {
       await resourcesApi.report(resource.id, fullReason);
       setReportSuccessMessage('Thank you. Your report has been submitted for moderation review.');
+      showToast('Report submitted for administrative moderation review.', 'success');
       setTimeout(() => {
         setShowReportModal(false);
         setReportSuccessMessage(null);
         setReportDetails('');
       }, 2200);
     } catch (err: unknown) {
-      setReportError(err instanceof Error ? err.message : 'Failed to submit report.');
+      const msg = err instanceof Error ? err.message : 'Failed to submit report.';
+      setReportError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -314,18 +327,30 @@ export const ResourceDetailView: React.FC = () => {
     setVersionUploadSuccess(null);
 
     if (!newVersionChangelog.trim() || newVersionChangelog.trim().length < 3) {
-      setVersionUploadError('Please provide a changelog note explaining what changed (min 3 characters).');
+      const msg = 'Please provide a changelog note explaining what changed (min 3 characters).';
+      setVersionUploadError(msg);
+      showToast(msg, 'error');
       return;
     }
 
     if (resource.type === 'link') {
       if (!newVersionUrl.trim() || !newVersionUrl.startsWith('http')) {
-        setVersionUploadError('Please provide a valid URL starting with http:// or https://');
+        const msg = 'Please provide a valid URL starting with http:// or https://';
+        setVersionUploadError(msg);
+        showToast(msg, 'error');
         return;
       }
     } else {
       if (!newVersionFile) {
-        setVersionUploadError('Please select a replacement file to upload for this version.');
+        const msg = 'Please select a replacement file to upload for this version.';
+        setVersionUploadError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if (newVersionFile.size > 50 * 1024 * 1024) {
+        const msg = 'File exceeds the maximum allowed size limit of 50 MB.';
+        setVersionUploadError(msg);
+        showToast(msg, 'error');
         return;
       }
     }
@@ -348,14 +373,18 @@ export const ResourceDetailView: React.FC = () => {
 
       const updatedResource = await resourcesApi.update(resource.id, formData);
       setResource(updatedResource);
-      setVersionUploadSuccess(`Version ${updatedResource.current_version?.version_number || 'new'} uploaded successfully!`);
+      const successMsg = `Version ${updatedResource.current_version?.version_number || 'new'} uploaded successfully!`;
+      setVersionUploadSuccess(successMsg);
+      showToast(successMsg, 'success');
       setShowNewVersionForm(false);
       setNewVersionFile(null);
       setNewVersionUrl('');
       setNewVersionChangelog('');
       setNewVersionPageCount('');
     } catch (err: unknown) {
-      setVersionUploadError(err instanceof Error ? err.message : 'Failed to upload new version.');
+      const msg = err instanceof Error ? err.message : 'Failed to upload new version.';
+      setVersionUploadError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsUploadingVersion(false);
     }
@@ -381,19 +410,35 @@ export const ResourceDetailView: React.FC = () => {
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
           {loadError || 'The requested study resource could not be found or has been removed.'}
         </p>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            padding: '8px 18px',
-            backgroundColor: 'var(--accent-core)',
-            color: '#fff',
-            fontSize: '13px',
-            fontWeight: 600,
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          Return to Catalog
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            onClick={loadResourceData}
+            style={{
+              padding: '8px 18px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            Retry Loading
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              padding: '8px 18px',
+              backgroundColor: 'var(--accent-core)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            Return to Catalog
+          </button>
+        </div>
       </div>
     );
   }

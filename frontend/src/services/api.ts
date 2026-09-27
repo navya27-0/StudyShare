@@ -71,10 +71,20 @@ export async function apiRequest<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (netErr: unknown) {
+    const rawMsg = netErr instanceof Error ? netErr.message : 'Network request failed';
+    throw new ApiError(
+      `Network connection failure: ${rawMsg}. Please check your internet connection or server availability.`,
+      0,
+      netErr
+    );
+  }
 
   // Handle token expiration & automatic refresh
   if (response.status === 401 && retry) {
@@ -101,15 +111,31 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    let errorDetail = `Request failed with status ${response.status}`;
+    let errorDetail = `Request failed with HTTP status ${response.status}`;
     let errorData: unknown = null;
     try {
       errorData = await response.json();
       if (typeof errorData === 'object' && errorData !== null && 'detail' in errorData) {
-        errorDetail = String((errorData as { detail: unknown }).detail);
+        const detail = (errorData as { detail: unknown }).detail;
+        if (typeof detail === 'string') {
+          errorDetail = detail;
+        } else if (Array.isArray(detail)) {
+          // FastAPI validation errors array format
+          errorDetail = detail.map((e: { msg?: string; loc?: string[] }) => {
+            const field = e.loc ? e.loc[e.loc.length - 1] : '';
+            return field ? `${field}: ${e.msg || 'invalid'}` : e.msg || 'validation error';
+          }).join('; ');
+        } else {
+          errorDetail = JSON.stringify(detail);
+        }
       }
     } catch {
       // response is not json
+      if (response.status === 413) {
+        errorDetail = 'File payload is too large. Server upload limit is 50 MB.';
+      } else if (response.status === 502 || response.status === 503 || response.status === 504) {
+        errorDetail = 'Backend gateway or server is currently unreachable. Please retry shortly.';
+      }
     }
     throw new ApiError(errorDetail, response.status, errorData);
   }

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import type { SubjectItem } from '../../types';
 import { taxonomyApi } from '../../services/api';
 
@@ -895,7 +896,9 @@ export const AppShell: React.FC = () => {
           className="app-main-content mobile-nav-pad"
           style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

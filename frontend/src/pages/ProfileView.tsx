@@ -31,13 +31,12 @@ export const ProfileView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadProfileData = () => {
     if (!targetUserId) {
       setIsLoading(false);
       return;
     }
 
-    let mounted = true;
     setIsLoading(true);
     setError(null);
 
@@ -47,24 +46,20 @@ export const ProfileView: React.FC = () => {
       usersApi.getActivity(targetUserId, 25),
     ])
       .then(([userData, resourcesData, activityData]) => {
-        if (mounted) {
-          setProfileUser(userData);
-          setUploadedResources(resourcesData.items);
-          setActivities(activityData.items);
-        }
+        setProfileUser(userData);
+        setUploadedResources(resourcesData.items);
+        setActivities(activityData.items);
       })
       .catch((err: unknown) => {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load contributor profile');
-        }
+        setError(err instanceof Error ? err.message : 'Failed to load contributor profile');
       })
       .finally(() => {
-        if (mounted) setIsLoading(false);
+        setIsLoading(false);
       });
+  };
 
-    return () => {
-      mounted = false;
-    };
+  useEffect(() => {
+    loadProfileData();
   }, [targetUserId]);
 
   const formatDate = (dateStr: string): string => {
@@ -112,22 +107,40 @@ export const ProfileView: React.FC = () => {
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>
           Profile Not Found
         </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
           {error || 'The requested contributor profile does not exist.'}
         </p>
-        <Link
-          to="/"
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'var(--accent-core)',
-            color: '#fff',
-            fontSize: '13px',
-            fontWeight: 600,
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          Return to Catalog
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={loadProfileData}
+            style={{
+              padding: '8px 18px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            Retry Loading
+          </button>
+          <Link
+            to="/"
+            style={{
+              padding: '8px 18px',
+              backgroundColor: 'var(--accent-core)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            Return to Catalog
+          </Link>
+        </div>
       </div>
     );
   }
@@ -473,8 +486,55 @@ export const ProfileView: React.FC = () => {
           }}
         >
           {activities.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-              No recent activity recorded.
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                padding: '48px 24px',
+                textAlign: 'center',
+              }}
+            >
+              <Activity size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 12px' }} />
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
+                No Study Activity Recorded
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 18px', lineHeight: 1.5 }}>
+                {isSelf
+                  ? 'Actions such as contributing lecture notes, rating resources, or bookmarking study materials will populate your academic activity timeline.'
+                  : `${profileUser.display_name} has no recent public activity logged in the community archive.`}
+              </p>
+              {isSelf && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                  <Link
+                    to="/"
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: 'var(--bg-subdued)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '12.5px',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    Browse Catalog
+                  </Link>
+                  <Link
+                    to="/upload"
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: 'var(--accent-core)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '12.5px',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    Upload Resource
+                  </Link>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>

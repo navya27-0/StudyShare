@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   UploadCloud,
@@ -13,8 +13,10 @@ import {
   AlertCircle,
   ArrowLeft,
   FileCode,
+  RotateCcw,
 } from 'lucide-react';
 import { taxonomyApi, resourcesApi } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import type { SubjectItem, UnitItem, TopicItem, ResourceType } from '../types';
 
 interface TypeOption {
@@ -65,11 +67,13 @@ const RESOURCE_TYPES: TypeOption[] = [
 
 export const UploadView: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Taxonomy State
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [loadingTaxonomy, setLoadingTaxonomy] = useState(true);
+  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | ''>('');
   const [selectedUnitId, setSelectedUnitId] = useState<number | ''>('');
   const [selectedTopicId, setSelectedTopicId] = useState<number | ''>('');
@@ -98,38 +102,37 @@ export const UploadView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Fetch taxonomy on mount
-  useEffect(() => {
-    let mounted = true;
-    taxonomyApi.getSubjectsTree()
-      .then((data) => {
-        if (mounted) {
-          setSubjects(data);
-          if (data.length > 0) {
-            setSelectedSubjectId(data[0].id);
-            setSemester(data[0].semester);
-            const firstUnits = data[0].units || [];
-            if (firstUnits.length > 0) {
-              setSelectedUnitId(firstUnits[0].id);
-              const firstTopics = firstUnits[0].topics || [];
-              if (firstTopics.length > 0) {
-                setSelectedTopicId(firstTopics[0].id);
-              }
-            }
+  // Fetch taxonomy on mount with error feedback
+  const loadTaxonomy = useCallback(async () => {
+    setLoadingTaxonomy(true);
+    setTaxonomyError(null);
+    try {
+      const data = await taxonomyApi.getSubjectsTree();
+      setSubjects(data);
+      if (data.length > 0) {
+        setSelectedSubjectId(data[0].id);
+        setSemester(data[0].semester);
+        const firstUnits = data[0].units || [];
+        if (firstUnits.length > 0) {
+          setSelectedUnitId(firstUnits[0].id);
+          const firstTopics = firstUnits[0].topics || [];
+          if (firstTopics.length > 0) {
+            setSelectedTopicId(firstTopics[0].id);
           }
         }
-      })
-      .catch(() => {
-        // Fallback or ignore
-      })
-      .finally(() => {
-        if (mounted) setLoadingTaxonomy(false);
-      });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to query curriculum taxonomy';
+      setTaxonomyError(msg);
+      showToast(`Curriculum loading error: ${msg}`, 'error');
+    } finally {
+      setLoadingTaxonomy(false);
+    }
+  }, [showToast]);
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    loadTaxonomy();
+  }, [loadTaxonomy]);
 
   const activeSubject = subjects.find((s) => s.id === selectedSubjectId);
   const availableUnits = activeSubject?.units || [];
@@ -287,6 +290,12 @@ export const UploadView: React.FC = () => {
         setFormError('Please select or drag-and-drop a document file to upload.');
         return;
       }
+      if (selectedFile.size > 50 * 1024 * 1024) {
+        setFormError(
+          `File exceeds the 50 MB upload limit (${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB). Please compress or select a smaller document.`
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -313,9 +322,15 @@ export const UploadView: React.FC = () => {
       }
 
       const res = await resourcesApi.create(formData);
+      showToast('Study resource successfully uploaded to academic ledger!', 'success');
       navigate(`/resources/${res.id}`);
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Upload failed. Please check network connection and try again.');
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : 'Upload failed due to a network or server error. Please try again.';
+      setFormError(errorMsg);
+      showToast(`Upload failed: ${errorMsg}`, 'error');
       setIsSubmitting(false);
     }
   };
@@ -381,24 +396,87 @@ export const UploadView: React.FC = () => {
         </p>
       </div>
 
-      {/* Error Banner */}
-      {formError && (
+      {/* Curriculum Taxonomy Loading Error Banner */}
+      {taxonomyError && (
         <div
+          role="alert"
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '12px',
-            padding: '12px 16px',
+            padding: '14px 18px',
             backgroundColor: 'var(--status-danger-bg)',
-            border: '1px solid var(--status-danger-border)',
-            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--status-danger)',
+            borderRadius: 'var(--radius-sm)',
             color: 'var(--status-danger)',
-            fontSize: '14px',
+            fontSize: '13.5px',
             marginBottom: '24px',
           }}
         >
-          <AlertCircle size={18} style={{ flexShrink: 0 }} />
-          <span>{formError}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} aria-hidden="true" />
+            <span>Curriculum network error: {taxonomyError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadTaxonomy}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              backgroundColor: 'transparent',
+              border: '1px solid var(--status-danger)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--status-danger)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <RotateCcw size={13} aria-hidden="true" />
+            <span>Retry Loading</span>
+          </button>
+        </div>
+      )}
+
+      {/* Form Submission Error Banner */}
+      {formError && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            padding: '14px 18px',
+            backgroundColor: 'var(--status-danger-bg)',
+            border: '1px solid var(--status-danger)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--status-danger)',
+            fontSize: '13.5px',
+            marginBottom: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} aria-hidden="true" />
+            <span>{formError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFormError(null)}
+            aria-label="Dismiss error"
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: 'var(--status-danger)',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
       )}
 

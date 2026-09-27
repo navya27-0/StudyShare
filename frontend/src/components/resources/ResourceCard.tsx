@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { ResourceListItem, ResourceType } from '../../types';
 import { resourcesApi } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 interface ResourceCardProps {
   resource: ResourceListItem;
@@ -31,6 +32,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   onBookmarkChange,
   viewMode = 'dense',
 }) => {
+  const { showToast } = useToast();
   const [upvotes, setUpvotes] = useState(resource.upvotes_count);
   const [downvotes, setDownvotes] = useState(resource.downvotes_count);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(resource.user_vote ?? null);
@@ -129,8 +131,9 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       setDownvotes(res.downvotes_count);
       setUserVote(res.vote_type);
       onVoteChange?.(resource.id, res.upvotes_count, res.downvotes_count, res.vote_type);
-    } catch {
-      // Revert or show toast if needed
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to register vote. Please check your network connection.';
+      showToast(`Vote error: ${msg}`, 'error');
     } finally {
       setIsVoting(false);
     }
@@ -144,8 +147,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       const res = await resourcesApi.toggleBookmark(resource.id, isBookmarked);
       setIsBookmarked(res.bookmarked);
       onBookmarkChange?.(resource.id, res.bookmarked);
-    } catch {
-      // Revert if error
+      showToast(
+        res.bookmarked ? 'Resource bookmarked to your library.' : 'Resource removed from saved library.',
+        'info',
+        2500
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update bookmark. Please check your network connection.';
+      showToast(`Bookmark error: ${msg}`, 'error');
     } finally {
       setIsBookmarking(false);
     }

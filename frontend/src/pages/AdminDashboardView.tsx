@@ -678,9 +678,30 @@ export const AdminDashboardView: React.FC = () => {
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, margin: '0 0 6px' }}>
                 Queue is Clear
               </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
                 No {reportStatusFilter !== 'all' ? reportStatusFilter : ''} student reports awaiting administrative review.
               </p>
+              {reportStatusFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportStatusFilter('all');
+                    setReportsPage(1);
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontFamily: 'var(--font-mono)',
+                    backgroundColor: 'var(--bg-subdued)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View All Reports
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1238,8 +1259,41 @@ export const AdminDashboardView: React.FC = () => {
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No matching user accounts found.
+                    <td colSpan={8} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <Users size={36} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+                        <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                          No Matching User Accounts Found
+                        </h4>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 0 16px', lineHeight: 1.5 }}>
+                          {userSearchQuery || userRoleFilter || userActiveFilter
+                            ? `No student or faculty accounts match the current query "${userSearchQuery || userRoleFilter || userActiveFilter}". Try adjusting or clearing search filters.`
+                            : 'No user accounts are currently registered in the database.'}
+                        </p>
+                        {(userSearchQuery || userRoleFilter || userActiveFilter) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserSearchQuery('');
+                              setUserRoleFilter('');
+                              setUserActiveFilter('');
+                              setUsersPage(1);
+                            }}
+                            style={{
+                              padding: '6px 14px',
+                              backgroundColor: 'var(--bg-subdued)',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '12px',
+                              fontFamily: 'var(--font-mono)',
+                              color: 'var(--text-primary)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Clear Search & Filters
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -1533,8 +1587,36 @@ export const AdminDashboardView: React.FC = () => {
                   </tr>
                 ) : filteredAuditActions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No moderation actions recorded.
+                    <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <ScrollText size={36} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+                        <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                          No Moderation Actions Found
+                        </h4>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 0 16px', lineHeight: 1.5 }}>
+                          {auditActionFilter
+                            ? `No moderation audit events match the filter "${auditActionFilter}".`
+                            : 'No administrative disciplinary or content moderation actions have been recorded yet.'}
+                        </p>
+                        {auditActionFilter && (
+                          <button
+                            type="button"
+                            onClick={() => setAuditActionFilter('')}
+                            style={{
+                              padding: '6px 14px',
+                              backgroundColor: 'var(--bg-subdued)',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '12px',
+                              fontFamily: 'var(--font-mono)',
+                              color: 'var(--text-primary)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Reset Action Filter
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
