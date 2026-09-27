@@ -1281,19 +1281,33 @@ export const ResourceDetailView: React.FC = () => {
             >
               Uploader
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Link
+              to={`/profile/${resource.uploader.id}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                textDecoration: 'none',
+              }}
+              title="View contributor profile"
+              className="uploader-profile-card"
+            >
               <div
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--accent-tint)',
+                  border: '1px solid var(--accent-border)',
                   color: 'var(--accent-core)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
                   fontSize: '14px',
+                  fontFamily: 'var(--font-mono)',
+                  flexShrink: 0,
+                  transition: 'border-color 100ms ease',
                 }}
               >
                 {resource.uploader.display_name.slice(0, 2).toUpperCase()}
@@ -1306,14 +1320,14 @@ export const ResourceDetailView: React.FC = () => {
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: '11px',
-                    color: 'var(--text-muted)',
+                    color: 'var(--accent-core)',
                     textTransform: 'capitalize',
                   }}
                 >
-                  {resource.uploader.role}
+                  {resource.uploader.role} • View Profile →
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>

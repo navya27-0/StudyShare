@@ -112,6 +112,12 @@ button:active {
   transform: scale(0.98);
 }
 
+button:disabled, input:disabled, select:disabled, textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 input, select, textarea {
   font-family: var(--font-body);
   font-size: 14px;
@@ -124,9 +130,33 @@ input, select, textarea {
   transition: border-color 100ms ease, box-shadow 100ms ease;
 }
 
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent-core);
   box-shadow: 0 0 0 1px var(--accent-core);
+}
+
+::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+::selection {
+  background-color: var(--accent-tint);
+  color: var(--accent-core);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Custom Scrollbars */
@@ -144,3 +174,22 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent-core);
+  outline-offset: 2px;
+}
+
+.uploader-link {
+  transition: color 100ms ease;
+}
+
+.uploader-link:hover {
+  color: var(--accent-core) !important;
+  text-decoration: underline;
+}
+
+.uploader-profile-card:hover div:first-child {
+  border-color: var(--accent-core);
+}
+

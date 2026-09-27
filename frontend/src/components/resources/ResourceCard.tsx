@@ -234,7 +234,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             textOverflow: 'ellipsis',
           }}
         >
-          {resource.uploader.display_name}
+          <Link
+            to={`/profile/${resource.uploader.id}`}
+            style={{ color: 'inherit' }}
+            title={`View ${resource.uploader.display_name}'s profile`}
+            className="uploader-link"
+          >
+            {resource.uploader.display_name}
+          </Link>
         </div>
 
         {/* Rating */}
@@ -472,9 +479,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           paddingTop: '2px',
         }}
       >
-        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+        <Link
+          to={`/profile/${resource.uploader.id}`}
+          style={{ color: 'var(--text-secondary)', fontWeight: 500 }}
+          title={`View ${resource.uploader.display_name}'s profile`}
+          className="uploader-link"
+        >
           By {resource.uploader.display_name}
-        </span>
+        </Link>
         <span>•</span>
         <span>{formatDate(resource.created_at)}</span>
 

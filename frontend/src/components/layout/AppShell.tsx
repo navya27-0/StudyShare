@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Search,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -251,6 +252,28 @@ export const AppShell: React.FC = () => {
             >
               <Bookmark size={16} strokeWidth={1.75} />
               <span>Saved Resources</span>
+            </Link>
+
+            <Link
+              to="/profile"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '7px 10px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '13.5px',
+                fontWeight: 500,
+                color:
+                  location.pathname === '/profile'
+                    ? 'var(--accent-core)'
+                    : 'var(--text-primary)',
+                backgroundColor:
+                  location.pathname === '/profile' ? 'var(--accent-tint)' : 'transparent',
+              }}
+            >
+              <UserIcon size={16} strokeWidth={1.75} />
+              <span>Contributor Profile</span>
             </Link>
 
             {user?.role === 'admin' && (
