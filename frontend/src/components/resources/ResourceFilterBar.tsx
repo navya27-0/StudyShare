@@ -90,13 +90,16 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
             size={16}
             color="var(--text-muted)"
             strokeWidth={1.75}
+            aria-hidden="true"
             style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }}
           />
           <input
+            id="catalog-search-input"
             type="text"
             placeholder="Search syllabus topics, exam keywords, problem sets..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            aria-label="Search syllabus topics, exam keywords, problem sets"
             style={{
               width: '100%',
               paddingLeft: '36px',
@@ -112,21 +115,22 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
                 setSearchInput('');
                 onFilterChange({ q: undefined, page: 1 });
               }}
-              aria-label="Clear search"
+              aria-label="Clear search query"
               style={{
                 position: 'absolute',
                 right: '10px',
-                padding: '4px',
+                padding: '6px',
                 color: 'var(--text-muted)',
               }}
+              className="touch-target"
             >
-              <X size={14} strokeWidth={1.75} />
+              <X size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
           )}
         </div>
 
         {/* Sort Dimension Control */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <div
             style={{
               display: 'flex',
@@ -139,18 +143,22 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
               height: '38px',
             }}
           >
-            <ArrowUpDown size={14} color="var(--text-muted)" strokeWidth={1.75} />
-            <span
+            <ArrowUpDown size={14} color="var(--text-muted)" strokeWidth={1.75} aria-hidden="true" />
+            <label
+              htmlFor="catalog-sort-select"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
                 color: 'var(--text-secondary)',
                 fontWeight: 600,
+                cursor: 'pointer',
               }}
             >
               SORT:
-            </span>
+            </label>
             <select
+              id="catalog-sort-select"
+              aria-label="Sort resources catalog"
               value={filters.sort_by || 'ranked'}
               onChange={(e) => onFilterChange({ sort_by: e.target.value as SortByOption, page: 1 })}
               style={{
@@ -174,6 +182,8 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
 
           {/* View Density Mode Toggle (Dense List vs Compact Table) */}
           <div
+            role="group"
+            aria-label="Catalog View Mode"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -187,6 +197,8 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
             <button
               type="button"
               onClick={() => onViewModeChange('dense')}
+              aria-pressed={viewMode === 'dense'}
+              aria-label="Dense Ledger List View"
               style={{
                 padding: '6px 8px',
                 borderRadius: 'var(--radius-sm)',
@@ -202,13 +214,15 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
               }}
               title="Dense Ledger List View"
             >
-              <LayoutList size={14} strokeWidth={1.75} />
+              <LayoutList size={14} strokeWidth={1.75} aria-hidden="true" />
               <span>DENSE</span>
             </button>
 
             <button
               type="button"
               onClick={() => onViewModeChange('compact')}
+              aria-pressed={viewMode === 'compact'}
+              aria-label="Compact Ledger Table Rows"
               style={{
                 padding: '6px 8px',
                 borderRadius: 'var(--radius-sm)',
@@ -224,7 +238,7 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
               }}
               title="Compact Ledger Table Rows"
             >
-              <Rows3 size={14} strokeWidth={1.75} />
+              <Rows3 size={14} strokeWidth={1.75} aria-hidden="true" />
               <span>ROWS</span>
             </button>
           </div>
@@ -247,16 +261,20 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Resource Type Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
+            <label
+              htmlFor="filter-type-select"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
                 color: 'var(--text-muted)',
+                fontWeight: 600,
               }}
             >
               TYPE:
-            </span>
+            </label>
             <select
+              id="filter-type-select"
+              aria-label="Filter by resource type"
               value={filters.type || ''}
               onChange={(e) =>
                 onFilterChange({
@@ -265,7 +283,7 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
                 })
               }
               style={{
-                height: '32px',
+                height: '34px',
                 fontSize: '12px',
                 padding: '2px 8px',
                 fontFamily: 'var(--font-mono)',
@@ -287,16 +305,20 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
 
           {/* Semester Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
+            <label
+              htmlFor="filter-semester-select"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
                 color: 'var(--text-muted)',
+                fontWeight: 600,
               }}
             >
               SEMESTER:
-            </span>
+            </label>
             <select
+              id="filter-semester-select"
+              aria-label="Filter by semester"
               value={filters.semester || ''}
               onChange={(e) =>
                 onFilterChange({
@@ -305,7 +327,7 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
                 })
               }
               style={{
-                height: '32px',
+                height: '34px',
                 fontSize: '12px',
                 padding: '2px 8px',
                 fontFamily: 'var(--font-mono)',
@@ -326,16 +348,20 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
 
           {/* Rating Filter Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
+            <label
+              htmlFor="filter-rating-select"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
                 color: 'var(--text-muted)',
+                fontWeight: 600,
               }}
             >
               RATING:
-            </span>
+            </label>
             <select
+              id="filter-rating-select"
+              aria-label="Filter by minimum peer rating"
               value={filters.min_rating || ''}
               onChange={(e) =>
                 onFilterChange({
@@ -344,7 +370,7 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
                 })
               }
               style={{
-                height: '32px',
+                height: '34px',
                 fontSize: '12px',
                 padding: '2px 8px',
                 fontFamily: 'var(--font-mono)',
@@ -367,21 +393,24 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
             <button
               type="button"
               onClick={onResetFilters}
+              aria-label="Reset all search filters"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: '4px 10px',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
                 backgroundColor: 'var(--bg-subdued)',
                 border: '1px solid var(--border-subtle)',
                 color: 'var(--text-secondary)',
                 fontSize: '11.5px',
                 fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
               }}
+              className="touch-target"
               title="Reset all search filters"
             >
-              <RotateCcw size={12} strokeWidth={1.75} />
+              <RotateCcw size={12} strokeWidth={1.75} aria-hidden="true" />
               <span>RESET</span>
             </button>
           )}

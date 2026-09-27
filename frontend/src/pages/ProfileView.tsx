@@ -163,7 +163,7 @@ export const ProfileView: React.FC = () => {
             {profileUser.avatar_url ? (
               <img
                 src={profileUser.avatar_url}
-                alt={profileUser.display_name}
+                alt={`${profileUser.display_name}'s avatar profile picture`}
                 style={{
                   width: '68px',
                   height: '68px',

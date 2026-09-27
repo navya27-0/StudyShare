@@ -256,15 +256,16 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             type="button"
             onClick={() => handleVote('up')}
             disabled={isVoting}
-            aria-label="Upvote"
+            aria-label={userVote === 'up' ? 'Remove upvote' : `Upvote ${resource.title}`}
             style={{
-              padding: '2px 4px',
+              padding: '4px',
               borderRadius: '2px',
               color: userVote === 'up' ? 'var(--accent-core)' : 'var(--text-muted)',
               backgroundColor: userVote === 'up' ? 'var(--accent-tint)' : 'transparent',
             }}
+            className="touch-target"
           >
-            <ChevronUp size={14} strokeWidth={2} />
+            <ChevronUp size={14} strokeWidth={2} aria-hidden="true" />
           </button>
           <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>
             {upvotes - downvotes}
@@ -273,15 +274,16 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             type="button"
             onClick={() => handleVote('down')}
             disabled={isVoting}
-            aria-label="Downvote"
+            aria-label={userVote === 'down' ? 'Remove downvote' : `Downvote ${resource.title}`}
             style={{
-              padding: '2px 4px',
+              padding: '4px',
               borderRadius: '2px',
               color: userVote === 'down' ? 'var(--status-danger)' : 'var(--text-muted)',
               backgroundColor: userVote === 'down' ? 'var(--status-danger-bg)' : 'transparent',
             }}
+            className="touch-target"
           >
-            <ChevronDown size={14} strokeWidth={2} />
+            <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
 
@@ -290,23 +292,25 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           <button
             type="button"
             onClick={handleBookmarkToggle}
-            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+            aria-label={isBookmarked ? `Remove ${resource.title} from bookmarks` : `Bookmark ${resource.title}`}
             style={{
-              padding: '4px',
+              padding: '6px',
               color: isBookmarked ? 'var(--accent-core)' : 'var(--text-muted)',
             }}
+            className="touch-target"
           >
-            <Bookmark size={14} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} />
+            <Bookmark size={14} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} aria-hidden="true" />
           </button>
           <a
             href={downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
             download
-            aria-label="Download document"
-            style={{ padding: '4px', color: 'var(--text-secondary)' }}
+            aria-label={`Download ${resource.title}`}
+            style={{ padding: '6px', color: 'var(--text-secondary)' }}
+            className="touch-target"
           >
-            <Download size={14} strokeWidth={1.75} />
+            <Download size={14} strokeWidth={1.75} aria-hidden="true" />
           </a>
         </div>
       </div>
@@ -555,17 +559,18 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               type="button"
               onClick={() => handleVote('up')}
               disabled={isVoting}
-              aria-label="Upvote note"
+              aria-label={userVote === 'up' ? 'Remove upvote' : `Upvote ${resource.title}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '4px 6px',
+                padding: '6px 8px',
                 borderRadius: '2px',
                 color: userVote === 'up' ? 'var(--accent-core)' : 'var(--text-secondary)',
               }}
+              className="touch-target"
               title="Upvote verified accuracy"
             >
-              <ChevronUp size={15} strokeWidth={2.2} />
+              <ChevronUp size={15} strokeWidth={2.2} aria-hidden="true" />
             </button>
 
             <span
@@ -586,17 +591,18 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               type="button"
               onClick={() => handleVote('down')}
               disabled={isVoting}
-              aria-label="Downvote note"
+              aria-label={userVote === 'down' ? 'Remove downvote' : `Downvote ${resource.title}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '4px 6px',
+                padding: '6px 8px',
                 borderRadius: '2px',
                 color: userVote === 'down' ? 'var(--status-danger)' : 'var(--text-muted)',
               }}
+              className="touch-target"
               title="Downvote inaccurate note"
             >
-              <ChevronDown size={15} strokeWidth={2.2} />
+              <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
             </button>
           </div>
 
@@ -608,18 +614,20 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               gap: '4px',
               fontFamily: 'var(--font-mono)',
               fontSize: '12px',
-              padding: '4px 8px',
+              padding: '6px 10px',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--bg-subdued)',
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-secondary)',
             }}
+            aria-label={`Average rating: ${resource.rating_avg.toFixed(1)} out of 5 stars from ${resource.rating_count} ratings`}
           >
             <Star
               size={13}
-              fill={resource.rating_avg > 0 ? '#B87318' : 'none'}
-              color="#B87318"
+              fill={resource.rating_avg > 0 ? '#965a12' : 'none'}
+              color="#965a12"
               strokeWidth={1.75}
+              aria-hidden="true"
             />
             <strong style={{ color: 'var(--text-primary)' }}>
               {resource.rating_avg > 0 ? resource.rating_avg.toFixed(1) : '—'}
@@ -636,6 +644,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Link
             to={`/resources/${resource.id}`}
+            aria-label={`Inspect resource details: ${resource.title}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -643,15 +652,16 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               fontFamily: 'var(--font-mono)',
               fontSize: '11.5px',
               fontWeight: 600,
-              padding: '5px 10px',
+              padding: '6px 12px',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--bg-subdued)',
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-primary)',
             }}
+            className="touch-target"
           >
             <span>INSPECT</span>
-            <ExternalLink size={12} strokeWidth={1.75} />
+            <ExternalLink size={12} strokeWidth={1.75} aria-hidden="true" />
           </Link>
 
           <a
@@ -659,6 +669,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             download
+            aria-label={`Download ${resource.title}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -666,13 +677,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               fontFamily: 'var(--font-mono)',
               fontSize: '11.5px',
               fontWeight: 600,
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--accent-core)',
               color: '#FFFFFF',
             }}
+            className="touch-target"
           >
-            <Download size={13} strokeWidth={1.75} />
+            <Download size={13} strokeWidth={1.75} aria-hidden="true" />
             <span>DOWNLOAD</span>
           </a>
         </div>

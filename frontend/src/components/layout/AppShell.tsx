@@ -57,6 +57,25 @@ export const AppShell: React.FC = () => {
     }
   }
 
+  // Handle escape key and lock body scroll when mobile menu is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   const toggleSubject = (subjectId: number) => {
     setExpandedSubjects((prev) => ({ ...prev, [subjectId]: !prev[subjectId] }));
   };
@@ -404,12 +423,14 @@ export const AppShell: React.FC = () => {
                           e.stopPropagation();
                           toggleSubject(subject.id);
                         }}
-                        style={{ padding: '2px', color: 'var(--text-muted)' }}
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${subject.code} ${subject.name}`}
+                        style={{ padding: '4px', color: 'var(--text-muted)' }}
                       >
                         {isExpanded ? (
-                          <ChevronDown size={14} strokeWidth={1.75} />
+                          <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" />
                         ) : (
-                          <ChevronRight size={14} strokeWidth={1.75} />
+                          <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" />
                         )}
                       </button>
 
@@ -506,12 +527,14 @@ export const AppShell: React.FC = () => {
                                   e.stopPropagation();
                                   toggleUnit(unit.id);
                                 }}
-                                style={{ padding: '2px', color: 'var(--text-muted)' }}
+                                aria-expanded={unitExpanded}
+                                aria-label={`${unitExpanded ? 'Collapse' : 'Expand'} Unit ${unit.unit_number}: ${unit.title}`}
+                                style={{ padding: '4px', color: 'var(--text-muted)' }}
                               >
                                 {unitExpanded ? (
-                                  <ChevronDown size={12} strokeWidth={1.75} />
+                                  <ChevronDown size={12} strokeWidth={1.75} aria-hidden="true" />
                                 ) : (
-                                  <ChevronRight size={12} strokeWidth={1.75} />
+                                  <ChevronRight size={12} strokeWidth={1.75} aria-hidden="true" />
                                 )}
                               </button>
 
@@ -742,6 +765,7 @@ export const AppShell: React.FC = () => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top Breadcrumb & Quick Action Bar */}
         <header
+          className="app-header"
           style={{
             borderBottom: '1px solid var(--border-subtle)',
             backgroundColor: 'var(--bg-surface)',
@@ -761,15 +785,18 @@ export const AppShell: React.FC = () => {
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open syllabus tree"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="curriculum-sidebar"
               style={{
                 display: 'none',
-                padding: '4px',
-                marginRight: '4px',
+                padding: '8px',
+                marginRight: '2px',
                 color: 'var(--text-secondary)',
+                borderRadius: 'var(--radius-sm)',
               }}
-              className="mobile-menu-btn"
+              className="mobile-menu-btn touch-target"
             >
-              <Menu size={20} strokeWidth={1.75} />
+              <Menu size={20} strokeWidth={1.75} aria-hidden="true" />
             </button>
 
             {/* Breadcrumb Links */}
@@ -798,7 +825,7 @@ export const AppShell: React.FC = () => {
 
               {currentSubject && (
                 <>
-                  <span style={{ color: 'var(--text-muted)' }}>/</span>
+                  <span style={{ color: 'var(--text-muted)' }} aria-hidden="true">/</span>
                   <Link
                     to={`/?subject_code=${currentSubject.code}`}
                     style={{
@@ -813,7 +840,7 @@ export const AppShell: React.FC = () => {
 
               {currentUnit && (
                 <>
-                  <span style={{ color: 'var(--text-muted)' }}>/</span>
+                  <span style={{ color: 'var(--text-muted)' }} aria-hidden="true">/</span>
                   <Link
                     to={`/?subject_code=${currentSubject?.code}&unit_id=${currentUnit.id}`}
                     style={{
@@ -828,7 +855,7 @@ export const AppShell: React.FC = () => {
 
               {currentTopic && (
                 <>
-                  <span style={{ color: 'var(--text-muted)' }}>/</span>
+                  <span style={{ color: 'var(--text-muted)' }} aria-hidden="true">/</span>
                   <span style={{ color: 'var(--accent-core)', fontWeight: 600 }}>
                     {currentTopic.title}
                   </span>
@@ -838,7 +865,7 @@ export const AppShell: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Link
               to="/upload"
               style={{
@@ -850,21 +877,192 @@ export const AppShell: React.FC = () => {
                 fontWeight: 600,
                 backgroundColor: 'var(--accent-core)',
                 color: '#FFFFFF',
-                padding: '6px 12px',
+                padding: '7px 12px',
                 borderRadius: 'var(--radius-sm)',
               }}
+              title="Upload academic resource"
+              className="touch-target"
             >
-              <Upload size={14} strokeWidth={1.75} />
-              <span>UPLOAD NOTE / PYQ</span>
+              <Upload size={14} strokeWidth={1.75} aria-hidden="true" />
+              <span className="upload-text-full">UPLOAD NOTE / PYQ</span>
+              <span className="upload-text-compact" style={{ display: 'none' }}>UPLOAD</span>
             </Link>
           </div>
         </header>
 
         {/* Dynamic Routed Content Container */}
-        <main style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%' }}>
+        <main
+          className="app-main-content mobile-nav-pad"
+          style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}
+        >
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile Sticky Bottom Navigation Dock (Active on screen width < 768px) */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="mobile-bottom-nav"
+        style={{
+          display: 'none',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '62px',
+          backgroundColor: 'var(--bg-surface)',
+          borderTop: '1px solid var(--border-subtle)',
+          zIndex: 45,
+          padding: '0 6px',
+          alignItems: 'center',
+          justifyContent: 'space-around',
+          boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        {/* 1. Catalog */}
+        <Link
+          to="/"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '6px 10px',
+            color: location.pathname === '/' && !location.search ? 'var(--accent-core)' : 'var(--text-secondary)',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+          className="touch-target"
+        >
+          <Layers size={18} strokeWidth={1.75} aria-hidden="true" />
+          <span>CATALOG</span>
+        </Link>
+
+        {/* 2. Syllabus Tree Drawer trigger */}
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open Curriculum Syllabus Drawer"
+          aria-expanded={mobileMenuOpen}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '6px 10px',
+            color: activeSubjectCode ? 'var(--accent-core)' : 'var(--text-secondary)',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            position: 'relative',
+          }}
+          className="touch-target"
+        >
+          <Search size={18} strokeWidth={1.75} aria-hidden="true" />
+          <span>SYLLABUS</span>
+          {activeSubjectCode && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '5px',
+                right: '12px',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-core)',
+              }}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+
+        {/* 3. Upload (Quick Contribution) */}
+        <Link
+          to="/upload"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '6px 10px',
+            color: location.pathname === '/upload' ? 'var(--accent-core)' : 'var(--text-secondary)',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+          className="touch-target"
+        >
+          <Upload size={18} strokeWidth={1.75} aria-hidden="true" />
+          <span>UPLOAD</span>
+        </Link>
+
+        {/* 4. Bookmarks */}
+        <Link
+          to="/bookmarks"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '6px 10px',
+            color: location.pathname === '/bookmarks' ? 'var(--accent-core)' : 'var(--text-secondary)',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+          className="touch-target"
+        >
+          <Bookmark size={18} strokeWidth={1.75} aria-hidden="true" />
+          <span>SAVED</span>
+        </Link>
+
+        {/* 5. Profile or Admin Portal */}
+        {user?.role === 'admin' ? (
+          <Link
+            to="/admin"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              padding: '6px 10px',
+              color: location.pathname === '/admin' ? 'var(--status-danger)' : 'var(--text-secondary)',
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+            className="touch-target"
+          >
+            <ShieldAlert size={18} strokeWidth={1.75} aria-hidden="true" />
+            <span>ADMIN</span>
+          </Link>
+        ) : (
+          <Link
+            to="/profile"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              padding: '6px 10px',
+              color: location.pathname === '/profile' ? 'var(--accent-core)' : 'var(--text-secondary)',
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+            className="touch-target"
+          >
+            <UserIcon size={18} strokeWidth={1.75} aria-hidden="true" />
+            <span>PROFILE</span>
+          </Link>
+        )}
+      </nav>
 
       <style>{`
         @media (max-width: 1023px) {
@@ -881,6 +1079,27 @@ export const AppShell: React.FC = () => {
           }
           .mobile-menu-btn {
             display: inline-flex !important;
+          }
+          .app-main-content {
+            padding: 20px 20px !important;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .mobile-bottom-nav {
+            display: flex !important;
+          }
+          .app-header {
+            padding: 10px 14px !important;
+          }
+          .app-main-content {
+            padding: 14px 12px 82px !important;
+          }
+          .upload-text-full {
+            display: none !important;
+          }
+          .upload-text-compact {
+            display: inline !important;
           }
         }
       `}</style>

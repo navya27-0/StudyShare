@@ -125,6 +125,26 @@ export const ResourceDetailView: React.FC = () => {
     loadResourceData();
   }, [resourceId, user?.id]);
 
+  // Handle escape key to dismiss open modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showReportModal) setShowReportModal(false);
+        if (showNewVersionForm) setShowNewVersionForm(false);
+      }
+    };
+    if (showReportModal) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showReportModal, showNewVersionForm]);
+
   // Resolve absolute or proxied file URL
   const resolveFileUrl = (url: string): string => {
     if (!url) return '';
@@ -439,8 +459,11 @@ export const ResourceDetailView: React.FC = () => {
         {/* Action icons (Share, Bookmark, Report) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
+            type="button"
             onClick={handleCopyLink}
             title="Copy share link"
+            aria-label="Copy share link to clipboard"
+            className="touch-target"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -453,12 +476,16 @@ export const ResourceDetailView: React.FC = () => {
               color: 'var(--text-secondary)',
             }}
           >
-            {copied ? <Check size={14} style={{ color: 'var(--status-verified)' }} /> : <Copy size={14} />}
+            {copied ? <Check size={14} style={{ color: 'var(--status-verified)' }} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
             {copied ? 'Copied' : 'Share'}
           </button>
           <button
+            type="button"
             onClick={handleToggleBookmark}
             title={isBookmarked ? 'Remove from bookmarks' : 'Add to bookmarks'}
+            aria-label={isBookmarked ? 'Remove from bookmarks' : 'Save to bookmarks'}
+            aria-pressed={isBookmarked}
+            className="touch-target"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -472,12 +499,15 @@ export const ResourceDetailView: React.FC = () => {
               fontWeight: isBookmarked ? 600 : 400,
             }}
           >
-            <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+            <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} aria-hidden="true" />
             {isBookmarked ? 'Bookmarked' : 'Bookmark'}
           </button>
           <button
+            type="button"
             onClick={() => setShowReportModal(true)}
             title="Report this resource"
+            aria-label="Report this resource"
+            className="touch-target"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -490,13 +520,13 @@ export const ResourceDetailView: React.FC = () => {
               color: 'var(--status-danger)',
             }}
           >
-            <Flag size={14} /> Report
+            <Flag size={14} aria-hidden="true" /> Report
           </button>
         </div>
       </div>
 
       {/* Main Grid: Left content (68%) / Right sidebar (32%) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '28px' }}>
+      <div className="resource-detail-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '28px' }}>
         {/* Left Column: Details, Preview, Versions */}
         <div>
           {/* Resource Title Header */}
@@ -676,12 +706,47 @@ export const ResourceDetailView: React.FC = () => {
 
             {/* Viewer Component */}
             {isPdf ? (
-              <div style={{ width: '100%', height: '580px', backgroundColor: '#525659' }}>
-                <iframe
-                  src={`${fileUrl}#toolbar=1&navpanes=0`}
-                  title={resource.title}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div
+                  className="mobile-pdf-banner"
+                  style={{
+                    display: 'none',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-subdued)',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    fontSize: '12px',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    Viewing on phone? Open full document:
+                  </span>
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--accent-core)',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>Full Screen PDF</span>
+                    <ExternalLink size={12} aria-hidden="true" />
+                  </a>
+                </div>
+                <div style={{ width: '100%', height: '580px', backgroundColor: '#525659' }} className="pdf-iframe-container">
+                  <iframe
+                    src={`${fileUrl}#toolbar=1&navpanes=0`}
+                    title={`PDF preview of ${resource.title}`}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
               </div>
             ) : resource.type === 'link' ? (
               <div style={{ padding: '36px 24px', textAlign: 'center' }}>
@@ -798,7 +863,10 @@ export const ResourceDetailView: React.FC = () => {
 
               {isOwnerOrAdmin && !showNewVersionForm && (
                 <button
+                  type="button"
                   onClick={() => setShowNewVersionForm(true)}
+                  aria-label="Upload new version of this resource"
+                  className="touch-target"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -811,7 +879,7 @@ export const ResourceDetailView: React.FC = () => {
                     borderRadius: 'var(--radius-sm)',
                   }}
                 >
-                  <Upload size={14} /> Upload New Version
+                  <Upload size={14} aria-hidden="true" /> Upload New Version
                 </button>
               )}
             </div>
@@ -835,8 +903,14 @@ export const ResourceDetailView: React.FC = () => {
                   <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Upload New Version (v{(resource.current_version?.version_number || 1) + 1})
                   </h3>
-                  <button type="button" onClick={() => setShowNewVersionForm(false)}>
-                    <X size={16} style={{ color: 'var(--text-muted)' }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewVersionForm(false)}
+                    aria-label="Cancel new version upload"
+                    className="touch-target"
+                    style={{ padding: '4px' }}
+                  >
+                    <X size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
                   </button>
                 </div>
 
@@ -848,10 +922,14 @@ export const ResourceDetailView: React.FC = () => {
 
                 {resource.type === 'link' ? (
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    <label
+                      htmlFor="new-version-url"
+                      style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}
+                    >
                       Updated Outbound URL <span style={{ color: 'var(--accent-core)' }}>*</span>
                     </label>
                     <input
+                      id="new-version-url"
                       type="url"
                       placeholder="https://..."
                       value={newVersionUrl}
@@ -862,12 +940,17 @@ export const ResourceDetailView: React.FC = () => {
                   </div>
                 ) : (
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    <label
+                      htmlFor="new-version-file"
+                      style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}
+                    >
                       Replacement Document File <span style={{ color: 'var(--accent-core)' }}>*</span>
                     </label>
                     <input
+                      id="new-version-file"
                       ref={newVersionFileRef}
                       type="file"
+                      aria-label="Select replacement document file"
                       onChange={(e) => e.target.files && setNewVersionFile(e.target.files[0])}
                       style={{ width: '100%', fontSize: '13px' }}
                     />
@@ -875,10 +958,13 @@ export const ResourceDetailView: React.FC = () => {
                 )}
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  <label
+                    htmlFor="new-version-changelog"
+                    style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
                     Changelog Note <span style={{ color: 'var(--accent-core)' }}>*</span>
                   </label>
                   <input
+                    id="new-version-changelog"
                     type="text"
                     placeholder="e.g. Corrected theorem derivation on page 4, added 2024 solutions"
                     value={newVersionChangelog}
@@ -894,6 +980,7 @@ export const ResourceDetailView: React.FC = () => {
                       <input
                         type="number"
                         placeholder="Page count"
+                        aria-label="Estimated page count"
                         value={newVersionPageCount}
                         onChange={(e) => setNewVersionPageCount(e.target.value === '' ? '' : Number(e.target.value))}
                         style={{ width: '100%' }}
@@ -1061,8 +1148,11 @@ export const ResourceDetailView: React.FC = () => {
           >
             {/* Primary Download / Open Button */}
             <button
+              type="button"
               onClick={handleDownload}
               disabled={isDownloading}
+              aria-label={resource.type === 'link' ? 'Open resource external link' : `Download file (${downloadsCount} downloads)`}
+              className="touch-target"
               style={{
                 width: '100%',
                 padding: '12px 18px',
@@ -1080,11 +1170,11 @@ export const ResourceDetailView: React.FC = () => {
             >
               {resource.type === 'link' ? (
                 <>
-                  <ExternalLink size={16} /> Open Resource Link
+                  <ExternalLink size={16} aria-hidden="true" /> Open Resource Link
                 </>
               ) : (
                 <>
-                  <Download size={16} /> Download File ({downloadsCount})
+                  <Download size={16} aria-hidden="true" /> Download File ({downloadsCount})
                 </>
               )}
             </button>
@@ -1106,9 +1196,13 @@ export const ResourceDetailView: React.FC = () => {
                 }}
               >
                 <button
+                  type="button"
                   onClick={() => handleVote('up')}
                   disabled={isVoting}
                   title="Upvote helpful resource"
+                  aria-label={`Upvote helpful resource, currently ${upvotes} upvotes`}
+                  aria-pressed={userVote === 'up'}
+                  className="touch-target"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1120,7 +1214,7 @@ export const ResourceDetailView: React.FC = () => {
                     fontWeight: userVote === 'up' ? 700 : 500,
                   }}
                 >
-                  <ChevronUp size={18} /> Upvote ({upvotes})
+                  <ChevronUp size={18} aria-hidden="true" /> Upvote ({upvotes})
                 </button>
 
                 <div
@@ -1130,14 +1224,19 @@ export const ResourceDetailView: React.FC = () => {
                     fontWeight: 700,
                     color: upvotes - downvotes > 0 ? 'var(--accent-core)' : 'var(--text-primary)',
                   }}
+                  aria-label={`Net vote score ${upvotes - downvotes}`}
                 >
                   {upvotes - downvotes > 0 ? `+${upvotes - downvotes}` : upvotes - downvotes}
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handleVote('down')}
                   disabled={isVoting}
                   title="Downvote inaccurate resource"
+                  aria-label={`Downvote inaccurate resource, currently ${downvotes} downvotes`}
+                  aria-pressed={userVote === 'down'}
+                  className="touch-target"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1149,7 +1248,7 @@ export const ResourceDetailView: React.FC = () => {
                     fontWeight: userVote === 'down' ? 700 : 500,
                   }}
                 >
-                  <ChevronDown size={18} /> ({downvotes})
+                  <ChevronDown size={18} aria-hidden="true" /> ({downvotes})
                 </button>
               </div>
             </div>
@@ -1166,7 +1265,11 @@ export const ResourceDetailView: React.FC = () => {
               </div>
 
               {/* Stars Row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <div
+                role="radiogroup"
+                aria-label="Quality rating 1 to 5 stars"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}
+              >
                 {[1, 2, 3, 4, 5].map((star) => {
                   const isFilled =
                     hoverRating !== null ? star <= hoverRating : userStars !== null ? star <= userStars : star <= Math.round(ratingAvg);
@@ -1175,17 +1278,21 @@ export const ResourceDetailView: React.FC = () => {
                     <button
                       key={star}
                       type="button"
+                      role="radio"
+                      aria-checked={userStars === star}
+                      aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(null)}
                       onClick={() => handleRate(star)}
                       disabled={isRating}
                       style={{
-                        padding: '2px',
+                        padding: '4px',
                         color: isFilled ? 'var(--status-exam)' : 'var(--border-strong)',
                         transition: 'transform 80ms ease',
                       }}
+                      className="touch-target"
                     >
-                      <Star size={22} fill={isFilled ? 'currentColor' : 'none'} />
+                      <Star size={22} fill={isFilled ? 'currentColor' : 'none'} aria-hidden="true" />
                     </button>
                   );
                 })}
@@ -1351,6 +1458,9 @@ export const ResourceDetailView: React.FC = () => {
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-modal-title"
             style={{
               backgroundColor: 'var(--bg-surface)',
               border: '1px solid var(--border-subtle)',
@@ -1363,13 +1473,22 @@ export const ResourceDetailView: React.FC = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Flag size={18} style={{ color: 'var(--status-danger)' }} />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                <Flag size={18} style={{ color: 'var(--status-danger)' }} aria-hidden="true" />
+                <h3
+                  id="report-modal-title"
+                  style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}
+                >
                   Report Study Resource
                 </h3>
               </div>
-              <button type="button" onClick={() => setShowReportModal(false)}>
-                <X size={18} style={{ color: 'var(--text-muted)' }} />
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                aria-label="Close report modal"
+                className="touch-target"
+                style={{ padding: '6px', color: 'var(--text-muted)' }}
+              >
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -1483,6 +1602,24 @@ export const ResourceDetailView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Responsive media styling for tablet & mobile */}
+      <style>{`
+        @media (max-width: 1023px) {
+          .resource-detail-layout {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+        }
+        @media (max-width: 767px) {
+          .mobile-pdf-banner {
+            display: flex !important;
+          }
+          .pdf-iframe-container {
+            height: 440px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

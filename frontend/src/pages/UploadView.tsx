@@ -434,10 +434,15 @@ export const UploadView: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
             {/* Subject Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <label
+                htmlFor="upload-subject-select"
+                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              >
                 Subject / Course <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <select
+                id="upload-subject-select"
+                aria-label="Select Subject / Course"
                 value={selectedSubjectId}
                 onChange={(e) => handleSubjectChange(Number(e.target.value))}
                 disabled={loadingTaxonomy || subjects.length === 0}
@@ -454,13 +459,18 @@ export const UploadView: React.FC = () => {
             {/* Unit Selector with inline create */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <label
+                  htmlFor="upload-unit-select"
+                  style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}
+                >
                   Unit / Module <span style={{ color: 'var(--accent-core)' }}>*</span>
                 </label>
                 {!showNewUnitForm && (
                   <button
                     type="button"
                     onClick={() => setShowNewUnitForm(true)}
+                    aria-expanded={showNewUnitForm}
+                    aria-label="Add new unit inline"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -468,15 +478,19 @@ export const UploadView: React.FC = () => {
                       fontSize: '11px',
                       fontWeight: 600,
                       color: 'var(--accent-core)',
+                      padding: '4px',
                     }}
+                    className="touch-target"
                   >
-                    <Plus size={13} /> Add Unit
+                    <Plus size={13} aria-hidden="true" /> Add Unit
                   </button>
                 )}
               </div>
 
               {!showNewUnitForm ? (
                 <select
+                  id="upload-unit-select"
+                  aria-label="Select Unit / Module"
                   value={selectedUnitId}
                   onChange={(e) => handleUnitChange(Number(e.target.value))}
                   disabled={availableUnits.length === 0}
@@ -503,13 +517,20 @@ export const UploadView: React.FC = () => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>New Unit</span>
-                    <button type="button" onClick={() => setShowNewUnitForm(false)}>
-                      <X size={14} style={{ color: 'var(--text-muted)' }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewUnitForm(false)}
+                      aria-label="Cancel new unit"
+                      style={{ padding: '4px' }}
+                      className="touch-target"
+                    >
+                      <X size={14} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
                     </button>
                   </div>
                   <input
                     type="text"
                     placeholder="Unit Title (e.g. Graph Algorithms)"
+                    aria-label="New Unit Title"
                     value={newUnitTitle}
                     onChange={(e) => setNewUnitTitle(e.target.value)}
                     style={{ width: '100%' }}
@@ -518,6 +539,7 @@ export const UploadView: React.FC = () => {
                     <input
                       type="number"
                       placeholder="Unit # (optional)"
+                      aria-label="Unit number"
                       value={newUnitNumber}
                       onChange={(e) => setNewUnitNumber(e.target.value === '' ? '' : Number(e.target.value))}
                       style={{ width: '120px' }}
@@ -535,6 +557,7 @@ export const UploadView: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         flex: 1,
                       }}
+                      className="touch-target"
                     >
                       {isCreatingUnit ? 'Saving...' : 'Add Unit'}
                     </button>
@@ -546,13 +569,18 @@ export const UploadView: React.FC = () => {
             {/* Topic Selector with inline create */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <label
+                  htmlFor="upload-topic-select"
+                  style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}
+                >
                   Topic / Subtopic <span style={{ color: 'var(--accent-core)' }}>*</span>
                 </label>
                 {!showNewTopicForm && selectedUnitId !== '' && (
                   <button
                     type="button"
                     onClick={() => setShowNewTopicForm(true)}
+                    aria-expanded={showNewTopicForm}
+                    aria-label="Add new topic inline"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -560,15 +588,19 @@ export const UploadView: React.FC = () => {
                       fontSize: '11px',
                       fontWeight: 600,
                       color: 'var(--accent-core)',
+                      padding: '4px',
                     }}
+                    className="touch-target"
                   >
-                    <Plus size={13} /> Add Topic
+                    <Plus size={13} aria-hidden="true" /> Add Topic
                   </button>
                 )}
               </div>
 
               {!showNewTopicForm ? (
                 <select
+                  id="upload-topic-select"
+                  aria-label="Select Topic / Subtopic"
                   value={selectedTopicId}
                   onChange={(e) => setSelectedTopicId(Number(e.target.value))}
                   disabled={availableTopics.length === 0}
@@ -658,16 +690,32 @@ export const UploadView: React.FC = () => {
 
           {/* Type Grid */}
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            <label
+              id="upload-category-label"
+              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}
+            >
               Resource Category <span style={{ color: 'var(--accent-core)' }}>*</span>
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+            <div
+              role="radiogroup"
+              aria-labelledby="upload-category-label"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}
+            >
               {RESOURCE_TYPES.map((opt) => {
                 const isSelected = resourceType === opt.type;
                 return (
                   <div
                     key={opt.type}
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={0}
                     onClick={() => setResourceType(opt.type)}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        setResourceType(opt.type);
+                      }
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -685,6 +733,7 @@ export const UploadView: React.FC = () => {
                         color: isSelected ? 'var(--accent-core)' : 'var(--text-secondary)',
                         marginTop: '2px',
                       }}
+                      aria-hidden="true"
                     >
                       {opt.icon}
                     </div>
@@ -710,12 +759,16 @@ export const UploadView: React.FC = () => {
           </div>
 
           {/* Title & Semester Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '16px', marginBottom: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '18px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <label
+                htmlFor="upload-resource-title"
+                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              >
                 Resource Title <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <input
+                id="upload-resource-title"
                 type="text"
                 placeholder="e.g. Complete Unit 2 AVL Tree Rotations & Solved PYQs"
                 value={title}
@@ -725,10 +778,14 @@ export const UploadView: React.FC = () => {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <label
+                htmlFor="upload-resource-semester"
+                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              >
                 Semester <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <select
+                id="upload-resource-semester"
                 value={semester}
                 onChange={(e) => setSemester(Number(e.target.value))}
                 style={{ width: '100%', height: '40px' }}
@@ -744,10 +801,14 @@ export const UploadView: React.FC = () => {
 
           {/* Description */}
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+            <label
+              htmlFor="upload-resource-desc"
+              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+            >
               Description & Context (Optional)
             </label>
             <textarea
+              id="upload-resource-desc"
               placeholder="Outline what topics this document covers, formulas included, professor hints, or specific exam references..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -759,10 +820,14 @@ export const UploadView: React.FC = () => {
           {/* Optional Page Count */}
           {resourceType !== 'link' && (
             <div style={{ maxWidth: '200px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <label
+                htmlFor="upload-resource-pages"
+                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              >
                 Estimated Pages
               </label>
               <input
+                id="upload-resource-pages"
                 type="number"
                 min={1}
                 max={2000}
@@ -805,10 +870,14 @@ export const UploadView: React.FC = () => {
 
           {resourceType === 'link' ? (
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <label
+                htmlFor="upload-external-url"
+                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              >
                 Outbound Link URL <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <input
+                id="upload-external-url"
                 type="url"
                 placeholder="https://drive.google.com/... or https://github.com/..."
                 value={externalUrl}
@@ -824,9 +893,18 @@ export const UploadView: React.FC = () => {
             <div>
               {/* Dropzone */}
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Upload document file. Click or drag and drop document"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleFileDrop}
                 onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
                 style={{
                   border: `2px dashed ${selectedFile ? 'var(--status-verified)' : 'var(--border-strong)'}`,
                   backgroundColor: selectedFile ? 'var(--status-verified-bg)' : 'var(--bg-subdued)',
@@ -840,6 +918,7 @@ export const UploadView: React.FC = () => {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  aria-label="Select file to upload"
                   onChange={handleFileSelect}
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.py,.c,.cpp,.java"
                   style={{ display: 'none' }}
@@ -847,19 +926,19 @@ export const UploadView: React.FC = () => {
 
                 {selectedFile ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={36} style={{ color: 'var(--status-verified)' }} />
+                    <CheckCircle2 size={36} style={{ color: 'var(--status-verified)' }} aria-hidden="true" />
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {selectedFile.name}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      Size: {formatFileSize(selectedFile.size)} • Click to replace file
+                      Size: {formatFileSize(selectedFile.size)} • Click or press Enter to replace file
                     </div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <UploadCloud size={40} style={{ color: 'var(--accent-core)' }} />
+                    <UploadCloud size={40} style={{ color: 'var(--accent-core)' }} aria-hidden="true" />
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      Click to browse or drag and drop document
+                      Click or press Enter to browse or drag and drop document
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       Supported formats: PDF, DOCX, PPTX, ZIP, Code files (Max 50 MB)
@@ -872,10 +951,14 @@ export const UploadView: React.FC = () => {
 
           {/* Initial Changelog Note */}
           <div style={{ marginTop: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+            <label
+              htmlFor="upload-changelog-input"
+              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+            >
               Version Changelog Note
             </label>
             <input
+              id="upload-changelog-input"
               type="text"
               placeholder="e.g. Initial upload, verified against 2024 syllabus"
               value={changelog}

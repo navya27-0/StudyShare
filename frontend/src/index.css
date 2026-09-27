@@ -7,25 +7,25 @@
   --border-subtle: #e5dfd5;
   --border-strong: #c8bfb2;
 
-  /* Ink / Text */
+  /* Ink / Text - tuned for WCAG AA (>= 4.5:1 contrast on paper canvas) */
   --text-primary: #1e1b18;
-  --text-secondary: #5c554e;
-  --text-muted: #8c827a;
+  --text-secondary: #524b44;
+  --text-muted: #665e56;
 
-  /* Burnt Terracotta Accent */
-  --accent-core: #c85a32;
-  --accent-hover: #a84723;
+  /* Burnt Terracotta Accent - tuned for WCAG AA contrast against white/paper */
+  --accent-core: #b84c24;
+  --accent-hover: #9c3f1d;
   --accent-tint: #fdf1eb;
   --accent-border: #e8a287;
 
-  /* Functional Status */
-  --status-verified: #2a6a4e;
+  /* Functional Status - tuned for WCAG AA contrast */
+  --status-verified: #226044;
   --status-verified-bg: #eaf4ee;
-  --status-exam: #b87318;
+  --status-exam: #965a12;
   --status-exam-bg: #fdf6e8;
-  --status-lab: #286474;
+  --status-lab: #225664;
   --status-lab-bg: #e9f3f6;
-  --status-danger: #bd2b2b;
+  --status-danger: #b52222;
   --status-danger-bg: #fcebeb;
   --status-danger-border: #eab8b8;
 
@@ -53,22 +53,23 @@
   --border-subtle: #2f2b26;
   --border-strong: #453f38;
 
+  /* Ink / Text - tuned for WCAG AA (>= 4.5:1 contrast on dark surface) */
   --text-primary: #f2efe9;
-  --text-secondary: #a8a196;
-  --text-muted: #70685e;
+  --text-secondary: #b5ada2;
+  --text-muted: #9e9589;
 
-  --accent-core: #e06d44;
-  --accent-hover: #f07e55;
+  --accent-core: #e6764d;
+  --accent-hover: #f3865e;
   --accent-tint: #2b1d16;
-  --accent-border: #6e3924;
+  --accent-border: #733c27;
 
-  --status-verified: #56b386;
+  --status-verified: #5ec090;
   --status-verified-bg: #132b1e;
-  --status-exam: #e6a242;
+  --status-exam: #f0ad46;
   --status-exam-bg: #2e210d;
-  --status-lab: #5bb1ca;
+  --status-lab: #64bccc;
   --status-lab-bg: #142830;
-  --status-danger: #f06a6a;
+  --status-danger: #f27373;
   --status-danger-bg: #301717;
   --status-danger-border: #6b2727;
 
@@ -142,7 +143,7 @@ input:focus, select:focus, textarea:focus {
 
 ::placeholder {
   color: var(--text-muted);
-  opacity: 0.75;
+  opacity: 0.9;
 }
 
 ::selection {
@@ -175,9 +176,31 @@ input:focus, select:focus, textarea:focus {
   background: var(--text-muted);
 }
 
-button:focus-visible, a:focus-visible {
-  outline: 2px solid var(--accent-core);
-  outline-offset: 2px;
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent-core) !important;
+  outline-offset: 2px !important;
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border-width: 0 !important;
+}
+
+/* Mobile & Touch utilities */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .uploader-link {
@@ -192,4 +215,19 @@ button:focus-visible, a:focus-visible {
 .uploader-profile-card:hover div:first-child {
   border-color: var(--accent-core);
 }
+
+/* Responsive tables & horizontal overflow scrolling */
+.table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile bottom nav safe-area padding */
+@media (max-width: 767px) {
+  .mobile-nav-pad {
+    padding-bottom: 74px !important;
+  }
+}
+
 

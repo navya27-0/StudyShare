@@ -362,31 +362,129 @@ export const BrowseView: React.FC = () => {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px' }}>
-          <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  marginBottom: '2px',
+                }}
+              >
+                CENTRAL CURRICULUM ARCHIVE // ALL BRANCHES
+              </div>
+              <h1
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                }}
+              >
+                Academic Resource Catalog
+              </h1>
+            </div>
+          </div>
+
+          {/* Mobile & Tablet Subject Quick-Selector Rail */}
+          {subjects.length > 0 && (
             <div
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                letterSpacing: '0.06em',
-                marginBottom: '2px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '12px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              CENTRAL CURRICULUM ARCHIVE // ALL BRANCHES
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  CURRICULUM QUICK-JUMP:
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '10.5px',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {subjects.length} COURSES
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  whiteSpace: 'nowrap',
+                  paddingBottom: '4px',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {subjects.map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => updateFilters({ subject_code: sub.code, unit_id: undefined, topic_id: undefined })}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '7px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-subdued)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                    className="touch-target"
+                    title={`${sub.code}: ${sub.name}`}
+                  >
+                    <span style={{ color: 'var(--accent-core)' }}>{sub.code}</span>
+                    <span
+                      style={{
+                        color: 'var(--text-secondary)',
+                        fontWeight: 400,
+                        fontSize: '11.5px',
+                        maxWidth: '160px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {sub.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <h1
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '22px',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                margin: 0,
-              }}
-            >
-              Academic Resource Catalog
-            </h1>
-          </div>
+          )}
         </div>
       )}
 
@@ -432,41 +530,44 @@ export const BrowseView: React.FC = () => {
         />
       ) : (
         <div
+          className={viewMode === 'compact' ? 'table-scroll-container' : undefined}
           style={{
             display: 'flex',
             flexDirection: 'column',
             gap: viewMode === 'compact' ? '0' : '12px',
             border: viewMode === 'compact' ? '1px solid var(--border-subtle)' : 'none',
             borderRadius: viewMode === 'compact' ? 'var(--radius-sm)' : '0',
-            overflow: viewMode === 'compact' ? 'hidden' : 'visible',
+            overflowX: viewMode === 'compact' ? 'auto' : 'visible',
           }}
         >
-          {/* Compact View Column Header */}
-          {viewMode === 'compact' && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '80px 100px 1fr 140px 90px 100px 80px',
-                gap: '12px',
-                padding: '8px 14px',
-                backgroundColor: 'var(--bg-subdued)',
-                borderBottom: '1px solid var(--border-subtle)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '10.5px',
-                fontWeight: 700,
-                color: 'var(--text-muted)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              <div>TYPE</div>
-              <div>COURSE</div>
-              <div>DOCUMENT TITLE</div>
-              <div>CONTRIBUTOR</div>
-              <div>RATING</div>
-              <div>VOTES</div>
-              <div style={{ textAlign: 'right' }}>ACTIONS</div>
-            </div>
-          )}
+          <div style={{ minWidth: viewMode === 'compact' ? '720px' : 'auto', display: 'flex', flexDirection: 'column' }}>
+            {/* Compact View Column Header */}
+            {viewMode === 'compact' && (
+              <div
+                role="row"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '80px 100px 1fr 140px 90px 100px 80px',
+                  gap: '12px',
+                  padding: '8px 14px',
+                  backgroundColor: 'var(--bg-subdued)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <div>TYPE</div>
+                <div>COURSE</div>
+                <div>DOCUMENT TITLE</div>
+                <div>CONTRIBUTOR</div>
+                <div>RATING</div>
+                <div>VOTES</div>
+                <div style={{ textAlign: 'right' }}>ACTIONS</div>
+              </div>
+            )}
 
           {resources.map((resource) => (
             <ResourceCard
@@ -501,6 +602,7 @@ export const BrowseView: React.FC = () => {
               }}
             />
           ))}
+          </div>
         </div>
       )}
 

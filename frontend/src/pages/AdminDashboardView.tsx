@@ -299,6 +299,17 @@ export const AdminDashboardView: React.FC = () => {
     }
   };
 
+  // Keyboard accessibility: dismiss action modal on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && actionModal.isOpen) {
+        setActionModal((prev) => ({ ...prev, isOpen: false }));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [actionModal.isOpen]);
+
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -1186,6 +1197,9 @@ export const AdminDashboardView: React.FC = () => {
 
           {/* Users Table */}
           <div
+            className="table-scroll-container"
+            role="region"
+            aria-label="User Accounts Directory"
             style={{
               backgroundColor: 'var(--bg-surface)',
               border: '1px solid var(--border-subtle)',
@@ -1480,6 +1494,9 @@ export const AdminDashboardView: React.FC = () => {
 
           {/* Audit Ledger Table */}
           <div
+            className="table-scroll-container"
+            role="region"
+            aria-label="Moderation Action Audit Log"
             style={{
               backgroundColor: 'var(--bg-surface)',
               border: '1px solid var(--border-subtle)',
@@ -1678,6 +1695,9 @@ export const AdminDashboardView: React.FC = () => {
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-action-dialog-title"
             style={{
               maxWidth: '520px',
               width: '100%',
@@ -1690,7 +1710,7 @@ export const AdminDashboardView: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Shield size={18} color="#2563EB" />
+              <Shield size={18} color="#2563EB" aria-hidden="true" />
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -1704,7 +1724,7 @@ export const AdminDashboardView: React.FC = () => {
               </span>
             </div>
 
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, margin: '0 0 8px' }}>
+            <h3 id="admin-action-dialog-title" style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, margin: '0 0 8px' }}>
               {actionModal.title}
             </h3>
 
