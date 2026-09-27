@@ -7,7 +7,7 @@ import { AdminRoute } from './components/auth/AdminRoute';
 import { AppShell } from './components/layout/AppShell';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
-import { BrowsePlaceholder } from './pages/BrowsePlaceholder';
+import { BrowseView } from './pages/BrowseView';
 import { ResourceDetailPlaceholder } from './pages/ResourceDetailPlaceholder';
 import { UploadPlaceholder } from './pages/UploadPlaceholder';
 import { ProfilePlaceholder } from './pages/ProfilePlaceholder';
@@ -32,7 +32,7 @@ export const App: React.FC = () => {
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<BrowsePlaceholder />} />
+              <Route path="/" element={<BrowseView />} />
               <Route path="/resources/:id" element={<ResourceDetailPlaceholder />} />
               <Route path="/upload" element={<UploadPlaceholder />} />
               <Route path="/profile" element={<ProfilePlaceholder />} />

@@ -1,4 +1,13 @@
-import type { AuthSuccessResponse, AuthTokens, SubjectItem, User } from '../types';
+import type {
+  AuthSuccessResponse,
+  AuthTokens,
+  BookmarkResponse,
+  ResourceFilterParams,
+  ResourceListResponse,
+  SubjectItem,
+  User,
+  VoteResponse,
+} from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -238,3 +247,54 @@ export const taxonomyApi = {
     }
   },
 };
+
+// Resources API methods
+export const resourcesApi = {
+  list: async (params: ResourceFilterParams = {}): Promise<ResourceListResponse> => {
+    const search = new URLSearchParams();
+    if (params.subject_id) search.set('subject_id', String(params.subject_id));
+    if (params.subject_code) search.set('subject_code', params.subject_code);
+    if (params.unit_id) search.set('unit_id', String(params.unit_id));
+    if (params.topic_id) search.set('topic_id', String(params.topic_id));
+    if (params.semester) search.set('semester', String(params.semester));
+    if (params.type) search.set('type', params.type);
+    if (params.min_rating) search.set('min_rating', String(params.min_rating));
+    if (params.q && params.q.trim()) search.set('q', params.q.trim());
+    if (params.sort_by) search.set('sort_by', params.sort_by);
+    if (params.page) search.set('page', String(params.page));
+    if (params.page_size) search.set('page_size', String(params.page_size));
+
+    const queryString = search.toString();
+    const endpoint = queryString ? `/api/resources?${queryString}` : '/api/resources';
+    return apiRequest<ResourceListResponse>(endpoint);
+  },
+
+  vote: async (resourceId: number, voteType: 'up' | 'down'): Promise<VoteResponse> => {
+    return apiRequest<VoteResponse>(`/api/resources/${resourceId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ vote_type: voteType }),
+    });
+  },
+
+  toggleBookmark: async (resourceId: number, currentlyBookmarked: boolean): Promise<BookmarkResponse> => {
+    if (currentlyBookmarked) {
+      await apiRequest<{ message: string; bookmarked: boolean }>(`/api/resources/${resourceId}/bookmark`, {
+        method: 'DELETE',
+      });
+      return { user_id: 0, resource_id: resourceId, bookmarked: false };
+    } else {
+      return apiRequest<BookmarkResponse>(`/api/resources/${resourceId}/bookmark`, {
+        method: 'POST',
+      });
+    }
+  },
+
+  getUserBookmarks: async (userId: number): Promise<{ bookmarks: { resource_id: number }[] }> => {
+    try {
+      return await apiRequest<{ bookmarks: { resource_id: number }[] }>(`/api/users/${userId}/bookmarks`);
+    } catch {
+      return { bookmarks: [] };
+    }
+  },
+};
+

@@ -51,6 +51,16 @@ async def test_filter_by_semester(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_filter_by_min_rating(client: AsyncClient):
+    """Test filtering resources by minimum average rating threshold."""
+    response = await client.get("/api/resources?min_rating=4.0")
+    assert response.status_code == 200
+    data = response.json()
+    for item in data["items"]:
+        assert item["rating_avg"] >= 4.0
+
+
+@pytest.mark.asyncio
 async def test_sort_by_most_upvoted(client: AsyncClient):
     """Test ordering resources by upvotes_count descending."""
     response = await client.get("/api/resources?sort_by=most_upvoted")

@@ -128,6 +128,7 @@ async def list_resources(
     topic_id: int | None = Query(None, description="Filter by Topic ID"),
     semester: int | None = Query(None, ge=1, le=8, description="Filter by semester (1-8)"),
     type: ResourceType | None = Query(None, description="Filter by resource type"),
+    min_rating: float | None = Query(None, ge=1.0, le=5.0, description="Minimum average rating"),
     q: str | None = Query(
         None, min_length=1, description="Full-text search query across title & description"
     ),
@@ -165,6 +166,8 @@ async def list_resources(
         base_stmt = base_stmt.where(Resource.semester == semester)
     if type is not None:
         base_stmt = base_stmt.where(Resource.type == type)
+    if min_rating is not None:
+        base_stmt = base_stmt.where(Resource.rating_avg >= min_rating)
 
     # 2. Full-Text Search across Title and Description
     if q and q.strip():
