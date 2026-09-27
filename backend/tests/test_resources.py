@@ -202,4 +202,3 @@ async def test_taxonomy_hierarchy(client: AsyncClient):
         first_unit = first_subject["units"][0]
         assert "unit_number" in first_unit
         assert "topics" in first_unit
-

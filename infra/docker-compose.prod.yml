@@ -1,0 +1,99 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: studyshare-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-studyshare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password must be set in production}
+      POSTGRES_DB: ${POSTGRES_DB:-studyshare_db}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - studyshare_prod_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studyshare} -d ${POSTGRES_DB:-studyshare_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: studyshare-backend-prod
+    restart: always
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "False"
+      BACKEND_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studyshare}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-studyshare_db}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://studyshare.yourcampus.edu}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT secret key must be set in production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE_BYTES: ${MAX_UPLOAD_SIZE_BYTES:-52428800}
+    volumes:
+      - backend_prod_uploads:/app/uploads
+    networks:
+      - studyshare_prod_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1024M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: studyshare-frontend-prod
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - studyshare_prod_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+volumes:
+  postgres_prod_data:
+  backend_prod_uploads:
+
+networks:
+  studyshare_prod_net:
+    driver: bridge

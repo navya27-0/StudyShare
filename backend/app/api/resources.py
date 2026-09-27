@@ -257,9 +257,7 @@ async def get_taxonomy_tree(
     """
     stmt = (
         select(Subject)
-        .options(
-            selectinload(Subject.units).selectinload(Unit.topics)
-        )
+        .options(selectinload(Subject.units).selectinload(Unit.topics))
         .order_by(Subject.semester.asc(), Subject.code.asc())
     )
     result = await db.execute(stmt)
@@ -284,12 +282,16 @@ async def create_unit(
     # Determine unit number if omitted
     unit_num = payload.unit_number
     if unit_num is None:
-        max_unit_stmt = select(func.max(Unit.unit_number)).where(Unit.subject_id == payload.subject_id)
+        max_unit_stmt = select(func.max(Unit.unit_number)).where(
+            Unit.subject_id == payload.subject_id
+        )
         max_unit = (await db.execute(max_unit_stmt)).scalar() or 0
         unit_num = max_unit + 1
 
     # Check for duplicate unit_number in this subject
-    dup_stmt = select(Unit).where(Unit.subject_id == payload.subject_id, Unit.unit_number == unit_num)
+    dup_stmt = select(Unit).where(
+        Unit.subject_id == payload.subject_id, Unit.unit_number == unit_num
+    )
     if (await db.execute(dup_stmt)).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -891,4 +893,3 @@ async def record_download(
     resource.downloads_count += 1
     await db.commit()
     return {"resource_id": resource_id, "downloads_count": resource.downloads_count}
-

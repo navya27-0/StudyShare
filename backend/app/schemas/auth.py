@@ -73,4 +73,3 @@ class UserActivityItem(BaseModel):
 class UserActivityListResponse(BaseModel):
     user_id: int
     items: list[UserActivityItem]
-

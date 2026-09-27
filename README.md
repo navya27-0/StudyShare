@@ -132,6 +132,8 @@ Copy the example environment file (the defaults work out of the box for local de
 cp .env.example .env
 ```
 
+For complete documentation of all configuration keys, types, and security guidelines, see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
+
 Key environment defaults:
 - `POSTGRES_USER=studyshare`
 - `POSTGRES_PASSWORD=studyshare_dev`
@@ -142,13 +144,24 @@ Key environment defaults:
 
 ### 3. Build & Start the Containers
 
-Spin up the entire stack:
+Spin up the development stack:
 
 ```bash
 docker compose up --build -d
 ```
 
 *(Alternatively, run `docker compose -f infra/docker-compose.yml up --build -d`)*
+
+#### Production Deployment
+
+For production environments with resource limits, isolated internal database networking, non-root user execution, and optimized Nginx reverse proxy caching:
+
+```bash
+# Ensure secure production values are set in .env:
+# POSTGRES_PASSWORD=<strong_password>
+# JWT_SECRET_KEY=$(openssl rand -hex 32)
+docker compose -f infra/docker-compose.prod.yml up --build -d
+```
 
 Verify that all three containers are healthy:
 
@@ -200,6 +213,16 @@ To run the frontend TypeScript validation and production build check:
 cd frontend
 npm run build
 ```
+
+---
+
+## Continuous Integration (CI)
+
+Every commit and pull request triggers automated checks via GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
+- **Backend CI**: Runs a dedicated PostgreSQL 16 container, applies Alembic migrations, runs database seeding, executes Ruff linter and format verification, and runs the 33-test Pytest suite.
+- **Frontend CI**: Validates clean dependencies (`npm ci`), executes ESLint rules, and runs `npm run build` (TypeScript compilation + Vite bundle check).
+- **Docker Validation**: Synthesizes and tests both development and production `docker-compose` YAML configs and builds both backend and frontend container images.
 
 ---
 

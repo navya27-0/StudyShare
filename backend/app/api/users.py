@@ -25,11 +25,7 @@ async def get_user_profile(
     """
     Retrieve public contributor profile and stats by user ID.
     """
-    stmt = (
-        select(User)
-        .where(User.id == user_id)
-        .options(selectinload(User.contributor_profile))
-    )
+    stmt = select(User).where(User.id == user_id).options(selectinload(User.contributor_profile))
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if not user:

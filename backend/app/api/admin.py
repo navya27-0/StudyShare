@@ -354,7 +354,9 @@ async def warn_user(
             detail=f"User with ID {user_id} was not found.",
         )
 
-    note_text = payload.note if payload and payload.note else "Official warning issued by administrator"
+    note_text = (
+        payload.note if payload and payload.note else "Official warning issued by administrator"
+    )
     audit_entry = ModerationAction(
         admin_id=current_admin.id,
         target_user_id=user.id,
@@ -488,4 +490,3 @@ async def list_moderation_actions(
         page_size=page_size,
         items=items,
     )
-

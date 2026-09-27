@@ -242,4 +242,3 @@ async def test_admin_user_directory_and_warn(
     assert log_res.status_code == 200
     actions = [item["action"] for item in log_res.json()["items"]]
     assert "user_warned" in actions
-
