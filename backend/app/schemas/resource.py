@@ -40,6 +40,35 @@ class TopicBriefResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TopicTreeItem(BaseModel):
+    id: int
+    title: str
+    ordering: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UnitTreeItem(BaseModel):
+    id: int
+    unit_number: int
+    title: str
+    ordering: int
+    topics: list[TopicTreeItem] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubjectTreeItem(BaseModel):
+    id: int
+    code: str
+    name: str
+    semester: int
+    department: str | None = None
+    units: list[UnitTreeItem] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class BreadcrumbHierarchy(BaseModel):
     subject: SubjectBriefResponse
     unit: UnitBriefResponse

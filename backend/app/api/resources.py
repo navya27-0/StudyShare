@@ -43,6 +43,7 @@ from app.schemas.resource import (
     ResourceListResponse,
     ResourceVersionResponse,
     SubjectBriefResponse,
+    SubjectTreeItem,
     TopicBriefResponse,
     UnitBriefResponse,
     UploaderBriefResponse,
@@ -236,6 +237,26 @@ async def list_resources(
         page_size=page_size,
         total_pages=total_pages,
     )
+
+
+@router.get("/taxonomy", response_model=list[SubjectTreeItem])
+async def get_taxonomy_tree(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """
+    Retrieve full academic taxonomy hierarchy: Subject -> Unit -> Topic
+    ordered by subject semester/code and unit/topic sequence.
+    """
+    stmt = (
+        select(Subject)
+        .options(
+            selectinload(Subject.units).selectinload(Unit.topics)
+        )
+        .order_by(Subject.semester.asc(), Subject.code.asc())
+    )
+    result = await db.execute(stmt)
+    subjects = result.scalars().all()
+    return subjects
 
 
 @router.get("/{resource_id}", response_model=ResourceDetailResponse)

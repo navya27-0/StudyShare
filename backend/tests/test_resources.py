@@ -174,3 +174,22 @@ async def test_create_and_version_update_resource(
         headers=other_auth_headers,
     )
     assert forbidden_res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_taxonomy_hierarchy(client: AsyncClient):
+    """Test retrieving academic taxonomy tree (Subject -> Unit -> Topic)."""
+    response = await client.get("/api/resources/taxonomy")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    first_subject = data[0]
+    assert "code" in first_subject
+    assert "units" in first_subject
+    assert isinstance(first_subject["units"], list)
+    if first_subject["units"]:
+        first_unit = first_subject["units"][0]
+        assert "unit_number" in first_unit
+        assert "topics" in first_unit
+
