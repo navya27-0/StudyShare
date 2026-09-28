@@ -92,94 +92,95 @@ export const MostUsefulModule: React.FC<MostUsefulModuleProps> = () => {
 
   return (
     <div
+      className="daq-card"
       style={{
+        padding: '24px 28px',
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-subtle)',
-        borderLeft: '4px solid var(--accent-core)',
-        borderRadius: 'var(--radius-md)',
-        padding: '18px 20px',
-        boxShadow: 'var(--shadow-sm)',
         marginBottom: '20px',
         position: 'relative',
-        transition: 'all 120ms ease',
       }}
     >
+      {/* Corner Crosshairs */}
+      <div className="daq-crosshair daq-crosshair-tl" />
+      <div className="daq-crosshair daq-crosshair-tr" />
+      <div className="daq-crosshair daq-crosshair-bl" />
+      <div className="daq-crosshair daq-crosshair-br" />
+
       {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 0 : '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 0 : '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
               width: '28px',
               height: '28px',
               borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-strong)',
               backgroundColor: 'var(--accent-tint)',
-              color: 'var(--accent-core)',
+              color: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <TrendingUp size={16} />
+            <TrendingUp size={15} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: 'var(--accent-core)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                QUALITY & RECENCY RANKING
+              <span className="daq-tag" style={{ fontSize: '9.5px', padding: '1.5px 6px' }}>
+                02 / TELEMETRY
               </span>
               <span
                 style={{
                   fontSize: '10px',
-                  backgroundColor: 'var(--bg-muted)',
                   color: 'var(--text-muted)',
-                  padding: '1px 5px',
-                  borderRadius: '2px',
                   fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
                 }}
               >
-                WEIGHTED
+                ALGORITHMIC TIME-DECAY RANKING
               </span>
             </div>
             <h2
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '16px',
+                fontSize: '18px',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                margin: 0,
+                margin: '3px 0 0',
+                letterSpacing: '-0.01em',
               }}
             >
-              Most Useful This Week
+              Most Useful <span className="academic-serif-italic" style={{ fontWeight: 400 }}>This Week</span>
             </h2>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
-            fontSize: '12px',
-            color: 'var(--text-muted)',
-            padding: '4px 8px',
+            fontSize: '11px',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--text-secondary)',
+            padding: '5px 12px',
             borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-subdued)',
+            cursor: 'pointer',
+            transition: 'all 140ms ease',
           }}
         >
           {isCollapsed ? (
             <>
-              <span>Show</span> <ChevronDown size={14} />
+              <span>EXPAND</span> <ChevronDown size={13} />
             </>
           ) : (
             <>
-              <span>Minimize</span> <ChevronUp size={14} />
+              <span>COLLAPSE</span> <ChevronUp size={13} />
             </>
           )}
         </button>
@@ -197,6 +198,7 @@ export const MostUsefulModule: React.FC<MostUsefulModuleProps> = () => {
           {items.map((item, index) => {
             const subjectCode = item.breadcrumbs?.subject?.code || `SEM ${item.semester}`;
             const netVotes = item.upvotes_count - item.downvotes_count;
+            const rankClass = index === 0 ? 'rank-badge-gold' : index === 1 ? 'rank-badge-silver' : 'rank-badge-bronze';
 
             return (
               <Link
@@ -211,29 +213,24 @@ export const MostUsefulModule: React.FC<MostUsefulModuleProps> = () => {
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   gap: '10px',
-                  transition: 'border-color 100ms ease, transform 80ms ease, background-color 100ms ease',
+                  transition: 'border-color 140ms ease, transform 140ms ease, background-color 140ms ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-strong)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.backgroundColor = 'var(--bg-muted)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.backgroundColor = 'var(--bg-subdued)';
                 }}
               >
                 <div>
-                  {/* Top line: Rank number + Subject code + Type */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  {/* Top line: Rank badge + Subject code + Type */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span
-                        style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: index === 0 ? 'var(--accent-core)' : 'var(--text-muted)',
-                        }}
-                      >
+                      <span className={`rank-badge ${rankClass}`}>
                         #{index + 1}
                       </span>
                       <span

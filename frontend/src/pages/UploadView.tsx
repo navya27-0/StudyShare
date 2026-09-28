@@ -362,36 +362,29 @@ export const UploadView: React.FC = () => {
 
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-          <div
-            style={{
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--accent-tint)',
-              color: 'var(--accent-core)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Academic Contribution
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <span className="daq-tag">
+            <span className="daq-beacon" />
+            01 / CONTRIBUTION PROTOCOL
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10.5px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+            ACADEMIC LEDGER
+          </span>
         </div>
         <h1
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: '26px',
+            fontSize: 'clamp(24px, 3.5vw, 32px)',
             fontWeight: 700,
             color: 'var(--text-primary)',
-            lineHeight: 1.25,
-            marginBottom: '6px',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.2,
+            marginBottom: '8px',
           }}
         >
           Publish Study Resource
         </h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '640px' }}>
           Contribute verified lecture notes, past exam question banks, lab records, or references to the engineering ledger.
         </p>
       </div>
@@ -626,16 +619,12 @@ export const UploadView: React.FC = () => {
                       type="button"
                       onClick={handleCreateUnit}
                       disabled={isCreatingUnit || !newUnitTitle.trim()}
+                      className="daq-btn-primary touch-target"
                       style={{
-                        padding: '6px 12px',
-                        backgroundColor: 'var(--accent-core)',
-                        color: '#fff',
+                        padding: '6px 14px',
                         fontSize: '12px',
-                        fontWeight: 600,
-                        borderRadius: 'var(--radius-sm)',
                         flex: 1,
                       }}
-                      className="touch-target"
                     >
                       {isCreatingUnit ? 'Saving...' : 'Add Unit'}
                     </button>
@@ -720,13 +709,10 @@ export const UploadView: React.FC = () => {
                     type="button"
                     onClick={handleCreateTopic}
                     disabled={isCreatingTopic || !newTopicTitle.trim()}
+                    className="daq-btn-primary touch-target"
                     style={{
-                      padding: '6px 12px',
-                      backgroundColor: 'var(--accent-core)',
-                      color: '#fff',
+                      padding: '6px 14px',
                       fontSize: '12px',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-sm)',
                       width: '100%',
                     }}
                   >
@@ -1046,8 +1032,21 @@ export const UploadView: React.FC = () => {
           </div>
         </div>
 
+        {/* Hairline Upload Progress Bar with Active Shimmer */}
+        {isSubmitting && (
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+              <span>TRANSMITTING ASSET TO REPOSITORY...</span>
+              <span>VERIFYING CHECKSUM</span>
+            </div>
+            <div className="upload-hairline-progress">
+              <div className="upload-hairline-progress-bar" />
+            </div>
+          </div>
+        )}
+
         {/* Submit Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '14px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '14px', marginTop: '14px' }}>
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -1066,17 +1065,10 @@ export const UploadView: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
+            className="daq-btn-primary touch-target"
             style={{
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#ffffff',
-              backgroundColor: 'var(--accent-core)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: 'var(--shadow-sm)',
+              padding: '10px 26px',
+              fontSize: '13.5px',
               opacity: isSubmitting ? 0.7 : 1,
             }}
           >

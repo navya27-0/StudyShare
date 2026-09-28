@@ -13,6 +13,7 @@ export const Signup: React.FC = () => {
   const [bio, setBio] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDoorClosing, setIsDoorClosing] = useState(false);
 
   const { signup } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -42,17 +43,20 @@ export const Signup: React.FC = () => {
         department,
         bio: bio.trim() || undefined,
       });
-      navigate('/', { replace: true });
+      setIsDoorClosing(true);
+      setTimeout(() => {
+        navigate('/', { replace: true, state: { fromDoor: true } });
+      }, 200);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Registration failed. Please review your details.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      className={isDoorClosing ? 'door-exit-anim' : ''}
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -145,13 +149,18 @@ export const Signup: React.FC = () => {
             width: '100%',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            backgroundColor: 'var(--bg-surface)',
+            backgroundColor: 'rgba(255, 255, 255, 0.015)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-sm)',
-            boxShadow: 'var(--shadow-md)',
+            position: 'relative',
             overflow: 'hidden',
           }}
+          className="daq-card"
         >
+          <div className="daq-crosshair daq-crosshair-tl" />
+          <div className="daq-crosshair daq-crosshair-tr" />
+          <div className="daq-crosshair daq-crosshair-bl" />
+          <div className="daq-crosshair daq-crosshair-br" />
           {/* Left Context Information */}
           <div
             style={{
@@ -467,18 +476,12 @@ export const Signup: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
+                className="daq-btn-primary touch-target"
                 style={{
-                  marginTop: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  backgroundColor: 'var(--accent-core)',
-                  color: '#FFFFFF',
-                  padding: '12px 18px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontWeight: 600,
-                  fontSize: '14px',
+                  marginTop: '12px',
+                  width: '100%',
+                  padding: '12px 20px',
+                  fontSize: '13.5px',
                   letterSpacing: '0.02em',
                   opacity: isSubmitting ? 0.75 : 1,
                 }}

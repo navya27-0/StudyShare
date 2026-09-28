@@ -38,13 +38,14 @@ export const BookmarksView: React.FC = () => {
     setError(null);
     try {
       const data = await usersApi.getBookmarks(user.id, 1, 100);
-      const items = data.items.map((b) => ({
+      const rawList = data?.items || [];
+      const items = rawList.map((b) => ({
         ...b.resource,
         is_bookmarked: true,
       }));
       setSavedItems(items);
       setFilteredItems(items);
-      setTotalCount(data.total);
+      setTotalCount(data?.total ?? rawList.length);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to retrieve saved bookmarks');
     } finally {
@@ -276,12 +277,17 @@ export const BookmarksView: React.FC = () => {
       {/* Bookmarks List */}
       {filteredItems.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredItems.map((res) => (
-            <ResourceCard
+          {filteredItems.map((res, idx) => (
+            <div
               key={res.id}
-              resource={res}
-              onBookmarkChange={handleBookmarkToggle}
-            />
+              className="stagger-item"
+              style={{ '--stagger-i': Math.min(idx, 8) } as React.CSSProperties}
+            >
+              <ResourceCard
+                resource={res}
+                onBookmarkChange={handleBookmarkToggle}
+              />
+            </div>
           ))}
         </div>
       ) : savedItems.length > 0 ? (
@@ -306,14 +312,7 @@ export const BookmarksView: React.FC = () => {
               setSelectedSemester('');
               setSelectedType('');
             }}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: 'var(--accent-core)',
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-            }}
+            className="daq-btn-primary"
           >
             Clear Filters
           </button>
@@ -353,17 +352,10 @@ export const BookmarksView: React.FC = () => {
           </p>
           <Link
             to="/"
+            className="daq-btn-primary"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 22px',
-              backgroundColor: 'var(--accent-core)',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: 'var(--shadow-sm)',
+              padding: '10px 24px',
+              fontSize: '13.5px',
             }}
           >
             <BookOpen size={16} /> Browse Course Catalog <ArrowRight size={15} />

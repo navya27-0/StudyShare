@@ -81,19 +81,23 @@ export const BrowseView: React.FC = () => {
     try {
       const [resData, bookmarksData] = await Promise.all([
         resourcesApi.list(activeFilters),
-        user ? resourcesApi.getUserBookmarks(user.id) : Promise.resolve({ bookmarks: [] }),
+        user
+          ? resourcesApi.getUserBookmarks(user.id).catch(() => ({ items: [], bookmarks: [] }))
+          : Promise.resolve({ items: [], bookmarks: [] }),
       ]);
 
-      const bookmarkedIds = new Set(bookmarksData.bookmarks.map((b) => b.resource_id));
+      const bookmarkList = bookmarksData?.items || bookmarksData?.bookmarks || [];
+      const bookmarkedIds = new Set(bookmarkList.map((b: { resource_id: number }) => b.resource_id));
 
-      const itemsWithBookmarks = resData.items.map((item) => ({
+      const rawItems = resData?.items || [];
+      const itemsWithBookmarks = rawItems.map((item) => ({
         ...item,
         is_bookmarked: bookmarkedIds.has(item.id),
       }));
 
       setResources(itemsWithBookmarks);
-      setTotalCount(resData.total);
-      setTotalPages(resData.total_pages);
+      setTotalCount(resData?.total ?? rawItems.length);
+      setTotalPages(resData?.total_pages ?? 1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to query resource records';
       setError(msg);
@@ -277,6 +281,7 @@ export const BrowseView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => updateFilters({ unit_id: undefined, topic_id: undefined })}
+                className="filter-chip-btn"
                 style={{
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-sm)',
@@ -284,8 +289,11 @@ export const BrowseView: React.FC = () => {
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 600,
                   backgroundColor: !currentUnitId ? 'var(--accent-core)' : 'var(--bg-subdued)',
-                  color: !currentUnitId ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: !currentUnitId ? 'var(--accent-contrast)' : 'var(--text-secondary)',
                   border: `1px solid ${!currentUnitId ? 'var(--accent-core)' : 'var(--border-subtle)'}`,
+                  boxShadow: !currentUnitId ? '0 0 10px var(--accent-border)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 140ms ease',
                 }}
               >
                 ALL UNITS
@@ -303,6 +311,7 @@ export const BrowseView: React.FC = () => {
                         topic_id: undefined,
                       })
                     }
+                    className="filter-chip-btn"
                     style={{
                       padding: '5px 12px',
                       borderRadius: 'var(--radius-sm)',
@@ -310,8 +319,11 @@ export const BrowseView: React.FC = () => {
                       fontFamily: 'var(--font-mono)',
                       fontWeight: 600,
                       backgroundColor: isSelected ? 'var(--accent-core)' : 'var(--bg-subdued)',
-                      color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                      color: isSelected ? 'var(--accent-contrast)' : 'var(--text-secondary)',
                       border: `1px solid ${isSelected ? 'var(--accent-core)' : 'var(--border-subtle)'}`,
+                      boxShadow: isSelected ? '0 0 10px var(--accent-border)' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 140ms ease',
                     }}
                     title={`Unit ${unit.unit_number}: ${unit.title}`}
                   >
@@ -364,31 +376,157 @@ export const BrowseView: React.FC = () => {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px' }}>
-            <div>
-              <div
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* DAQ CONSULTING INSPIRED ARCHITECTURAL HERO BANNER */}
+          <div
+            className="daq-card academic-grid-bg"
+            style={{
+              padding: '44px 36px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Background subtle radial glow */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-60px',
+                right: '5%',
+                width: '420px',
+                height: '260px',
+                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Corner Crosshair Accents */}
+            <div className="daq-crosshair daq-crosshair-tl" />
+            <div className="daq-crosshair daq-crosshair-tr" />
+            <div className="daq-crosshair daq-crosshair-bl" />
+            <div className="daq-crosshair daq-crosshair-br" />
+
+            {/* Section Tag */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <span className="daq-tag">
+                <span className="daq-beacon" />
+                01 / ACADEMIC ARCHITECTURE
+              </span>
+              <span
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   color: 'var(--text-muted)',
-                  letterSpacing: '0.06em',
-                  marginBottom: '2px',
+                  letterSpacing: '0.12em',
                 }}
               >
-                CENTRAL CURRICULUM ARCHIVE // ALL BRANCHES
+                GOVERNED &amp; PEER-REVIEWED
+              </span>
+            </div>
+
+            {/* Main Title & Formal Editorial Header */}
+            <h1
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(28px, 4.5vw, 46px)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.15,
+                color: 'var(--text-primary)',
+                marginBottom: '14px',
+                maxWidth: '820px',
+              }}
+            >
+              Architecting <span className="academic-serif-italic" style={{ color: 'var(--text-primary)', fontWeight: 400 }}>Academic Knowledge.</span>
+            </h1>
+
+            {/* Subtitle */}
+            <p
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '15px',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.7,
+                maxWidth: '660px',
+                marginBottom: '28px',
+              }}
+            >
+              The authoritative ledger for university lecture notes, past exam papers, and syllabus milestones.
+              Decentralized, faculty-audited, and governed strictly by course taxonomy.
+            </p>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '36px' }}>
+              <a
+                href="#catalog-grid"
+                className="daq-btn-primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <span>EXPLORE CATALOG</span>
+                <ChevronRight size={14} strokeWidth={2.5} />
+              </a>
+
+              <a
+                href="/upload"
+                className="daq-btn-secondary"
+              >
+                <span>CONTRIBUTE ASSET</span>
+              </a>
+            </div>
+
+            {/* DAQ 4-Column Architectural Telemetry Matrix */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                borderTop: '1px solid var(--border-subtle)',
+                paddingTop: '20px',
+                gap: '16px',
+              }}
+            >
+              <div style={{ transition: 'transform 180ms ease' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                  01 / CURRICULUM
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {subjects.length} Programs
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Computer Science &amp; Eng.</div>
               </div>
-              <h1
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '22px',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  margin: 0,
-                }}
-              >
-                Academic Resource Catalog
-              </h1>
+
+              <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '16px', transition: 'transform 180ms ease' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                  02 / MODULES
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  12 Governed
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Unit &amp; Topic Taxonomy</div>
+              </div>
+
+              <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '16px', transition: 'transform 180ms ease' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                  03 / INTEGRITY
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 600, color: 'var(--status-verified)' }}>
+                  100% Verified
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Zero Hallucination / Noise</div>
+              </div>
+
+              <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '16px', transition: 'transform 180ms ease' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                  04 / PROTOCOL
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  v2.4.0 Live
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Decentralized Ledger</div>
+              </div>
             </div>
           </div>
 
@@ -466,7 +604,7 @@ export const BrowseView: React.FC = () => {
                       cursor: 'pointer',
                       flexShrink: 0,
                     }}
-                    className="touch-target"
+                    className="touch-target filter-chip-btn"
                     title={`${sub.code}: ${sub.name}`}
                   >
                     <span style={{ color: 'var(--accent-core)' }}>{sub.code}</span>
@@ -494,25 +632,24 @@ export const BrowseView: React.FC = () => {
       <MostUsefulModule />
 
       {/* Filter and Search Toolbar */}
-      <ResourceFilterBar
-        filters={activeFilters}
-        onFilterChange={updateFilters}
-        onResetFilters={handleResetFilters}
-        totalCount={totalCount}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
+      <div id="catalog-grid">
+        <ResourceFilterBar
+          filters={activeFilters}
+          onFilterChange={updateFilters}
+          onResetFilters={handleResetFilters}
+          totalCount={totalCount}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+      </div>
 
       {/* Resource Feed Area */}
       {isLoading ? (
         <ResourceSkeletonList count={6} viewMode={viewMode} />
       ) : error ? (
         <div
+          className="daq-card"
           style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--status-danger-border)',
-            borderLeft: '4px solid var(--status-danger)',
-            borderRadius: 'var(--radius-sm)',
             padding: '40px 24px',
             textAlign: 'center',
             margin: '12px 0',
@@ -528,20 +665,8 @@ export const BrowseView: React.FC = () => {
           <button
             type="button"
             onClick={fetchResources}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              padding: '8px 20px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--accent-core)',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            className="daq-btn-primary"
+            style={{ margin: '0 auto' }}
           >
             <RefreshCw size={14} />
             <span>RETRY CONNECTION</span>
@@ -596,38 +721,43 @@ export const BrowseView: React.FC = () => {
               </div>
             )}
 
-          {resources.map((resource) => (
-            <ResourceCard
+          {resources.map((resource, idx) => (
+            <div
               key={resource.id}
-              resource={resource}
-              viewMode={viewMode}
-              onVoteChange={(resId, newUp, newDown, newVote) => {
-                setResources((prev) =>
-                  prev.map((r) =>
-                    r.id === resId
-                      ? {
-                          ...r,
-                          upvotes_count: newUp,
-                          downvotes_count: newDown,
-                          user_vote: newVote,
-                        }
-                      : r
-                  )
-                );
-              }}
-              onBookmarkChange={(resId, isSaved) => {
-                setResources((prev) =>
-                  prev.map((r) =>
-                    r.id === resId
-                      ? {
-                          ...r,
-                          is_bookmarked: isSaved,
-                        }
-                      : r
-                  )
-                );
-              }}
-            />
+              className={viewMode === 'compact' ? undefined : 'stagger-item'}
+              style={viewMode === 'compact' ? undefined : ({ '--stagger-i': Math.min(idx, 8) } as React.CSSProperties)}
+            >
+              <ResourceCard
+                resource={resource}
+                viewMode={viewMode}
+                onVoteChange={(resId, newUp, newDown, newVote) => {
+                  setResources((prev) =>
+                    prev.map((r) =>
+                      r.id === resId
+                        ? {
+                            ...r,
+                            upvotes_count: newUp,
+                            downvotes_count: newDown,
+                            user_vote: newVote,
+                          }
+                        : r
+                    )
+                  );
+                }}
+                onBookmarkChange={(resId, isSaved) => {
+                  setResources((prev) =>
+                    prev.map((r) =>
+                      r.id === resId
+                        ? {
+                            ...r,
+                            is_bookmarked: isSaved,
+                          }
+                        : r
+                    )
+                  );
+                }}
+              />
+            </div>
           ))}
           </div>
         </div>
@@ -703,8 +833,10 @@ export const BrowseView: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: isCurrent ? 700 : 500,
                     backgroundColor: isCurrent ? 'var(--accent-core)' : 'var(--bg-surface)',
-                    color: isCurrent ? '#FFFFFF' : 'var(--text-primary)',
+                    color: isCurrent ? 'var(--accent-contrast)' : 'var(--text-primary)',
                     border: `1px solid ${isCurrent ? 'var(--accent-core)' : 'var(--border-subtle)'}`,
+                    boxShadow: isCurrent ? '0 0 15px var(--accent-border)' : 'none',
+                    transition: 'all 140ms ease',
                   }}
                 >
                   {pageNum}

@@ -129,14 +129,7 @@ export const ProfileView: React.FC = () => {
           </button>
           <Link
             to="/"
-            style={{
-              padding: '8px 18px',
-              backgroundColor: 'var(--accent-core)',
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-            }}
+            className="daq-btn-primary"
           >
             Return to Catalog
           </Link>
@@ -298,18 +291,7 @@ export const ProfileView: React.FC = () => {
           {isSelf && (
             <Link
               to="/upload"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                backgroundColor: 'var(--accent-core)',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
+              className="daq-btn-primary"
             >
               <UploadCloud size={16} /> Contribute Material
             </Link>
@@ -449,17 +431,7 @@ export const ProfileView: React.FC = () => {
               {isSelf && (
                 <Link
                   to="/upload"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 18px',
-                    backgroundColor: 'var(--accent-core)',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    borderRadius: 'var(--radius-sm)',
-                  }}
+                  className="daq-btn-primary"
                 >
                   <UploadCloud size={15} /> Upload First Resource
                 </Link>
@@ -521,15 +493,7 @@ export const ProfileView: React.FC = () => {
                   </Link>
                   <Link
                     to="/upload"
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: 'var(--accent-core)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '12.5px',
-                      fontFamily: 'var(--font-mono)',
-                      fontWeight: 600,
-                      color: '#FFFFFF',
-                    }}
+                    className="daq-btn-primary"
                   >
                     Upload Resource
                   </Link>

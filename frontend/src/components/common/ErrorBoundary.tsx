@@ -179,19 +179,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <button
               type="button"
               onClick={this.handleReset}
-              className="touch-target"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                backgroundColor: 'var(--accent-core)',
-                color: '#FFFFFF',
-                fontSize: '13px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
+              className="daq-btn-primary touch-target"
             >
               <RotateCcw size={15} aria-hidden="true" />
               <span>Retry Recovering View</span>

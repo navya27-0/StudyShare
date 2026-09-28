@@ -84,6 +84,11 @@ export const ResourceDetailView: React.FC = () => {
   const [versionUploadSuccess, setVersionUploadSuccess] = useState<string | null>(null);
   const newVersionFileRef = useRef<HTMLInputElement>(null);
 
+  // Micro-interaction animation states
+  const [animatingVote, setAnimatingVote] = useState<'up' | 'down' | null>(null);
+  const [animatingBookmark, setAnimatingBookmark] = useState(false);
+  const [animatingStar, setAnimatingStar] = useState<number | null>(null);
+
   const resourceId = id ? parseInt(id, 10) : NaN;
 
   // Load Resource Data
@@ -110,7 +115,8 @@ export const ResourceDetailView: React.FC = () => {
       if (user) {
         try {
           const bmData = await resourcesApi.getUserBookmarks(user.id);
-          const hasBookmarked = bmData.bookmarks.some((b) => b.resource_id === data.id);
+          const list = bmData?.items || bmData?.bookmarks || [];
+          const hasBookmarked = list.some((b: { resource_id: number }) => b.resource_id === data.id);
           setIsBookmarked(hasBookmarked);
         } catch {
           // Ignore bookmark check error
@@ -197,10 +203,12 @@ export const ResourceDetailView: React.FC = () => {
     }
   };
 
-  // Vote Handler
+  // Vote Handler with pop animation
   const handleVote = async (type: 'up' | 'down') => {
     if (!resource || isVoting) return;
     setIsVoting(true);
+    setAnimatingVote(type);
+    setTimeout(() => setAnimatingVote(null), 180);
     try {
       const res = await resourcesApi.vote(resource.id, type);
       setUpvotes(res.upvotes_count);
@@ -213,10 +221,12 @@ export const ResourceDetailView: React.FC = () => {
     }
   };
 
-  // Rating Handler
+  // Rating Handler with star-burst pop animation
   const handleRate = async (stars: number) => {
     if (!resource || isRating) return;
     setIsRating(true);
+    setAnimatingStar(stars);
+    setTimeout(() => setAnimatingStar(null), 180);
     setRatingFeedback(null);
     try {
       const res = await resourcesApi.rate(resource.id, stars);
@@ -234,10 +244,12 @@ export const ResourceDetailView: React.FC = () => {
     }
   };
 
-  // Bookmark Handler
+  // Bookmark Handler with pop animation
   const handleToggleBookmark = async () => {
     if (!resource || isBookmarking) return;
     setIsBookmarking(true);
+    setAnimatingBookmark(true);
+    setTimeout(() => setAnimatingBookmark(false), 180);
     try {
       const res = await resourcesApi.toggleBookmark(resource.id, isBookmarked);
       setIsBookmarked(res.bookmarked);
@@ -427,14 +439,7 @@ export const ResourceDetailView: React.FC = () => {
           </button>
           <button
             onClick={() => navigate('/')}
-            style={{
-              padding: '8px 18px',
-              backgroundColor: 'var(--accent-core)',
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-            }}
+            className="daq-btn-primary"
           >
             Return to Catalog
           </button>
@@ -544,7 +549,7 @@ export const ResourceDetailView: React.FC = () => {
               fontWeight: isBookmarked ? 600 : 400,
             }}
           >
-            <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} aria-hidden="true" />
+            <Bookmark size={14} className={animatingBookmark ? 'bookmark-pop' : ''} fill={isBookmarked ? 'currentColor' : 'none'} aria-hidden="true" />
             {isBookmarked ? 'Bookmarked' : 'Bookmark'}
           </button>
           <button
@@ -842,16 +847,10 @@ export const ResourceDetailView: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => resourcesApi.recordDownload(resource.id)}
+                    className="daq-btn-primary"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 22px',
-                      backgroundColor: 'var(--accent-core)',
-                      color: '#fff',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-sm)',
+                      padding: '10px 24px',
+                      fontSize: '13px',
                     }}
                   >
                     Open External Resource <ExternalLink size={15} />
@@ -870,16 +869,10 @@ export const ResourceDetailView: React.FC = () => {
                 <button
                   onClick={handleDownload}
                   disabled={isDownloading}
+                  className="daq-btn-primary"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 22px',
-                    backgroundColor: 'var(--accent-core)',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 24px',
+                    fontSize: '13px',
                   }}
                 >
                   <Download size={16} /> Download File ({formatFileSize(resource.file_size_bytes)})
@@ -1049,13 +1042,10 @@ export const ResourceDetailView: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isUploadingVersion}
+                      className="daq-btn-primary"
                       style={{
-                        padding: '6px 18px',
-                        backgroundColor: 'var(--accent-core)',
-                        color: '#fff',
+                        padding: '7px 20px',
                         fontSize: '12px',
-                        fontWeight: 600,
-                        borderRadius: 'var(--radius-sm)',
                       }}
                     >
                       {isUploadingVersion ? 'Uploading...' : 'Publish Version'}
@@ -1197,20 +1187,11 @@ export const ResourceDetailView: React.FC = () => {
               onClick={handleDownload}
               disabled={isDownloading}
               aria-label={resource.type === 'link' ? 'Open resource external link' : `Download file (${downloadsCount} downloads)`}
-              className="touch-target"
+              className="daq-btn-primary touch-target"
               style={{
                 width: '100%',
                 padding: '12px 18px',
-                backgroundColor: 'var(--accent-core)',
-                color: '#ffffff',
-                fontSize: '14px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-sm)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: 'var(--shadow-sm)',
+                fontSize: '13.5px',
               }}
             >
               {resource.type === 'link' ? (
@@ -1259,7 +1240,7 @@ export const ResourceDetailView: React.FC = () => {
                     fontWeight: userVote === 'up' ? 700 : 500,
                   }}
                 >
-                  <ChevronUp size={18} aria-hidden="true" /> Upvote ({upvotes})
+                  <ChevronUp size={18} className={animatingVote === 'up' ? 'vote-pop-up' : ''} aria-hidden="true" /> Upvote ({upvotes})
                 </button>
 
                 <div
@@ -1293,7 +1274,7 @@ export const ResourceDetailView: React.FC = () => {
                     fontWeight: userVote === 'down' ? 700 : 500,
                   }}
                 >
-                  <ChevronDown size={18} aria-hidden="true" /> ({downvotes})
+                  <ChevronDown size={18} className={animatingVote === 'down' ? 'vote-pop-down' : ''} aria-hidden="true" /> ({downvotes})
                 </button>
               </div>
             </div>
@@ -1333,9 +1314,11 @@ export const ResourceDetailView: React.FC = () => {
                       style={{
                         padding: '4px',
                         color: isFilled ? 'var(--status-exam)' : 'var(--border-strong)',
-                        transition: 'transform 80ms ease',
+                        cursor: 'pointer',
+                        background: 'transparent',
+                        border: 'none',
                       }}
-                      className="touch-target"
+                      className={`touch-target star-interactive ${animatingStar === star ? 'star-pop' : ''}`}
                     >
                       <Star size={22} fill={isFilled ? 'currentColor' : 'none'} aria-hidden="true" />
                     </button>

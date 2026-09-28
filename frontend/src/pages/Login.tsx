@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { BookOpen, KeyRound, ArrowRight, ShieldCheck, AlertCircle, Sparkles, Moon, Sun } from 'lucide-react';
+import {
+  BookOpen,
+  KeyRound,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  Sparkles,
+  Moon,
+  Sun,
+  GraduationCap,
+  Compass,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+
+type ViewPhase = 'title' | 'fading_to_login' | 'login';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDoorClosing, setIsDoorClosing] = useState(false);
 
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -16,6 +30,56 @@ export const Login: React.FC = () => {
   const location = useLocation();
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  const [viewPhase, setViewPhase] = useState<ViewPhase>(() => {
+    if ((location.state as { skipTitle?: boolean })?.skipTitle) return 'login';
+    try {
+      if (sessionStorage.getItem('studyshare_title_seen') === 'true') {
+        return 'login';
+      }
+    } catch {
+      // ignore
+    }
+    return 'title';
+  });
+
+  const advanceToLogin = useCallback(() => {
+    try {
+      sessionStorage.setItem('studyshare_title_seen', 'true');
+    } catch {
+      // ignore
+    }
+    setViewPhase((prev) => {
+      if (prev === 'title') {
+        setTimeout(() => {
+          setViewPhase('login');
+        }, 200);
+        return 'fading_to_login';
+      }
+      return prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (viewPhase !== 'title') return;
+
+    // Auto-advance after 2.4s
+    const timer = setTimeout(() => {
+      advanceToLogin();
+    }, 2400);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+      advanceToLogin();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [viewPhase, advanceToLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +93,13 @@ export const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      setIsDoorClosing(true);
+      setTimeout(() => {
+        navigate(from, { replace: true, state: { fromDoor: true } });
+      }, 200);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Invalid authentication credentials.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -44,8 +110,349 @@ export const Login: React.FC = () => {
     setError(null);
   };
 
+  // 1. Initial Application Title Screen with Architectural DAQ Styling
+  if (viewPhase === 'title' || viewPhase === 'fading_to_login') {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={advanceToLogin}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') advanceToLogin();
+        }}
+        className={viewPhase === 'fading_to_login' ? 'cinematic-fade-exit' : ''}
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          backgroundColor: 'var(--bg-canvas)',
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
+          userSelect: 'none',
+          outline: 'none',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Top Header Ribbon */}
+        <header
+          style={{
+            borderBottom: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-surface)',
+            padding: '12px 28px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px',
+                fontWeight: 700,
+                backgroundColor: 'var(--accent-tint)',
+                color: 'var(--accent-core)',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-sm)',
+                letterSpacing: '0.06em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>STUDYSHARE</span>
+              <span className="daq-beacon" title="Network Active" />
+            </div>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              ACADEMIC INTELLIGENCE PLATFORM // v1.0.0
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                backgroundColor: 'var(--bg-subdued)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-secondary)',
+                fontSize: '12px',
+                fontFamily: 'var(--font-mono)',
+                cursor: 'pointer',
+              }}
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} mode`}
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon size={14} strokeWidth={1.75} />
+                  <span>NIGHT</span>
+                </>
+              ) : (
+                <>
+                  <Sun size={14} strokeWidth={1.75} />
+                  <span>PAPER</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                advanceToLogin();
+              }}
+              className="daq-btn-secondary"
+              style={{
+                padding: '6px 14px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.06em',
+              }}
+            >
+              <span>ENTER NOW</span>
+              <ArrowRight size={12} strokeWidth={2} />
+            </button>
+          </div>
+        </header>
+
+        {/* Center Presentation Viewport */}
+        <main
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px 24px',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '840px',
+              width: '100%',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: '52px 36px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              position: 'relative',
+              boxShadow: '0 20px 48px -12px var(--shadow-sm)',
+            }}
+            className="daq-card"
+          >
+            {/* Corner Crosshairs */}
+            <div className="daq-crosshair daq-crosshair-tl" />
+            <div className="daq-crosshair daq-crosshair-tr" />
+            <div className="daq-crosshair daq-crosshair-bl" />
+            <div className="daq-crosshair daq-crosshair-br" />
+
+            {/* Glowing StudyShare Emblem */}
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-strong)',
+                backgroundColor: 'var(--accent-tint)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-core)',
+                marginBottom: '24px',
+                boxShadow: '0 0 30px var(--accent-tint)',
+              }}
+            >
+              <svg
+                width="34"
+                height="34"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </div>
+
+            {/* Micro Telemetry Tag */}
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px',
+                letterSpacing: '0.18em',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span>// CENTRALIZED ACADEMIC REPOSITORY //</span>
+            </div>
+
+            {/* Display Title & Academic Motto */}
+            <div style={{ marginBottom: '8px' }}>
+              <h1
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(38px, 6vw, 58px)',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.05,
+                  color: 'var(--text-primary)',
+                  margin: '0 0 6px 0',
+                }}
+              >
+                STUDYSHARE
+              </h1>
+              <div
+                className="academic-serif-italic"
+                style={{
+                  fontSize: 'clamp(18px, 2.5vw, 24px)',
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '-0.01em',
+                  marginTop: '6px',
+                }}
+              >
+                Curating Academic Intelligence &amp; Verified Curricula
+              </div>
+            </div>
+
+            {/* Description */}
+            <p
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '14.5px',
+                lineHeight: 1.7,
+                color: 'var(--text-secondary)',
+                margin: '12px 0 30px 0',
+                maxWidth: '620px',
+              }}
+            >
+              Engineered exclusively for university scholars. Structured across Semesters 1 through 8
+              with verifiable cryptographic hashes, faculty audit logs, and merit-backed peer review.
+            </p>
+
+            {/* Feature Pills */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '36px',
+              }}
+            >
+              <span className="daq-tag">
+                <GraduationCap size={11} strokeWidth={2} />
+                SEM 1-8 TAXONOMY
+              </span>
+              <span className="daq-tag">
+                <ShieldCheck size={11} strokeWidth={2} />
+                FACULTY VERIFIED
+              </span>
+              <span className="daq-tag">
+                <Sparkles size={11} strokeWidth={2} />
+                REPUTATION PROTOCOL
+              </span>
+              <span className="daq-tag">
+                <Compass size={11} strokeWidth={2} />
+                ZERO GATEKEEPING
+              </span>
+            </div>
+
+            {/* Primary Action Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                advanceToLogin();
+              }}
+              className="daq-btn-primary"
+              style={{
+                padding: '12px 36px',
+                fontSize: '13px',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.08em',
+                marginBottom: '20px',
+              }}
+            >
+              <span>ENTER PLATFORM</span>
+              <ArrowRight size={15} strokeWidth={2.2} />
+            </button>
+
+            {/* Hairline Auto-advance Progress Bar */}
+            <div className="title-progress-track" title="Auto-advancing to sign in">
+              <div className="title-progress-fill" />
+            </div>
+
+            {/* Micro Prompt */}
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10.5px',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.08em',
+                marginTop: '12px',
+              }}
+            >
+              PRESS ANY KEY OR CLICK ANYWHERE TO CONTINUE
+            </span>
+          </div>
+        </main>
+
+        {/* Footer Ribbon */}
+        <footer
+          style={{
+            borderTop: '1px solid var(--border-subtle)',
+            padding: '12px 28px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: 'var(--bg-surface)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="daq-beacon" />
+            <span>SESSION: ENCRYPTED // TLS 1.3 // ZERO-TRACKING ARCHIVE</span>
+          </div>
+          <div>REPUTATION LEDGER ACTIVE // 10 PTS BASELINE</div>
+          <div>© 2026 STUDYSHARE ACADEMIC INFRASTRUCTURE</div>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div
+      className={isDoorClosing ? 'cinematic-fade-exit' : 'cinematic-fade-enter'}
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -91,9 +498,29 @@ export const Login: React.FC = () => {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={toggleTheme}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => setViewPhase('title')}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '4px 8px',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+            }}
+            title="Replay Title Screen"
+          >
+            // TITLE SCREEN
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleTheme}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -120,6 +547,7 @@ export const Login: React.FC = () => {
             </>
           )}
         </button>
+        </div>
       </header>
 
       {/* Main Ledger Split Workspace */}
@@ -138,13 +566,18 @@ export const Login: React.FC = () => {
             width: '100%',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            backgroundColor: 'var(--bg-surface)',
+            backgroundColor: 'rgba(255, 255, 255, 0.015)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-sm)',
-            boxShadow: 'var(--shadow-md)',
+            position: 'relative',
             overflow: 'hidden',
           }}
+          className="daq-card"
         >
+          <div className="daq-crosshair daq-crosshair-tl" />
+          <div className="daq-crosshair daq-crosshair-tr" />
+          <div className="daq-crosshair daq-crosshair-bl" />
+          <div className="daq-crosshair daq-crosshair-br" />
           {/* Left Archival Context Panel */}
           <div
             style={{
@@ -424,18 +857,12 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
+                className="daq-btn-primary touch-target"
                 style={{
-                  marginTop: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  backgroundColor: 'var(--accent-core)',
-                  color: '#FFFFFF',
-                  padding: '12px 18px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontWeight: 600,
-                  fontSize: '14px',
+                  marginTop: '12px',
+                  width: '100%',
+                  padding: '12px 20px',
+                  fontSize: '13.5px',
                   letterSpacing: '0.02em',
                   opacity: isSubmitting ? 0.75 : 1,
                 }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Layers,
@@ -14,6 +14,8 @@ import {
   X,
   Search,
   User as UserIcon,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -32,6 +34,78 @@ export const AppShell: React.FC = () => {
   const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+
+  // Persisted Desktop Collapsible Sidebar
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('studyshare_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('studyshare_sidebar_collapsed', String(next));
+      } catch {
+        // storage quota/access ignore
+      }
+      return next;
+    });
+  }, []);
+
+  // Keyboard shortcut Ctrl+B / Cmd+B for sidebar toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSidebar]);
+
+  // Direction-Aware Route Navigation Transition
+  const prevPathRef = useRef(location.pathname);
+  const [routeTransitionClass, setRouteTransitionClass] = useState<string>('page-trans-crossfade');
+  const [shellEnterAnim, setShellEnterAnim] = useState<boolean>(() => {
+    return Boolean((location.state as { fromDoor?: boolean })?.fromDoor);
+  });
+
+  useEffect(() => {
+    if (shellEnterAnim) {
+      const timer = setTimeout(() => {
+        setShellEnterAnim(false);
+      }, 240);
+      return () => clearTimeout(timer);
+    }
+  }, [shellEnterAnim]);
+
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    const current = location.pathname;
+
+    if (location.state && (location.state as { fromDoor?: boolean }).fromDoor) {
+      setRouteTransitionClass('page-trans-same-level');
+    } else if (prev === current) {
+      setRouteTransitionClass('page-trans-same-level');
+    } else if (prev === '/' && current.startsWith('/resources/')) {
+      setRouteTransitionClass('page-trans-drill-in');
+    } else if (prev.startsWith('/resources/') && current === '/') {
+      setRouteTransitionClass('page-trans-drill-back');
+    } else {
+      setRouteTransitionClass('page-trans-crossfade');
+    }
+
+    prevPathRef.current = current;
+  }, [location.pathname, location.search, location.state]);
 
   // Fetch academic taxonomy tree on mount
   useEffect(() => {
@@ -117,6 +191,7 @@ export const AppShell: React.FC = () => {
 
   return (
     <div
+      className={shellEnterAnim ? 'page-trans-door-enter' : ''}
       style={{
         display: 'flex',
         minHeight: '100vh',
@@ -138,10 +213,10 @@ export const AppShell: React.FC = () => {
         />
       )}
 
-      {/* 260px Left Sidebar Rail */}
+      {/* Collapsible Left Sidebar Rail (260px expanded <-> 68px collapsed) */}
       <aside
         style={{
-          width: '270px',
+          width: sidebarCollapsed ? '68px' : '260px',
           flexShrink: 0,
           borderRight: '1px solid var(--border-subtle)',
           backgroundColor: 'var(--bg-subdued)',
@@ -151,47 +226,119 @@ export const AppShell: React.FC = () => {
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          transition: 'transform 120ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className={`sidebar-rail ${mobileMenuOpen ? 'mobile-open' : ''}`}
+        className={`sidebar-rail ${mobileMenuOpen ? 'mobile-open' : ''} ${sidebarCollapsed ? 'desktop-collapsed' : ''}`}
       >
         {/* Brand Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: sidebarCollapsed ? '16px 0' : '18px 16px 18px 20px',
             borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-surface)',
+            backgroundColor: 'var(--bg-canvas)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+            gap: '8px',
+            height: '62px',
+            boxSizing: 'border-box',
           }}
         >
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link
+            to="/"
+            title={sidebarCollapsed ? 'Expand sidebar (Ctrl+B)' : 'StudyShare Home'}
+            onClick={(e) => {
+              if (sidebarCollapsed) {
+                e.preventDefault();
+                toggleSidebar();
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              gap: '12px',
+              minWidth: 0,
+              textDecoration: 'none',
+              width: sidebarCollapsed ? '100%' : 'auto',
+            }}
+          >
             <div
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                fontWeight: 700,
-                backgroundColor: 'var(--accent-tint)',
-                color: 'var(--accent-core)',
-                padding: '3px 8px',
+                width: '32px',
+                height: '32px',
                 borderRadius: 'var(--radius-sm)',
-                letterSpacing: '0.06em',
+                border: '1px solid var(--border-strong)',
+                backgroundColor: 'var(--accent-tint)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-primary)',
+                flexShrink: 0,
+                boxShadow: '0 0 15px var(--accent-tint)',
+                cursor: sidebarCollapsed ? 'pointer' : 'default',
               }}
             >
-              STUDYSHARE
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
             </div>
-            <span
+            {!sidebarCollapsed && (
+              <div className="sidebar-label" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    STUDYSHARE
+                  </span>
+                  <span className="daq-beacon" title="Network Connected" />
+                </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '9px',
+                    fontWeight: 500,
+                    letterSpacing: '0.16em',
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Academic Intelligence
+                </span>
+              </div>
+            )}
+          </Link>
+
+          {/* Desktop Sidebar Collapse Button (Visible ONLY when expanded) */}
+          {!sidebarCollapsed && (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label="Collapse sidebar (Ctrl+B)"
+              title="Collapse sidebar (Ctrl+B)"
+              className="sidebar-desktop-toggle"
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '15px',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
+                padding: '6px',
+                color: 'var(--text-muted)',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
               }}
             >
-              Academic Ledger
-            </span>
-          </Link>
+              <PanelLeftClose size={16} strokeWidth={1.75} />
+            </button>
+          )}
 
           {mobileMenuOpen && (
             <button
@@ -206,104 +353,145 @@ export const AppShell: React.FC = () => {
         </div>
 
         {/* Primary Navigation Links */}
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ padding: sidebarCollapsed ? '12px 8px' : '14px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <Link
               to="/"
+              title={sidebarCollapsed ? 'Browse Catalog' : undefined}
+              className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '7px 10px',
+                gap: sidebarCollapsed ? 0 : '10px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                padding: sidebarCollapsed ? '9px 0' : '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 500,
                 color:
                   location.pathname === '/' && !location.search
-                    ? 'var(--accent-core)'
-                    : 'var(--text-primary)',
+                    ? 'var(--text-primary)'
+                    : 'var(--text-secondary)',
                 backgroundColor:
                   location.pathname === '/' && !location.search
                     ? 'var(--accent-tint)'
                     : 'transparent',
+                border: `1px solid ${
+                  location.pathname === '/' && !location.search
+                    ? 'var(--border-strong)'
+                    : 'transparent'
+                }`,
               }}
             >
-              <Layers size={16} strokeWidth={1.75} />
-              <span>Browse Catalog</span>
+              <Layers size={17} strokeWidth={1.8} />
+              <span className="sidebar-label">Browse Catalog</span>
             </Link>
 
             <Link
               to="/upload"
+              title={sidebarCollapsed ? 'Upload Resource' : undefined}
+              className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '7px 10px',
+                gap: sidebarCollapsed ? 0 : '10px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                padding: sidebarCollapsed ? '9px 0' : '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 500,
                 color:
-                  location.pathname === '/upload' ? 'var(--accent-core)' : 'var(--text-primary)',
+                  location.pathname === '/upload' ? 'var(--text-primary)' : 'var(--text-secondary)',
                 backgroundColor:
-                  location.pathname === '/upload' ? 'var(--accent-tint)' : 'transparent',
+                  location.pathname === '/upload'
+                    ? 'var(--accent-tint)'
+                    : 'transparent',
+                border: `1px solid ${
+                  location.pathname === '/upload'
+                    ? 'var(--border-strong)'
+                    : 'transparent'
+                }`,
               }}
             >
-              <Upload size={16} strokeWidth={1.75} />
-              <span>Upload Resource</span>
+              <Upload size={17} strokeWidth={1.8} />
+              <span className="sidebar-label">Upload Resource</span>
             </Link>
 
             <Link
               to="/bookmarks"
+              title={sidebarCollapsed ? 'Saved Archives' : undefined}
+              className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '7px 10px',
+                gap: sidebarCollapsed ? 0 : '10px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                padding: sidebarCollapsed ? '9px 0' : '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 500,
                 color:
                   location.pathname === '/bookmarks'
-                    ? 'var(--accent-core)'
-                    : 'var(--text-primary)',
+                    ? 'var(--text-primary)'
+                    : 'var(--text-secondary)',
                 backgroundColor:
-                  location.pathname === '/bookmarks' ? 'var(--accent-tint)' : 'transparent',
+                  location.pathname === '/bookmarks'
+                    ? 'var(--accent-tint)'
+                    : 'transparent',
+                border: `1px solid ${
+                  location.pathname === '/bookmarks'
+                    ? 'var(--border-strong)'
+                    : 'transparent'
+                }`,
               }}
             >
-              <Bookmark size={16} strokeWidth={1.75} />
-              <span>Saved Resources</span>
+              <Bookmark size={17} strokeWidth={1.8} />
+              <span className="sidebar-label">Saved Archives</span>
             </Link>
 
             <Link
               to="/profile"
+              title={sidebarCollapsed ? 'Contributor Profile' : undefined}
+              className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '7px 10px',
+                gap: sidebarCollapsed ? 0 : '10px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                padding: sidebarCollapsed ? '9px 0' : '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 500,
                 color:
                   location.pathname === '/profile'
-                    ? 'var(--accent-core)'
-                    : 'var(--text-primary)',
+                    ? 'var(--text-primary)'
+                    : 'var(--text-secondary)',
                 backgroundColor:
-                  location.pathname === '/profile' ? 'var(--accent-tint)' : 'transparent',
+                  location.pathname === '/profile'
+                    ? 'var(--accent-tint)'
+                    : 'transparent',
+                border: `1px solid ${
+                  location.pathname === '/profile'
+                    ? 'var(--border-strong)'
+                    : 'transparent'
+                }`,
               }}
             >
-              <UserIcon size={16} strokeWidth={1.75} />
-              <span>Contributor Profile</span>
+              <UserIcon size={17} strokeWidth={1.8} />
+              <span className="sidebar-label">Contributor Profile</span>
             </Link>
 
             {user?.role === 'admin' && (
               <Link
                 to="/admin"
+                title={sidebarCollapsed ? 'Moderation Portal' : undefined}
+                className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '7px 10px',
+                  gap: sidebarCollapsed ? 0 : '10px',
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                  padding: sidebarCollapsed ? '9px 0' : '7px 10px',
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '13.5px',
                   fontWeight: 600,
@@ -314,23 +502,70 @@ export const AppShell: React.FC = () => {
                       : 'transparent',
                 }}
               >
-                <ShieldAlert size={16} strokeWidth={1.75} />
-                <span>Moderation Portal</span>
+                <ShieldAlert size={17} strokeWidth={1.75} />
+                <span className="sidebar-label">Moderation Portal</span>
               </Link>
             )}
           </div>
         </div>
 
         {/* Academic Hierarchy Tree Section */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '12px 14px',
-          }}
-        >
+        {sidebarCollapsed ? (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              paddingTop: '20px',
+              gap: '12px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title="Expand Curriculum Tree (Ctrl+B)"
+              aria-label="Expand Curriculum Tree"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: activeSubjectCode ? 'var(--accent-tint)' : 'transparent',
+                border: `1px solid ${activeSubjectCode ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
+                color: activeSubjectCode ? 'var(--accent-core)' : 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <Search size={15} strokeWidth={1.8} />
+            </button>
+            <span
+              style={{
+                writingMode: 'vertical-rl',
+                textOrientation: 'mixed',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                color: 'var(--text-muted)',
+                transform: 'rotate(180deg)',
+              }}
+            >
+              CURRICULUM
+            </span>
+          </div>
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '12px 14px',
+            }}
+          >
           <div
             style={{
               display: 'flex',
@@ -612,29 +847,32 @@ export const AppShell: React.FC = () => {
             })}
           </div>
         </div>
+      )}
 
         {/* Bottom User Profile Section */}
         <div
           style={{
-            padding: '14px 16px',
+            padding: sidebarCollapsed ? '12px 8px' : '14px 16px',
             borderTop: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-surface)',
+            backgroundColor: 'var(--bg-canvas)',
           }}
         >
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: sidebarCollapsed ? 'center' : 'space-between',
               marginBottom: '10px',
             }}
           >
             <Link
               to="/profile"
+              title={sidebarCollapsed ? (user?.display_name || 'Student Profile') : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                gap: sidebarCollapsed ? 0 : '10px',
                 minWidth: 0,
               }}
             >
@@ -642,15 +880,15 @@ export const AppShell: React.FC = () => {
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '50%',
+                  borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'var(--accent-tint)',
-                  border: '1px solid var(--accent-border)',
-                  color: 'var(--accent-core)',
+                  border: '1px solid var(--border-strong)',
+                  color: 'var(--text-primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  fontSize: '13px',
+                  fontSize: '12.5px',
                   fontFamily: 'var(--font-mono)',
                   flexShrink: 0,
                 }}
@@ -658,45 +896,47 @@ export const AppShell: React.FC = () => {
                 {user?.display_name?.charAt(0).toUpperCase() || 'U'}
               </div>
 
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {user?.display_name || 'Student'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span
+              {!sidebarCollapsed && (
+                <div className="sidebar-label" style={{ minWidth: 0 }}>
+                  <div
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color:
-                        user?.role === 'admin'
-                          ? 'var(--status-danger)'
-                          : 'var(--status-verified)',
-                      textTransform: 'uppercase',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
-                    {user?.role === 'admin' ? 'FACULTY ADMIN' : 'STUDENT'}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '10px',
-                      color: 'var(--accent-core)',
-                    }}
-                  >
-                    ★ {user?.contributor_profile?.reputation_points ?? 10} pts
-                  </span>
+                    {user?.display_name || 'Student'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        color:
+                          user?.role === 'admin'
+                            ? 'var(--status-danger)'
+                            : 'var(--status-verified)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {user?.role === 'admin' ? 'FACULTY ADMIN' : 'STUDENT'}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '9.5px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      • {user?.contributor_profile?.reputation_points ?? 10} PTS
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </Link>
           </div>
 
@@ -705,7 +945,8 @@ export const AppShell: React.FC = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+              gap: sidebarCollapsed ? '6px' : 0,
               paddingTop: '8px',
               borderTop: '1px solid var(--border-subtle)',
             }}
@@ -717,24 +958,27 @@ export const AppShell: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                fontSize: '11.5px',
+                fontSize: '11px',
                 color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-mono)',
-                padding: '4px 8px',
+                padding: sidebarCollapsed ? '6px' : '4px 8px',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--bg-subdued)',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-subtle)',
+                cursor: 'pointer',
               }}
               title="Toggle theme palette"
+              aria-label="Toggle theme"
             >
               {theme === 'light' ? (
                 <>
-                  <Moon size={13} strokeWidth={1.75} />
-                  <span>DARK MODE</span>
+                  <Moon size={12} strokeWidth={1.75} />
+                  {!sidebarCollapsed && <span className="sidebar-label">DARK</span>}
                 </>
               ) : (
                 <>
-                  <Sun size={13} strokeWidth={1.75} />
-                  <span>LIGHT MODE</span>
+                  <Sun size={12} strokeWidth={1.75} />
+                  {!sidebarCollapsed && <span className="sidebar-label">LIGHT</span>}
                 </>
               )}
             </button>
@@ -749,38 +993,80 @@ export const AppShell: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                fontSize: '11.5px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
                 color: 'var(--text-muted)',
-                padding: '4px 8px',
+                padding: sidebarCollapsed ? '6px' : '4px 8px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
               }}
               title="Sign out"
+              aria-label="Sign out"
             >
-              <LogOut size={13} strokeWidth={1.75} />
-              <span>EXIT</span>
+              <LogOut size={12} strokeWidth={1.75} />
+              {!sidebarCollapsed && <span className="sidebar-label">EXIT</span>}
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content Viewport */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div
+        className="academic-grid-bg"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          position: 'relative',
+        }}
+      >
         {/* Top Breadcrumb & Quick Action Bar */}
         <header
           className="app-header"
           style={{
             borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-surface)',
-            padding: '12px 24px',
+            backgroundColor: 'var(--bg-glass)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            padding: '12px 28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
             zIndex: 30,
+            transition: 'background-color 200ms ease, border-color 200ms ease',
           }}
         >
           {/* Breadcrumb Trail */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            {/* Desktop Expand Sidebar Button */}
+            {sidebarCollapsed && (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="desktop-expand-sidebar-btn"
+                aria-label="Expand sidebar (Ctrl+B)"
+                title="Expand sidebar (Ctrl+B)"
+                style={{
+                  display: 'none',
+                  padding: '6px',
+                  marginRight: '4px',
+                  color: 'var(--text-secondary)',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <PanelLeft size={16} strokeWidth={1.75} />
+              </button>
+            )}
+
             {/* Mobile Menu Toggle */}
             <button
               type="button"
@@ -806,19 +1092,23 @@ export const AppShell: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                fontSize: '13px',
+                gap: '8px',
+                fontSize: '12px',
                 color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-mono)',
                 overflowX: 'auto',
                 whiteSpace: 'nowrap',
               }}
             >
+              <span className="daq-tag" style={{ padding: '1px 6px', fontSize: '9.5px' }}>
+                01
+              </span>
               <Link
                 to="/"
                 style={{
-                  color: !currentSubject ? 'var(--accent-core)' : 'var(--text-secondary)',
+                  color: !currentSubject ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: 600,
+                  letterSpacing: '0.04em',
                 }}
               >
                 CURRICULUM
@@ -830,8 +1120,9 @@ export const AppShell: React.FC = () => {
                   <Link
                     to={`/?subject_code=${currentSubject.code}`}
                     style={{
-                      color: !currentUnit ? 'var(--accent-core)' : 'var(--text-secondary)',
+                      color: !currentUnit ? 'var(--text-primary)' : 'var(--text-secondary)',
                       fontWeight: 600,
+                      letterSpacing: '0.04em',
                     }}
                   >
                     {currentSubject.code}
@@ -845,7 +1136,7 @@ export const AppShell: React.FC = () => {
                   <Link
                     to={`/?subject_code=${currentSubject?.code}&unit_id=${currentUnit.id}`}
                     style={{
-                      color: !currentTopic ? 'var(--accent-core)' : 'var(--text-secondary)',
+                      color: !currentTopic ? 'var(--text-primary)' : 'var(--text-secondary)',
                       fontWeight: 500,
                     }}
                   >
@@ -857,7 +1148,7 @@ export const AppShell: React.FC = () => {
               {currentTopic && (
                 <>
                   <span style={{ color: 'var(--text-muted)' }} aria-hidden="true">/</span>
-                  <span style={{ color: 'var(--accent-core)', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                     {currentTopic.title}
                   </span>
                 </>
@@ -867,25 +1158,55 @@ export const AppShell: React.FC = () => {
 
           {/* Quick Action Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Link
-              to="/upload"
+            {/* Quick Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-strong)',
+                color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 600,
-                backgroundColor: 'var(--accent-core)',
-                color: '#FFFFFF',
-                padding: '7px 12px',
-                borderRadius: 'var(--radius-sm)',
+                letterSpacing: '0.04em',
+                transition: 'all 160ms ease',
+              }}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={13} strokeWidth={2} style={{ color: '#f59e0b' }} />
+                  <span className="upload-text-full">LIGHT</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={13} strokeWidth={2} style={{ color: '#6366f1' }} />
+                  <span className="upload-text-full">DARK</span>
+                </>
+              )}
+            </button>
+
+            <Link
+              to="/upload"
+              className="daq-btn-primary touch-target"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                padding: '7px 16px',
               }}
               title="Upload academic resource"
-              className="touch-target"
             >
-              <Upload size={14} strokeWidth={1.75} aria-hidden="true" />
-              <span className="upload-text-full">UPLOAD NOTE / PYQ</span>
+              <Upload size={13} strokeWidth={2.2} aria-hidden="true" />
+              <span className="upload-text-full">UPLOAD ASSET</span>
               <span className="upload-text-compact" style={{ display: 'none' }}>UPLOAD</span>
             </Link>
           </div>
@@ -893,7 +1214,8 @@ export const AppShell: React.FC = () => {
 
         {/* Dynamic Routed Content Container */}
         <main
-          className="app-main-content mobile-nav-pad"
+          key={location.pathname}
+          className={`app-main-content mobile-nav-pad ${routeTransitionClass}`}
           style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}
         >
           <ErrorBoundary>
@@ -1068,12 +1390,27 @@ export const AppShell: React.FC = () => {
       </nav>
 
       <style>{`
+        @media (min-width: 1024px) {
+          .desktop-expand-sidebar-btn {
+            display: inline-flex !important;
+          }
+          .desktop-expand-sidebar-btn:hover {
+            border-color: var(--border-strong) !important;
+            color: var(--text-primary) !important;
+            background-color: var(--bg-subdued) !important;
+          }
+        }
+
         @media (max-width: 1023px) {
+          .sidebar-desktop-toggle {
+            display: none !important;
+          }
           .sidebar-rail {
             position: fixed !important;
             left: 0;
             top: 0;
             bottom: 0;
+            width: 270px !important;
             transform: translateX(-100%);
             box-shadow: var(--shadow-md);
           }

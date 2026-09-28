@@ -45,6 +45,18 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
     };
   }, [searchInput]);
 
+  // Global shortcut (Ctrl+K / Cmd+K) to focus catalog search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('catalog-search-input')?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const hasActiveFilters = !!(
     filters.type ||
     filters.semester ||
@@ -55,17 +67,21 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
 
   return (
     <div
+      className="daq-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '14px',
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '16px 20px',
-        boxShadow: 'var(--shadow-sm)',
+        padding: '18px 20px',
+        position: 'relative',
       }}
     >
+      <div className="daq-crosshair daq-crosshair-tl" />
+      <div className="daq-crosshair daq-crosshair-tr" />
+      <div className="daq-crosshair daq-crosshair-bl" />
+      <div className="daq-crosshair daq-crosshair-br" />
       {/* Top Row: Search Input + Sort + Density Controls */}
       <div
         style={{
@@ -103,12 +119,12 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
             style={{
               width: '100%',
               paddingLeft: '36px',
-              paddingRight: searchInput ? '34px' : '12px',
+              paddingRight: searchInput ? '34px' : '58px',
               height: '38px',
               fontSize: '13.5px',
             }}
           />
-          {searchInput && (
+          {searchInput ? (
             <button
               type="button"
               onClick={() => {
@@ -126,6 +142,17 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
             >
               <X size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
+          ) : (
+            <span
+              className="kbd-shortcut"
+              style={{
+                position: 'absolute',
+                right: '10px',
+              }}
+              title="Keyboard shortcut: Ctrl+K or ⌘K"
+            >
+              ⌘K
+            </span>
           )}
         </div>
 
@@ -200,21 +227,23 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
               aria-pressed={viewMode === 'dense'}
               aria-label="Dense Ledger List View"
               style={{
-                padding: '6px 8px',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
-                color: viewMode === 'dense' ? 'var(--accent-core)' : 'var(--text-muted)',
-                backgroundColor: viewMode === 'dense' ? 'var(--bg-surface)' : 'transparent',
-                boxShadow: viewMode === 'dense' ? 'var(--shadow-sm)' : 'none',
+                color: viewMode === 'dense' ? 'var(--accent-contrast)' : 'var(--text-muted)',
+                backgroundColor: viewMode === 'dense' ? 'var(--accent-core)' : 'transparent',
+                border: viewMode === 'dense' ? '1px solid var(--accent-core)' : '1px solid transparent',
+                boxShadow: viewMode === 'dense' ? '0 0 10px var(--accent-border)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 600,
+                transition: 'all 140ms ease',
               }}
               title="Dense Ledger List View"
             >
-              <LayoutList size={14} strokeWidth={1.75} aria-hidden="true" />
+              <LayoutList size={13} strokeWidth={2} aria-hidden="true" />
               <span>DENSE</span>
             </button>
 
@@ -224,21 +253,23 @@ export const ResourceFilterBar: React.FC<ResourceFilterBarProps> = ({
               aria-pressed={viewMode === 'compact'}
               aria-label="Compact Ledger Table Rows"
               style={{
-                padding: '6px 8px',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
-                color: viewMode === 'compact' ? 'var(--accent-core)' : 'var(--text-muted)',
-                backgroundColor: viewMode === 'compact' ? 'var(--bg-surface)' : 'transparent',
-                boxShadow: viewMode === 'compact' ? 'var(--shadow-sm)' : 'none',
+                color: viewMode === 'compact' ? 'var(--accent-contrast)' : 'var(--text-muted)',
+                backgroundColor: viewMode === 'compact' ? 'var(--accent-core)' : 'transparent',
+                border: viewMode === 'compact' ? '1px solid var(--accent-core)' : '1px solid transparent',
+                boxShadow: viewMode === 'compact' ? '0 0 10px var(--accent-border)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 600,
+                transition: 'all 140ms ease',
               }}
               title="Compact Ledger Table Rows"
             >
-              <Rows3 size={14} strokeWidth={1.75} aria-hidden="true" />
+              <Rows3 size={13} strokeWidth={2} aria-hidden="true" />
               <span>ROWS</span>
             </button>
           </div>

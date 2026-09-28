@@ -379,6 +379,7 @@ export const AdminDashboardView: React.FC = () => {
 
       {/* DISTINCT FACULTY CONTROL HEADER (Slate/Navy theme treatment) */}
       <div
+        className="daq-card daq-crosshair"
         style={{
           borderBottom: '1px solid var(--border-subtle)',
           backgroundColor: 'var(--bg-surface)',
@@ -387,6 +388,7 @@ export const AdminDashboardView: React.FC = () => {
           marginBottom: '24px',
           borderLeft: '4px solid #2563EB',
           boxShadow: 'var(--shadow-sm)',
+          position: 'relative',
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>

@@ -380,11 +380,13 @@ export const resourcesApi = {
     }
   },
 
-  getUserBookmarks: async (userId: number): Promise<{ bookmarks: { resource_id: number }[] }> => {
+  getUserBookmarks: async (userId: number): Promise<{ items: { resource_id: number }[]; bookmarks: { resource_id: number }[] }> => {
     try {
-      return await apiRequest<{ bookmarks: { resource_id: number }[] }>(`/api/users/${userId}/bookmarks`);
+      const res = await apiRequest<{ items?: { resource_id: number }[]; bookmarks?: { resource_id: number }[] }>(`/api/users/${userId}/bookmarks`);
+      const list = res.items || res.bookmarks || [];
+      return { items: list, bookmarks: list };
     } catch {
-      return { bookmarks: [] };
+      return { items: [], bookmarks: [] };
     }
   },
 };

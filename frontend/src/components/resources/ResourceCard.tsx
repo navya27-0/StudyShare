@@ -14,6 +14,8 @@ import {
   Eye,
   Star,
   ExternalLink,
+  ArrowRight,
+  User,
 } from 'lucide-react';
 import type { ResourceListItem, ResourceType } from '../../types';
 import { resourcesApi } from '../../services/api';
@@ -39,6 +41,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(resource.is_bookmarked ?? false);
   const [isVoting, setIsVoting] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
+  const [animatingVote, setAnimatingVote] = useState<'up' | 'down' | null>(null);
+  const [animatingBookmark, setAnimatingBookmark] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
   const downloadUrl = resource.file_url.startsWith('http')
@@ -121,10 +125,12 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
 
   const badge = getTypeBadge(resource.type);
 
-  // Voting action
+  // Voting action with pop animation
   const handleVote = async (type: 'up' | 'down') => {
     if (isVoting) return;
     setIsVoting(true);
+    setAnimatingVote(type);
+    setTimeout(() => setAnimatingVote(null), 180);
     try {
       const res = await resourcesApi.vote(resource.id, type);
       setUpvotes(res.upvotes_count);
@@ -139,10 +145,12 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
     }
   };
 
-  // Bookmark action
+  // Bookmark action with pop animation
   const handleBookmarkToggle = async () => {
     if (isBookmarking) return;
     setIsBookmarking(true);
+    setAnimatingBookmark(true);
+    setTimeout(() => setAnimatingBookmark(false), 180);
     try {
       const res = await resourcesApi.toggleBookmark(resource.id, isBookmarked);
       setIsBookmarked(res.bookmarked);
@@ -254,8 +262,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         </div>
 
         {/* Rating */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '11.5px' }}>
-          <Star size={13} fill={resource.rating_avg > 0 ? '#B87318' : 'none'} color="#B87318" strokeWidth={1.75} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-primary)' }}>
+          <Star size={13} fill={resource.rating_avg > 0 ? 'var(--status-exam)' : 'none'} color="var(--status-exam)" strokeWidth={1.75} />
           <span>{resource.rating_avg > 0 ? resource.rating_avg.toFixed(1) : '—'}</span>
         </div>
 
@@ -274,7 +282,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             className="touch-target"
           >
-            <ChevronUp size={14} strokeWidth={2} aria-hidden="true" />
+            <ChevronUp size={14} className={animatingVote === 'up' ? 'vote-pop-up' : ''} strokeWidth={2} aria-hidden="true" />
           </button>
           <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>
             {upvotes - downvotes}
@@ -292,7 +300,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             className="touch-target"
           >
-            <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
+            <ChevronDown size={14} className={animatingVote === 'down' ? 'vote-pop-down' : ''} strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
 
@@ -308,7 +316,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             className="touch-target"
           >
-            <Bookmark size={14} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} aria-hidden="true" />
+            <Bookmark size={14} className={animatingBookmark ? 'bookmark-pop' : ''} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} aria-hidden="true" />
           </button>
           <a
             href={downloadUrl}
@@ -329,21 +337,23 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   // STANDARD HIGH-DENSITY LEDGER CARD LIST ITEM
   return (
     <div
+      className="daq-card ledger-resource-card"
       style={{
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-subtle)',
         borderLeft: `3px solid ${spineColor}`,
         borderRadius: 'var(--radius-sm)',
-        padding: '16px 20px',
-        boxShadow: 'var(--shadow-sm)',
+        padding: '18px 22px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
-        transition: 'border-color 100ms ease, box-shadow 100ms ease',
+        gap: '12px',
         position: 'relative',
       }}
-      className="ledger-resource-card"
     >
+      <div className="daq-crosshair daq-crosshair-tl" />
+      <div className="daq-crosshair daq-crosshair-tr" />
+      <div className="daq-crosshair daq-crosshair-bl" />
+      <div className="daq-crosshair daq-crosshair-br" />
       {/* Header Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -384,21 +394,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           {/* Verified Syllabus Tag */}
           {resource.is_verified && (
             <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
-                fontWeight: 600,
-                color: 'var(--status-verified)',
-                backgroundColor: 'var(--status-verified-bg)',
-                padding: '1px 6px',
-                borderRadius: '2px',
-              }}
+              className="verified-seal"
               title="Verified according to university syllabus"
             >
-              <CheckCircle2 size={11} strokeWidth={2} />
+              <CheckCircle2 size={11} strokeWidth={2.2} />
               <span>SYLLABUS VERIFIED</span>
             </div>
           )}
@@ -436,7 +435,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             title={isBookmarked ? 'Saved to Bookmarks' : 'Save for Revision'}
           >
-            <Bookmark size={15} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} />
+            <Bookmark size={15} className={animatingBookmark ? 'bookmark-pop' : ''} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} />
           </button>
         </div>
       </div>
@@ -447,17 +446,19 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           to={`/resources/${resource.id}`}
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: '16px',
+            fontSize: '16.5px',
             fontWeight: 600,
             color: 'var(--text-primary)',
             letterSpacing: '-0.01em',
             display: 'inline-flex',
-            alignItems: 'baseline',
+            alignItems: 'center',
             gap: '6px',
+            transition: 'color 160ms ease',
           }}
           className="resource-title-link"
         >
           <span>{resource.title}</span>
+          <ArrowRight size={14} className="resource-title-arrow" />
         </Link>
       </h3>
 
@@ -494,11 +495,18 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       >
         <Link
           to={`/profile/${resource.uploader.id}`}
-          style={{ color: 'var(--text-secondary)', fontWeight: 500 }}
+          style={{
+            color: 'var(--text-secondary)',
+            fontWeight: 500,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
           title={`View ${resource.uploader.display_name}'s profile`}
           className="uploader-link"
         >
-          By {resource.uploader.display_name}
+          <User size={12} strokeWidth={1.75} aria-hidden="true" />
+          <span>By {resource.uploader.display_name}</span>
         </Link>
         <span>•</span>
         <span>{formatDate(resource.created_at)}</span>
@@ -579,7 +587,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               className="touch-target"
               title="Upvote verified accuracy"
             >
-              <ChevronUp size={15} strokeWidth={2.2} aria-hidden="true" />
+              <ChevronUp size={15} className={animatingVote === 'up' ? 'vote-pop-up' : ''} strokeWidth={2.2} aria-hidden="true" />
             </button>
 
             <span
@@ -611,7 +619,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               className="touch-target"
               title="Downvote inaccurate note"
             >
-              <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
+              <ChevronDown size={15} className={animatingVote === 'down' ? 'vote-pop-down' : ''} strokeWidth={2.2} aria-hidden="true" />
             </button>
           </div>
 
@@ -633,8 +641,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           >
             <Star
               size={13}
-              fill={resource.rating_avg > 0 ? '#965a12' : 'none'}
-              color="#965a12"
+              fill={resource.rating_avg > 0 ? 'var(--status-exam)' : 'none'}
+              color="var(--status-exam)"
               strokeWidth={1.75}
               aria-hidden="true"
             />
@@ -687,11 +695,22 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               fontSize: '11.5px',
               fontWeight: 600,
               padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
+              borderRadius: 'var(--radius-full)',
               backgroundColor: 'var(--accent-core)',
-              color: '#FFFFFF',
+              color: 'var(--accent-contrast)',
+              border: '1px solid var(--accent-core)',
+              boxShadow: '0 2px 12px var(--accent-tint)',
+              transition: 'all 160ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             className="touch-target"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent-core)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
             <Download size={13} strokeWidth={1.75} aria-hidden="true" />
             <span>DOWNLOAD</span>

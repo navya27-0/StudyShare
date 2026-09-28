@@ -124,20 +124,15 @@ export const ResourceEmptyState: React.FC<ResourceEmptyStateProps> = ({
 
         <Link
           to="/upload"
+          className="daq-btn-primary"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
             fontFamily: 'var(--font-mono)',
-            fontSize: '12.5px',
-            fontWeight: 600,
+            fontSize: '11.5px',
+            letterSpacing: '0.06em',
             padding: '8px 18px',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--accent-core)',
-            color: '#FFFFFF',
           }}
         >
-          <Upload size={14} strokeWidth={1.75} />
+          <Upload size={13} strokeWidth={2.2} />
           <span>UPLOAD FIRST RESOURCE</span>
         </Link>
       </div>
