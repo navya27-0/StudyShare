@@ -41,13 +41,16 @@ StudyShare organizes academic materials directly into a structured **Subject →
 ## Key Features
 
 - **Curriculum-First Taxonomy**: Browse by university course code (`CS204`), syllabus unit (`Unit 02`), and specific lecture topics (`Dijkstra Shortest Path`), or jump directly across branches using the top rail.
-- **Academic Ranking Algorithm**: Transparent scoring formula that balances user ratings, net votes, and recent view/download activity with time-decay weighting (old-but-gold references stay visible; truly stale materials naturally drop down).
+- **Academic Ranking Algorithm**: Transparent scoring formula that balances user ratings, net votes, and recent view/download activity with time-decay weighting (old-but-gold references stay visible; truly stale materials naturally drop down), featuring metallic honors badges (`#1`, `#2`, `#3`).
+- **Architectural Institutional UI**: Precision monochromatic aesthetic inspired by DAQ Consulting, featuring hairline blueprint grids, corner crosshairs, verified syllabus seals with active beacons, and tactile card lift highlights.
+- **Keyboard-Driven Workflow**: Global shortcuts (`Ctrl+K` / `⌘K` to focus catalog search, `Ctrl+B` to toggle curriculum sidebar) for swift desktop navigation between lectures.
 - **True Version Control**: Upload new versions to existing resources with mandatory changelogs (`v1 → v2`), avoiding duplicate file dumps.
 - **In-Browser File Previews**: Integrated inline PDF viewer and external web link handling with direct download tracking.
 - **Revision Desk (Personal Bookmarks)**: One-click offline-friendly saved library for assembling custom exam packs before midterms and finals.
 - **Contributor Reputation**: Student profiles tracking uploaded materials, total upvotes, community karma points, and an activity log.
 - **Administrative Governance**: Route-protected faculty/admin console with a queue to review student reports, action or dismiss flags, ban/unban abusive accounts, and inspect a tamper-evident moderation audit ledger.
-- **Accessible & Responsive**: High-density desktop table mode, responsive mobile drawers and touch targets (≥44px), WCAG AA color contrast, full keyboard navigation, and an intentional paper-and-charcoal dark mode.
+- **WCAG AAA Contrast & Dual Theme**: Engineered for both pure black OLED dark mode and high-contrast light mode, ensuring high legibility for small taxonomy labels, dates, and ratings.
+- **Hardware-Accelerated Transitions**: Silky 200–240ms page transitions with zero GPU blur lag and full `prefers-reduced-motion` compliance.
 - **Resilient UX**: Contextual error boundaries preventing full-page whiteouts, toast alerts on failed network operations, and informative empty states for all filtered list views.
 
 ---
@@ -228,12 +231,16 @@ Every commit and pull request triggers automated checks via GitHub Actions ([`.g
 
 ## Design Decisions
 
-We deliberately avoided the generic "purple-gradient SaaS" look in favor of an **academic engineering ledger**:
+We deliberately avoided the generic "purple-gradient SaaS" look in favor of an **architectural academic engineering ledger**:
 
-- **Paper Canvas & Carbon Ink**: Warm archival paper neutrals (`#FBF9F5` light, `#121110` dark) paired with terracotta (`#C85A32`) as our single dominant interactive color.
-- **Space Grotesk + Plus Jakarta Sans**: Space Grotesk gives course codes (`CS204`), semester badges, and technical metrics a structured feel, while Plus Jakarta Sans keeps dense lists legible on phone screens between classes.
-- **Information Density**: Students cramming before an exam need quick scans, not floaty cards with 40px padding. We provide both a rich list view and a high-density compact table view.
-- **Snappy Motion**: Transitions are mechanical and fast (≤120ms) rather than slow decorative easing curves.
+- **Monochromatic Canvas & Pure Contrast**: High-contrast pitch-black foundation (`#000000`) with subtle hairline blueprint grids (`36px`) and corner crosshairs in Dark Mode, and a crisp porcelain surface (`#ffffff`) with deep zinc typography in Light Mode.
+- **Editorial Typographic System**:
+  - `Newsreader` italic serif for prestigious academic mottos and curriculum section milestones.
+  - `Space Grotesk` geometric display face for punchy course codes (`CS401`) and titles.
+  - `JetBrains Mono` for telemetry matrices, tabular voting numbers, and taxonomy codes.
+  - `Plus Jakarta Sans` for clean, high-legibility body descriptions and reviews.
+- **High-Density Ledger Layout**: Students cramming before an exam need rapid scanning, not fluffy marketing padding. Both an interactive dense card view and an ultra-compact tabular rows view are supported.
+- **Tactile Physics**: Smooth 200–240ms GPU transforms, card hover lifts with hairline highlights, animated title arrows, and haptic button feedback.
 
 For full token tables, spacing rules, and component specs, see [DESIGN.md](DESIGN.md).
 

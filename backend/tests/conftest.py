@@ -1,4 +1,11 @@
+import sys
 from collections.abc import AsyncGenerator
+from pathlib import Path
+
+# Ensure backend root directory is in sys.path for robust test discovery
+backend_dir = str(Path(__file__).resolve().parent.parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
