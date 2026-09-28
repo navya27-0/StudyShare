@@ -4,9 +4,11 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
 from app.database import async_session_maker
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
 from app.models.interactions import Bookmark, ModerationAction, Rating, Report, Vote
+from app.models.profile import ContributorProfile
 from app.models.resource import Resource, ResourceVersion
 from app.models.taxonomy import Subject, Topic, Unit
 from app.models.user import User
@@ -23,9 +25,11 @@ async def seed_data(session: AsyncSession) -> None:
     now = datetime.now(UTC)
 
     # 1. Users
+    default_password = hash_password("StudyShare2024!")
+
     prof_sharma = User(
         email="prof.sharma@university.edu",
-        hashed_password="pbkdf2:sha256:600000$dummyhash$profsharma2024",
+        hashed_password=default_password,
         display_name="Prof. K. Sharma",
         avatar_url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
         role=UserRole.ADMIN,
@@ -36,7 +40,7 @@ async def seed_data(session: AsyncSession) -> None:
 
     arvind = User(
         email="arvind.raman@student.univ.edu",
-        hashed_password="pbkdf2:sha256:600000$dummyhash$arvindraman",
+        hashed_password=default_password,
         display_name="Arvind Raman",
         avatar_url="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150",
         role=UserRole.STUDENT,
@@ -46,7 +50,7 @@ async def seed_data(session: AsyncSession) -> None:
 
     sneha = User(
         email="sneha.rao@student.univ.edu",
-        hashed_password="pbkdf2:sha256:600000$dummyhash$sneharao",
+        hashed_password=default_password,
         display_name="Sneha Rao",
         avatar_url="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
         role=UserRole.STUDENT,
@@ -56,7 +60,7 @@ async def seed_data(session: AsyncSession) -> None:
 
     devansh = User(
         email="devansh.m@student.univ.edu",
-        hashed_password="pbkdf2:sha256:600000$dummyhash$devanshm",
+        hashed_password=default_password,
         display_name="Devansh Mehta",
         avatar_url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
         role=UserRole.STUDENT,
@@ -66,7 +70,7 @@ async def seed_data(session: AsyncSession) -> None:
 
     ananya = User(
         email="ananya.iyer@student.univ.edu",
-        hashed_password="pbkdf2:sha256:600000$dummyhash$ananyaiyer",
+        hashed_password=default_password,
         display_name="Ananya Iyer",
         avatar_url="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
         role=UserRole.STUDENT,
@@ -75,6 +79,58 @@ async def seed_data(session: AsyncSession) -> None:
     )
 
     session.add_all([prof_sharma, arvind, sneha, devansh, ananya])
+    await session.flush()
+
+    prof_profile = ContributorProfile(
+        user_id=prof_sharma.id,
+        bio="Professor of Computer Science & Systems Architect",
+        department="Computer Science & Engineering",
+        reputation_points=500,
+        total_uploads=10,
+        total_upvotes_received=450,
+        created_at=now - timedelta(days=120),
+    )
+    arvind_profile = ContributorProfile(
+        user_id=arvind.id,
+        bio="3rd Year CSE | Distributed Systems & Algorithms enthusiast",
+        semester=5,
+        department="Computer Science & Engineering",
+        reputation_points=180,
+        total_uploads=5,
+        total_upvotes_received=92,
+        created_at=now - timedelta(days=90),
+    )
+    sneha_profile = ContributorProfile(
+        user_id=sneha.id,
+        bio="3rd Year CSE | Database internals & Graph Theory",
+        semester=5,
+        department="Computer Science & Engineering",
+        reputation_points=140,
+        total_uploads=4,
+        total_upvotes_received=78,
+        created_at=now - timedelta(days=80),
+    )
+    devansh_profile = ContributorProfile(
+        user_id=devansh.id,
+        bio="2nd Year CSE | Operating Systems & Computer Architecture",
+        semester=4,
+        department="Computer Science & Engineering",
+        reputation_points=65,
+        total_uploads=2,
+        total_upvotes_received=31,
+        created_at=now - timedelta(days=60),
+    )
+    ananya_profile = ContributorProfile(
+        user_id=ananya.id,
+        bio="2nd Year CSE | Automata Theory & Compiler Design",
+        semester=3,
+        department="Computer Science & Engineering",
+        reputation_points=45,
+        total_uploads=1,
+        total_upvotes_received=18,
+        created_at=now - timedelta(days=45),
+    )
+    session.add_all([prof_profile, arvind_profile, sneha_profile, devansh_profile, ananya_profile])
     await session.flush()
 
     # 2. Subjects, Units, Topics

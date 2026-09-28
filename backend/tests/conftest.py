@@ -1,11 +1,13 @@
 from collections.abc import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
+from app.core.rate_limit import login_rate_limiter
 from app.database import get_db_session
 from app.main import app
 
@@ -37,6 +39,14 @@ async def override_get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 app.dependency_overrides[get_db_session] = override_get_db_session
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Ensure login rate limiter failures are cleared across tests."""
+    login_rate_limiter.clear()
+    yield
+    login_rate_limiter.clear()
 
 
 @pytest_asyncio.fixture

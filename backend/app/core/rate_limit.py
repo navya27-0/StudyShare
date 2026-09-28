@@ -53,6 +53,11 @@ class LoginRateLimiter:
         with self._lock:
             self._failures.pop(key, None)
 
+    def clear(self) -> None:
+        """Clear all rate limiting failure state across all keys (useful for test isolation)."""
+        with self._lock:
+            self._failures.clear()
+
 
 login_rate_limiter = LoginRateLimiter(
     max_attempts=settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
