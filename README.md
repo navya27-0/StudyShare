@@ -105,14 +105,14 @@ Implemented in [`backend/app/core/ranking.py`](backend/app/core/ranking.py) and 
 $$\text{RankingScore} = \left(2.0 \cdot R_{\text{adj}} + V_{\text{net}} + E + B_{\text{auth}}\right) \times D_{\text{recency}}$$
 
 1. **Bayesian Adjusted Rating ($R_{\text{adj}}$)**: Smooths star ratings toward a prior of $m = 3.5$ over $C = 3$ pseudo-ratings:
-   $$R_{\text{adj}} = \frac{\text{rating\_count} \cdot \text{rating\_avg} + 3.0 \times 3.5}{\text{rating\_count} + 3.0}$$
+   $$R_{\text{adj}} = \frac{\text{rating count} \cdot \text{rating avg} + 3.0 \times 3.5}{\text{rating count} + 3.0}$$
 2. **Logarithmic Net Votes ($V_{\text{net}}$)**: Signed logarithmic compression of authenticated community votes:
    $$V_{\text{net}} = \text{sign}(v) \cdot \ln(1 + |v|) \cdot 1.5 \quad \text{where } v = \text{upvotes} - \text{downvotes}$$
 3. **Anti-Manipulation Bounded Engagement ($E$)**: Downloads are weighted at $1.5\times$, while passive views are weighted at $0.15\times$ and hard-capped at $500$ effective views so unauthenticated view spikes cannot outrank community-reviewed notes:
    $$E = \ln\left(1 + 1.5 \cdot \text{downloads} + 0.15 \cdot \min(\text{views}, 500)\right)$$
 4. **Syllabus Authority Bonus ($B_{\text{auth}}$)**: $+2.0$ flat boost for faculty-verified materials (`is_verified = True`).
 5. **Curricular Gravity Decay ($D_{\text{recency}}$)**: Soft power-law curve over a 30-day academic baseline:
-   $$D_{\text{recency}} = \frac{1}{\left(1 + \frac{\text{age\_in\_days}}{30}\right)^{0.4}}$$
+   $$D_{\text{recency}} = \frac{1}{\left(1 + \frac{\text{age in days}}{30}\right)^{0.4}}$$
 
 ---
 
