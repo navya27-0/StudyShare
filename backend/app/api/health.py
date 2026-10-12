@@ -28,7 +28,7 @@ async def health_check(
         db_status = "disconnected"
         db_error = str(exc)
         # Mark response as Service Unavailable if database is unreachable
-        response.status_code = status.HTTP(503)
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 

@@ -4,9 +4,9 @@
 Formula Design & Mathematical Rationale:
 ----------------------------------------
 The ranking score balances four core dimensions:
-1. Quality Consensus (Bayesian Adjusted Rating)
-2. Community Validation (Logarithmic Net Votes)
-3. Direct Utility & Engagement (Downloads & Views)
+1. Quality Consensus (Bayesian Adjusted Rating — authenticated signal)
+2. Community Validation (Logarithmic Net Votes — authenticated signal)
+3. Direct Utility & Bounded Engagement (Downloads & Capped Passive Views)
 4. Syllabus / Academic Authority (Verified Badge)
 All scaled against a Time-Decay Gravity Curve designed specifically for academic curricula.
 
@@ -27,10 +27,12 @@ Mathematical Definition:
        V_net = sign(net_votes) * ln(1 + |net_votes|) * 1.5
    A resource with +50 net votes contributes ~5.9 points; +200 net votes contributes ~7.9 points.
 
-3. Engagement & Utility (E):
-   A download signifies high academic utility (saving or printing for exam prep), whereas a view
-   is passive interest. We weight downloads at 2.0x and views at 0.5x, compressed logarithmically:
-       E = ln(1 + downloads_count * 2.0 + views_count * 0.5)
+3. Anti-Manipulation Engagement & Utility (E):
+   A download signifies active academic utility, whereas a page view is a passive signal.
+   To prevent unauthenticated view-bot inflation from outranking community-reviewed material,
+   passive views are weighted at 0.15x and hard-capped at 500 effective views:
+       effective_views = min(views_count, 500)
+       E = ln(1 + downloads_count * 1.5 + effective_views * 0.15)
 
 4. Academic Authority Bonus (B_auth):
    Resources verified by faculty or course coordinators (is_verified = True) guarantee syllabus
@@ -38,23 +40,9 @@ Mathematical Definition:
        B_auth = 2.0 if is_verified else 0.0
 
 5. Curricular Gravity Time Decay (D_recency):
-   Standard exponential decay (e^-λt) causes older resources to rapidly vanish, which is disastrous
-   for timeless university subjects (e.g., standard Data Structures, Operating Systems, or Calculus
-   notes remain relevant for years). However, truly stale resources with low engagement must sink.
    We implement a soft power-law gravity curve with a 30-day baseline (approx. 1 month):
        age_in_days = (current_time - created_at) in days
        D_recency = 1.0 / (1.0 + age_in_days / 30.0) ^ 0.4
-
-   Decay benchmarks:
-   - Day 0 (Brand new): 1.00x multiplier
-   - Day 30 (1 month):  0.76x multiplier
-   - Day 90 (1 term):   0.57x multiplier
-   - Day 180 (1 sem):   0.47x multiplier
-   - Day 365 (1 year):  0.36x multiplier
-
-   Result: A 1-year-old authoritative lecture note with 150 upvotes and 4.9 rating still scores
-   comfortably above a brand-new unvoted upload, while a 90-day-old resource with no votes or low
-   ratings will gracefully sink to the bottom.
 
 Final Score:
 ------------
@@ -68,6 +56,10 @@ from typing import Any
 from sqlalchemy import Float, case, func, literal
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
+
+PASSIVE_VIEW_CAP = 500
+PASSIVE_VIEW_WEIGHT = 0.15
+DOWNLOAD_UTILITY_WEIGHT = 1.5
 
 
 class _AgeInDays(FunctionElement):
@@ -111,8 +103,13 @@ def compute_ranking_score(
     else:
         vote_score = 0.0
 
-    # 3. Engagement
-    engagement = math.log(1.0 + downloads_count * 2.0 + views_count * 0.5)
+    # 3. Engagement (with capped passive views to prevent artificial inflation)
+    effective_views = min(max(0, views_count), PASSIVE_VIEW_CAP)
+    engagement = math.log(
+        1.0
+        + max(0, downloads_count) * DOWNLOAD_UTILITY_WEIGHT
+        + effective_views * PASSIVE_VIEW_WEIGHT
+    )
 
     # 4. Authority
     authority = 2.0 if is_verified else 0.0
@@ -147,11 +144,15 @@ def get_ranking_sql_expression(resource_cls: Any) -> Any:
         else_=literal(0.0),
     )
 
-    # 3. Engagement
+    # 3. Engagement with capped passive views
+    effective_views = case(
+        (resource_cls.views_count > literal(PASSIVE_VIEW_CAP), literal(float(PASSIVE_VIEW_CAP))),
+        else_=resource_cls.views_count,
+    )
     engagement_term = func.ln(
         literal(1.0)
-        + resource_cls.downloads_count * literal(2.0)
-        + resource_cls.views_count * literal(0.5)
+        + resource_cls.downloads_count * literal(DOWNLOAD_UTILITY_WEIGHT)
+        + effective_views * literal(PASSIVE_VIEW_WEIGHT)
     )
 
     # 4. Authority Bonus

@@ -1,269 +1,174 @@
-# StudyShare
+# StudyShare — Course-Organized Academic Study Resource Platform
 
-> A high-density academic resource ledger and peer-reviewed study repository built for college campuses.
-
----
-
-### What is StudyShare? (And why not just a shared Google Drive?)
-
-Most college resource sharing starts in a shared Google Drive folder and quickly disintegrates: dead links, duplicate files named `notes_unit3_final_FINAL(1).pdf`, unorganized folders with no syllabus mapping, zero version history, and no way to know if an exam solution is actually accurate or completely outdated.
-
-StudyShare organizes academic materials directly into a structured **Subject → Unit → Topic** curriculum hierarchy. Students and faculty can upload notes, past-year exam questions (PYQs), formula cheat sheets, and lab manuals with true version history, changelogs, peer ratings, and an algorithmic ranking engine that bubbles reliable, current resources to the top while letting stale or superseded notes sink.
+StudyShare is a full-stack academic platform built for university students and faculty to discover, share, preview, and organize verified course materials (**Lecture Notes, Past Exam Papers / PYQs, Question Banks, Lab Manuals, and Reference Links**) mapped to a structured **`Course → Unit → Topic`** curriculum hierarchy.
 
 ---
 
-## Visual Previews
+## Key Capabilities & Student-First Workflows
 
-<!-- SCREENSHOT PLACEHOLDER: Main academic catalog with curriculum tree, quick-jump rail, and filters -->
-<!-- Drop screenshot here: docs/screenshots/catalog-browse-desktop.png -->
-```text
-+------------------------------------------------------------------------------------+
-| [StudyShare]  Search CS201, Unit 3, formula sheets... (/)    [Saved] [Admin] [Moon]|
-+------------------------------------------------------------------------------------+
-| BROWSE BY CURRICULUM: CS101 Computer Science | EE201 Circuits | MA301 Linear Alg  |
-| SELECTED: CS204 Discrete Math > Unit 2: Graph Theory > Topic: Dijkstra Algorithm   |
-+------------------------------------------------------------------------------------+
-| FILTERS: [Type: All] [Semester: 4] [Min Rating: 4+]    SORT: [Most Useful (Ranked)]|
-|                                                                                    |
-| [PDF] Unit 2 Complete Lecture Notes & Proofs               ^ 42  * 4.8 (19 ratings)|
-|       CS204 - Discrete Mathematical Structures             v     854 downloads     |
-|       By Sneha Rao • Sem 4 • 24 pages • v2 (3d ago)        [Bookmark] [Download]   |
-|       Changelog: Fixed inductive step proof on slide 14                            |
-+------------------------------------------------------------------------------------+
-```
+### 1. Immediate 5-Second Clarity & Guided Student Flow
+- **Student-Friendly Terminology**: Clear labels (**Find Resources**, **Upload Notes**, **My Bookmarks**, **My Profile**, **Admin Review**, **Study Materials**) replace institutional jargon.
+- **4-Step Primary Flow Banner**: Guides students immediately through:
+  `1. Choose your course → 2. Pick a unit → 3. Find notes or past papers → 4. Preview or download`
+- **Personalized Semester Onboarding**: Interactive setup modal capturing **University/Institution**, **Department**, **Current Semester**, **Enrolled Courses**, **Preferred Theme**, and **Contributor Intent**, powering a personalized **Your Semester** strip on the home view.
 
-<!-- SCREENSHOT PLACEHOLDER: Document view with inline PDF viewer, rating, and version timeline -->
-<!-- Drop screenshot here: docs/screenshots/resource-detail-preview.png -->
-> **Tip for contributors:** Place real production screenshots in `docs/screenshots/` (`catalog-browse-desktop.png`, `resource-detail-preview.png`, `mobile-drawer-walkthrough.gif`, and `admin-moderation-queue.png`).
+### 2. Student-Oriented Search & Fast Exam-Time Filtering
+- **Multi-Token & Synonym Search**: Searches across resource titles, descriptions, course codes (`CS201`), course names (`Operating Systems`), unit numbers/titles (`Unit 3`), topics (`Dijkstra`), contributor names, and filenames. Automatically expands student synonyms (`pyq`, `past paper`, `last year` → Exam Papers & Question Banks; `lab`, `manual` → Lab Records).
+- **1-Click Exam Mode Chips**: Instant filters for **Exam Prep (PYQs & Q-Banks)**, **Verified Only**, **4★ & Above**, and **My Semester**, plus **Recently Updated** and **Smart Ranked** sorting.
+- **Helpful Empty States**: Provides actionable recovery buttons (**Clear All Filters**, **Search All Courses**, **Upload First Resource**, **Browse Resources**) whenever a filter combination or personal library is empty.
 
----
+### 3. Frictionless Upload, Duplicate Detection & Inline PDF Preview
+- **Drag-and-Drop Auto-Fill**: Dropping a file (`CS201_Unit2_AVL_Trees_Notes.pdf`) automatically extracts a clean title, detects the matching course (`CS201`) and unit (`Unit 2`), and sets the resource type.
+- **Streaming Upload & Magic-Byte Signature Validation**: Uploads stream in 64 KB chunks (`backend/app/core/storage.py`) with SHA-256 integrity hashing, strict path containment, and magic-byte header verification (rejecting disguised executables such as Windows PE `MZ` or Linux `ELF` binaries).
+- **Pre-Upload Duplicate Detection**: Real-time `/api/resources/check-duplicate` check alerts contributors if similar material already exists in the selected course/unit, offering a 1-click **Upload as New Version** flow.
+- **Inline Document Preview & Revision History**: Built-in PDF/image preview directly inside the resource detail modal, **Downloaded** tracking badge, and a collapsible version timeline with changelogs.
+- **Governed File Serving (`/uploads/{file_key}`)**: Uploaded files are served through a moderation-aware endpoint with `X-Content-Type-Options: nosniff` that automatically blocks access (`404 Not Found`) if the parent resource is soft-deleted by moderation.
 
-## Key Features
-
-- **Curriculum-First Taxonomy**: Browse by university course code (`CS204`), syllabus unit (`Unit 02`), and specific lecture topics (`Dijkstra Shortest Path`), or jump directly across branches using the top rail.
-- **Academic Ranking Algorithm**: Transparent scoring formula that balances user ratings, net votes, and recent view/download activity with time-decay weighting (old-but-gold references stay visible; truly stale materials naturally drop down), featuring metallic honors badges (`#1`, `#2`, `#3`).
-- **Architectural Institutional UI**: Precision monochromatic aesthetic inspired by DAQ Consulting, featuring hairline blueprint grids, corner crosshairs, verified syllabus seals with active beacons, and tactile card lift highlights.
-- **Keyboard-Driven Workflow**: Global shortcuts (`Ctrl+K` / `⌘K` to focus catalog search, `Ctrl+B` to toggle curriculum sidebar) for swift desktop navigation between lectures.
-- **True Version Control**: Upload new versions to existing resources with mandatory changelogs (`v1 → v2`), avoiding duplicate file dumps.
-- **In-Browser File Previews**: Integrated inline PDF viewer and external web link handling with direct download tracking.
-- **Revision Desk (Personal Bookmarks)**: One-click offline-friendly saved library for assembling custom exam packs before midterms and finals.
-- **Contributor Reputation**: Student profiles tracking uploaded materials, total upvotes, community karma points, and an activity log.
-- **Administrative Governance**: Route-protected faculty/admin console with a queue to review student reports, action or dismiss flags, ban/unban abusive accounts, and inspect a tamper-evident moderation audit ledger.
-- **WCAG AAA Contrast & Dual Theme**: Engineered for both pure black OLED dark mode and high-contrast light mode, ensuring high legibility for small taxonomy labels, dates, and ratings.
-- **Hardware-Accelerated Transitions**: Silky 200–240ms page transitions with zero GPU blur lag and full `prefers-reduced-motion` compliance.
-- **Resilient UX**: Contextual error boundaries preventing full-page whiteouts, toast alerts on failed network operations, and informative empty states for all filtered list views.
+### 4. Accessibility, Comfortable Reading & Low-Bandwidth Campus Mode
+- **DAQ Consulting Monochrome Design System**: High-contrast **Dark Mode** (`#000000` canvas, `#080808` surface, `#FFFFFF` typography) and **Light Paper Mode** (`#F8FAFC` canvas, `#FFFFFF` surface, `#09090B` ink) with `1px` architectural hairlines and 160–240ms `cubic-bezier(0.16, 1, 0.3, 1)` transitions.
+- **Comfortable Reading Mode**: 1-click toggle increasing body typography (`16px`), line height (`1.72`), and card padding for extended pre-exam study sessions.
+- **Low-Bandwidth Lite Mode**: Strips decorative grids, blurs, and animations while caching the course taxonomy (`studyshare_taxonomy_cache_v2`) and saved bookmarks locally for slow hostel Wi-Fi or mobile data.
+- **WCAG AA Keyboard & Screen-Reader Support**: Skip-to-main-content link, `44×44px` minimum touch targets, semantic landmarks, `aria-live` status feedback, and focus traps on all dialogs (`Escape` to close, `/` to focus search).
 
 ---
 
-## Tech Stack
+## System Architecture & Tech Stack
 
-| Layer | Technologies & Tools |
-| :--- | :--- |
-| **Frontend** | React 19, TypeScript, Vite, React Router v7, Lucide Icons, CSS Custom Properties |
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0 (asyncio + asyncpg), Alembic, Pydantic v2 |
-| **Database** | PostgreSQL 16 with native `to_tsvector` full-text search indexing |
-| **Auth & Security** | JWT (access + refresh tokens), Argon2 password hashing, rate limiting, role-based access control (RBAC) |
-| **Infrastructure** | Docker, Docker Compose, Nginx (frontend SPA distribution), multi-stage builds |
-| **Testing & Quality** | Pytest, AnyIO, Ruff (Python linter/formatter), TypeScript (`tsc -b`), ESLint |
+| Layer | Technology | Highlights |
+| :--- | :--- | :--- |
+| **Backend API** | FastAPI (Python 3.11+) | Async SQLAlchemy 2.0, Pydantic v2 validation, canonical `/api/...` OpenAPI namespace |
+| **Database** | PostgreSQL 16 / SQLite (`aiosqlite`) | Dialect-aware SQL ranking compiler (`_AgeInDays`) supporting both PostgreSQL & SQLite |
+| **Security & Auth** | `bcrypt` + `PyJWT` (`HS256`) | Cost-12 `bcrypt` password hashing, `jti`-rotated `HttpOnly` refresh cookies, in-memory/tab-scoped access tokens, TTL-pruned rate limiting & token revocation, CSP + `nosniff` + `X-Request-ID` headers |
+| **Frontend UI** | React 19 + TypeScript + Vite | Modular domain API services (`src/services/`), modular CSS architecture (`src/styles/`), zero external UI bloat |
+| **CI/CD** | GitHub Actions | Automated Ruff linter/formatter, Pytest integration suite, TypeScript strict check, Vite build, Docker Compose smoke test |
 
----
-
-## Project Structure Overview
+### Project Structure
 
 ```text
 StudyShare/
-├── backend/                        # FastAPI asynchronous application
-│   ├── alembic/                    # Database migration scripts
-│   │   └── versions/               # Schema evolution (users, taxonomy, resources, audit)
+├── backend/
 │   ├── app/
-│   │   ├── api/                    # Route handlers (auth, resources, users, admin, health)
-│   │   ├── core/                   # Security, JWT tokens, rate limiters, dependencies
-│   │   ├── models/                 # SQLAlchemy 2.0 declarative database models
-│   │   ├── schemas/                # Pydantic v2 request/response schemas
-│   │   ├── seed.py                 # Realistic university curriculum & user seed script
-│   │   ├── config.py               # Environment configuration via Pydantic Settings
-│   │   ├── database.py             # Async engine & sessionmaker
-│   │   └── main.py                 # FastAPI application factory & static file mounts
-│   ├── tests/                      # Pytest suite (auth, resources, taxonomy, interactions, admin)
-│   └── requirements.txt            # Python dependencies
-│
-├── frontend/                       # React 19 + TypeScript + Vite SPA
-│   ├── public/                     # Static assets & favicons
+│   │   ├── api/            # Canonical /api routers (auth, resources, users, admin, health)
+│   │   ├── core/           # Security (bcrypt + PyJWT), Ranking compiler, TTL Rate Limiter, Streaming Storage
+│   │   ├── models/         # SQLAlchemy 2.0 ORM models (User, Subject, Unit, Topic, Resource, Version, Vote, Rating, Report)
+│   │   ├── schemas/        # Pydantic v2 request/response contracts
+│   │   ├── main.py         # FastAPI app, CSP/Request-ID middleware, governed /uploads route
+│   │   └── seed.py         # Idempotent academic curriculum & sample resource seeder
+│   ├── tests/              # Comprehensive async Pytest suite (auth, resources, interactions, admin, security & contracts)
+│   ├── requirements.txt    # Version-bounded Python dependencies
+│   └── requirements.lock   # Pinned reproducible lockfile
+├── frontend/
 │   ├── src/
-│   │   ├── components/             # Reusable UI components
-│   │   │   ├── common/             # ErrorBoundary, Modal, Badges, DarkModeToggle
-│   │   │   ├── layout/             # AppShell, Navbar, SidebarTree, MobileDrawer
-│   │   │   └── resources/          # ResourceCard, FilterBar, EmptyState, MostUsefulModule
-│   │   ├── context/                # React contexts (AuthContext, ToastContext)
-│   │   ├── pages/                  # Page views (Browse, Detail, Upload, Bookmarks, Profile, Admin)
-│   │   ├── services/               # Typed API client with standardized error handling
-│   │   └── types/                  # TypeScript interface definitions
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── infra/                          # Docker configuration
-│   └── docker-compose.yml          # Postgres 16, backend, and frontend service topology
-├── DESIGN.md                       # Comprehensive design system & token specification
-├── CONTRIBUTING.md                 # Contribution guidelines & coding conventions
-├── docker-compose.yml              # Root proxy for convenience
-└── README.md                       # You are here
+│   │   ├── components/     # AppShell, BrowseView, ResourceCard, ResourceDetailView, UploadView, OnboardingModal, etc.
+│   │   ├── context/        # AuthContext (in-memory + HttpOnly refresh lifecycle) & ToastContext
+│   │   ├── services/       # Modular API layer: httpClient, authApi, taxonomyApi, resourcesApi, usersApi, adminApi, localStorage
+│   │   ├── styles/         # Modular CSS: tokens, reset, motion, layout, components, accessibility, responsive
+│   │   └── types/          # Strict TypeScript interfaces matching backend Pydantic schemas
+└── DESIGN.md               # Canonical DAQ Consulting design system & motion specification
 ```
 
 ---
 
-## Local Setup (Docker Compose)
+## Canonical API Overview (`/api/...`)
 
-Follow these steps top to bottom to run the full stack locally with PostgreSQL, FastAPI, and React.
+All documented OpenAPI endpoints live under `/api/...` (legacy root paths `/resources`, `/users`, `/admin` are maintained only as hidden backward-compatibility aliases):
 
-### Prerequisites
+- **Health**: `GET /api/health` — Database connectivity & latency check.
+- **Authentication**:
+  - `POST /api/auth/signup` — Register student account & provision contributor profile (+10 welcome reputation).
+  - `POST /api/auth/login` — Authenticate with `bcrypt`, return short-lived access token + set `HttpOnly` refresh cookie.
+  - `POST /api/auth/refresh` — Rotate refresh token (`jti` revocation check) and issue fresh access token.
+  - `POST /api/auth/logout` — Revoke refresh token and clear `HttpOnly` cookie.
+  - `GET /api/auth/me` — Retrieve current authenticated user profile.
+- **Resources & Curriculum Taxonomy**:
+  - `GET /api/resources` — Paginated catalog with multi-level taxonomy filters, student synonym search, and single-pass bookmark/vote hydration.
+  - `GET /api/resources/taxonomy` — Full `Subject → Unit → Topic` tree.
+  - `GET /api/resources/check-duplicate` — Pre-upload duplicate detection by title similarity, unit/topic, and byte size.
+  - `POST /api/resources` — Streaming multipart upload with magic-byte validation and initial version creation.
+  - `GET /api/resources/{id}` — Resource detail with version history and deduplicated view tracking.
+  - `PUT /api/resources/{id}` — Publish a new immutable `ResourceVersion` with changelog.
+  - `POST /api/resources/{id}/vote` — Upvote/downvote toggle & switch with atomic counter recomputation.
+  - `POST /api/resources/{id}/rating` — 1–5 star rating upsert.
+  - `POST /api/resources/{id}/bookmark` & `DELETE /api/resources/{id}/bookmark` — Personal study library management.
+  - `POST /api/resources/{id}/report` — Submit moderation report.
+  - `POST /api/resources/{id}/download` — Deduplicated download counter increment.
+- **Users & Admin Moderation**:
+  - `GET /api/users/{id}`, `GET /api/users/{id}/activity`, `GET /api/users/{id}/bookmarks`
+  - `GET /api/admin/reports`, `POST /api/admin/reports/{id}/action`, `POST /api/admin/resources/{id}/remove`, `POST /api/admin/resources/{id}/restore`, `GET /api/admin/users`, `POST /api/admin/users/{id}/ban`, `POST /api/admin/users/{id}/unban`, `POST /api/admin/users/{id}/warn`, `GET /api/admin/moderation-actions`
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v24+ recommended)
-- Git
+---
 
-### 1. Clone the repository
+## Mathematical Ranking Algorithm
 
-```bash
-git clone https://github.com/navya27-0/StudyShare.git
-cd StudyShare
-```
+Implemented in [`backend/app/core/ranking.py`](backend/app/core/ranking.py) and compiled directly into SQL (`PostgreSQL` and `SQLite` compatible):
 
-### 2. Environment Configuration
+$$\text{RankingScore} = \left(2.0 \cdot R_{\text{adj}} + V_{\text{net}} + E + B_{\text{auth}}\right) \times D_{\text{recency}}$$
 
-Copy the example environment file (the defaults work out of the box for local development):
+1. **Bayesian Adjusted Rating ($R_{\text{adj}}$)**: Smooths star ratings toward a prior of $m = 3.5$ over $C = 3$ pseudo-ratings:
+   $$R_{\text{adj}} = \frac{\text{rating\_count} \cdot \text{rating\_avg} + 3.0 \times 3.5}{\text{rating\_count} + 3.0}$$
+2. **Logarithmic Net Votes ($V_{\text{net}}$)**: Signed logarithmic compression of authenticated community votes:
+   $$V_{\text{net}} = \text{sign}(v) \cdot \ln(1 + |v|) \cdot 1.5 \quad \text{where } v = \text{upvotes} - \text{downvotes}$$
+3. **Anti-Manipulation Bounded Engagement ($E$)**: Downloads are weighted at $1.5\times$, while passive views are weighted at $0.15\times$ and hard-capped at $500$ effective views so unauthenticated view spikes cannot outrank community-reviewed notes:
+   $$E = \ln\left(1 + 1.5 \cdot \text{downloads} + 0.15 \cdot \min(\text{views}, 500)\right)$$
+4. **Syllabus Authority Bonus ($B_{\text{auth}}$)**: $+2.0$ flat boost for faculty-verified materials (`is_verified = True`).
+5. **Curricular Gravity Decay ($D_{\text{recency}}$)**: Soft power-law curve over a 30-day academic baseline:
+   $$D_{\text{recency}} = \frac{1}{\left(1 + \frac{\text{age\_in\_days}}{30}\right)^{0.4}}$$
 
-```bash
-cp .env.example .env
-```
+---
 
-For complete documentation of all configuration keys, types, and security guidelines, see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
+## Quick Start (Local Development)
 
-Key environment defaults:
-- `POSTGRES_USER=studyshare`
-- `POSTGRES_PASSWORD=studyshare_dev`
-- `POSTGRES_DB=studyshare_db`
-- `POSTGRES_HOST_PORT=5433` *(mapped to 5432 internally so it won't conflict with a local Postgres install)*
-- `BACKEND_PORT=8000`
-- `CORS_ORIGINS=http://localhost:5173,http://localhost:80,http://localhost`
-
-### 3. Build & Start the Containers
-
-Spin up the development stack:
-
-```bash
-docker compose up --build -d
-```
-
-*(Alternatively, run `docker compose -f infra/docker-compose.yml up --build -d`)*
-
-#### Production Deployment
-
-For production environments with resource limits, isolated internal database networking, non-root user execution, and optimized Nginx reverse proxy caching:
-
-```bash
-# Ensure secure production values are set in .env:
-# POSTGRES_PASSWORD=<strong_password>
-# JWT_SECRET_KEY=$(openssl rand -hex 32)
-docker compose -f infra/docker-compose.prod.yml up --build -d
-```
-
-Verify that all three containers are healthy:
+### 1. Backend Setup (SQLite Zero-Config or PostgreSQL)
 
 ```bash
-docker compose ps
+cd backend
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux:
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+
+# Seed sample academic courses, units, topics, users, and resources:
+# (For local SQLite without Docker, set DATABASE_URL="sqlite+aiosqlite:///./studyshare.db")
+python -m app.seed
+
+# Start FastAPI server on http://127.0.0.1:8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-You should see:
-- `studyshare-postgres` (healthy on port `5433->5432`)
-- `studyshare-backend` (running on port `8000`)
-- `studyshare-frontend` (running on port `5173`)
-
-### 4. Run Database Migrations
-
-Apply the Alembic migrations to set up the database schema:
-
-```bash
-docker exec -it studyshare-backend alembic upgrade head
-```
-
-### 5. Seed Realistic University Data
-
-Populate the database with course syllabi (Computer Science, Electronics, Mathematics), lecture notes, past exam papers, lab manuals, sample student users, votes, and ratings:
-
-```bash
-docker exec -it studyshare-backend python -m app.seed
-```
-
-### 6. Open the Application
-
-- **Frontend App**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://localhost:8000](http://localhost:8000)
-- **Interactive API Documentation (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Backend Health Check**: [http://localhost:8000/api/health](http://localhost:8000/api/health)
-
-You can immediately sign up for a new account on the frontend (you'll get 10 welcome reputation points automatically).
-
-### 7. Running the Automated Test Suite
-
-To run all 33 backend tests inside the Docker container:
-
-```bash
-docker exec -it -e PYTHONPATH=/app studyshare-backend pytest tests/ -v
-```
-
-To run the frontend TypeScript validation and production build check:
+### 2. Frontend Setup
 
 ```bash
 cd frontend
-npm run build
+npm install
+npm run dev
 ```
 
----
+Open `http://localhost:5173` in your browser.
 
-## Continuous Integration (CI)
+### Demo Accounts (Seeded by `python -m app.seed`)
 
-Every commit and pull request triggers automated checks via GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
-
-- **Backend CI**: Runs a dedicated PostgreSQL 16 container, applies Alembic migrations, runs database seeding, executes Ruff linter and format verification, and runs the 33-test Pytest suite.
-- **Frontend CI**: Validates clean dependencies (`npm ci`), executes ESLint rules, and runs `npm run build` (TypeScript compilation + Vite bundle check).
-- **Docker Validation**: Synthesizes and tests both development and production `docker-compose` YAML configs and builds both backend and frontend container images.
-
----
-
-## Design Decisions
-
-We deliberately avoided the generic "purple-gradient SaaS" look in favor of an **architectural academic engineering ledger**:
-
-- **Monochromatic Canvas & Pure Contrast**: High-contrast pitch-black foundation (`#000000`) with subtle hairline blueprint grids (`36px`) and corner crosshairs in Dark Mode, and a crisp porcelain surface (`#ffffff`) with deep zinc typography in Light Mode.
-- **Editorial Typographic System**:
-  - `Newsreader` italic serif for prestigious academic mottos and curriculum section milestones.
-  - `Space Grotesk` geometric display face for punchy course codes (`CS401`) and titles.
-  - `JetBrains Mono` for telemetry matrices, tabular voting numbers, and taxonomy codes.
-  - `Plus Jakarta Sans` for clean, high-legibility body descriptions and reviews.
-- **High-Density Ledger Layout**: Students cramming before an exam need rapid scanning, not fluffy marketing padding. Both an interactive dense card view and an ultra-compact tabular rows view are supported.
-- **Tactile Physics**: Smooth 200–240ms GPU transforms, card hover lifts with hairline highlights, animated title arrows, and haptic button feedback.
-
-For full token tables, spacing rules, and component specs, see [DESIGN.md](DESIGN.md).
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Student Contributor** | `arvind.raman@student.univ.edu` | `StudyShare2024!` |
+| **Student Peer** | `sneha.rao@student.univ.edu` | `StudyShare2024!` |
+| **Faculty Moderator (Admin)** | `prof.sharma@university.edu` | `StudyShare2024!` |
 
 ---
 
-## Known Limitations & Roadmap
+## Verification, Linting & Automated Tests
 
-We built this for real campus use, which means acknowledging trade-offs we had to make for the current version:
+```bash
+# Backend Lint, Format Check & Full Pytest Suite
+cd backend
+ruff check .
+ruff format --check .
+pytest -v
 
-1. **Local Disk Storage vs. Object Storage**: Currently, uploaded PDFs and files are stored on the local container volume (`/app/uploads`). For a multi-node production deployment, this needs an S3/Cloudflare R2 storage provider with pre-signed upload URLs.
-2. **OCR for Handwritten Notes**: Right now, search matches resource titles, descriptions, and taxonomy names. Scanned handwritten notes aren't full-text indexed yet — adding an asynchronous OCR worker (Tesseract/PaddleOCR) is on our wishlist.
-3. **Real-time Push Notifications**: If a resource you bookmarked receives an updated version (`v2`), you only see it when browsing. Adding WebSockets or email alerts for followed resources would be a huge quality-of-life win.
-4. **University SSO / Eduroam Auth**: Currently using JWT auth with university email addresses. Adding SAML/OAuth2 campus single sign-on would streamline onboarding for campus IT.
-5. **PDF In-Reader Dark Inversion**: While the app has a dedicated dark mode, viewing white PDF backgrounds at night can still be harsh. Adding an optional canvas inversion filter in the PDF viewer is planned.
-
----
-
-## Contributing
-
-Interested in adding features or fixing bugs? Check out [CONTRIBUTING.md](CONTRIBUTING.md) for local environment setup, testing requirements, and commit conventions.
-
----
-
-## License
-
-This project is open-source under the [MIT License](LICENSE).
+# Frontend TypeScript & Production Bundle Verification
+cd ../frontend
+npm run lint
+npm run build
+```

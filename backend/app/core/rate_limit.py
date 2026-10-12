@@ -1,6 +1,5 @@
 import threading
 import time
-from collections import defaultdict
 
 from fastapi import HTTPException, status
 
@@ -10,18 +9,36 @@ settings = get_settings()
 
 
 class LoginRateLimiter:
-    """Thread-safe in-memory sliding-window rate limiter for login attempts."""
+    """
+    Thread-safe sliding-window rate limiter for login attempts with automatic TTL pruning.
+    """
 
     def __init__(self, max_attempts: int, window_seconds: int):
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
-        self._failures: dict[str, list[float]] = defaultdict(list)
+        self._failures: dict[str, list[float]] = {}
         self._lock = threading.Lock()
 
     def _cleanup_old_attempts(self, key: str, now: float) -> list[float]:
         cutoff = now - self.window_seconds
-        valid_attempts = [ts for ts in self._failures[key] if ts > cutoff]
-        self._failures[key] = valid_attempts
+        existing = self._failures.get(key)
+        if not existing:
+            return []
+        valid_attempts = [ts for ts in existing if ts > cutoff]
+        if valid_attempts:
+            self._failures[key] = valid_attempts
+        else:
+            self._failures.pop(key, None)
+
+        if len(self._failures) > 2000:
+            stale_keys = [
+                k
+                for k, timestamps in self._failures.items()
+                if not timestamps or timestamps[-1] <= cutoff
+            ]
+            for k in stale_keys:
+                self._failures.pop(k, None)
+
         return valid_attempts
 
     def check(self, key: str) -> None:
@@ -45,8 +62,9 @@ class LoginRateLimiter:
         """Record an invalid login attempt."""
         now = time.time()
         with self._lock:
-            self._cleanup_old_attempts(key, now)
-            self._failures[key].append(now)
+            valid = self._cleanup_old_attempts(key, now)
+            valid.append(now)
+            self._failures[key] = valid
 
     def reset(self, key: str) -> None:
         """Clear failed attempts upon a successful login."""
@@ -67,7 +85,7 @@ class CounterDeduplicator:
     Prevents rapid page refreshes or automated scripts from artificially inflating ranking metrics.
     """
 
-    def __init__(self, window_seconds: int = 30):
+    def __init__(self, window_seconds: int = 60):
         self.window_seconds = window_seconds
         self._seen: dict[str, float] = {}
         self._lock = threading.Lock()
@@ -81,8 +99,7 @@ class CounterDeduplicator:
             if last_seen is not None and (now - last_seen) < self.window_seconds:
                 return False
             self._seen[composite_key] = now
-            # Periodic lightweight pruning when map grows large
-            if len(self._seen) > 5000:
+            if len(self._seen) > 2000:
                 cutoff = now - self.window_seconds
                 self._seen = {k: ts for k, ts in self._seen.items() if ts > cutoff}
             return True
@@ -93,26 +110,46 @@ class CounterDeduplicator:
 
 
 class RevokedTokenStore:
-    """Thread-safe store of revoked refresh token digests for token rotation & logout."""
+    """
+    Thread-safe TTL-bounded store of revoked refresh token digests for token rotation & logout.
+    Automatically expires revoked entries once their natural refresh TTL has elapsed.
+    """
 
-    def __init__(self) -> None:
-        self._revoked: set[str] = set()
+    def __init__(self, default_ttl_seconds: int | None = None) -> None:
+        self.default_ttl_seconds = default_ttl_seconds or (
+            settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
+        )
+        self._revoked: dict[str, float] = {}
         self._lock = threading.Lock()
 
-    def revoke(self, token: str) -> None:
+    def _prune_expired(self, now: float) -> None:
+        if len(self._revoked) > 1000:
+            self._revoked = {k: exp for k, exp in self._revoked.items() if exp > now}
+
+    def revoke(self, token: str, ttl_seconds: int | None = None) -> None:
+        now = time.time()
+        ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
         with self._lock:
-            self._revoked.add(token)
+            self._prune_expired(now)
+            self._revoked[token] = now + ttl
 
     def is_revoked(self, token: str) -> bool:
+        now = time.time()
         with self._lock:
-            return token in self._revoked
+            exp = self._revoked.get(token)
+            if exp is None:
+                return False
+            if exp <= now:
+                self._revoked.pop(token, None)
+                return False
+            return True
 
     def clear(self) -> None:
         with self._lock:
             self._revoked.clear()
 
 
-counter_deduplicator = CounterDeduplicator(window_seconds=30)
+counter_deduplicator = CounterDeduplicator(window_seconds=60)
 revoked_token_store = RevokedTokenStore()
 
 login_rate_limiter = LoginRateLimiter(

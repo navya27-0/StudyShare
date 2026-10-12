@@ -1,0 +1,118 @@
+:root {
+  /* ========================================================
+     DAQ CONSULTING DESIGN SYSTEM: THE NEURAL CORE
+     Pure Black Foundation, Monochromatic Hairlines, Precision Matrix
+     ======================================================== */
+
+  /* Pitch Black & Surface Matrix */
+  --bg-canvas: #000000;
+  --bg-surface: #080808;
+  --bg-subdued: #0f0f0f;
+  --bg-muted: #171717;
+  --bg-glass: rgba(8, 8, 8, 0.82);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus: rgba(255, 255, 255, 0.50);
+
+  /* High-Contrast Crisp White & Translucent Text */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.90);
+  --text-muted: rgba(255, 255, 255, 0.74);
+
+  /* High-Contrast Core Accent (White on Black) */
+  --accent-core: #ffffff;
+  --accent-hover: #e4e4e7;
+  --accent-tint: rgba(255, 255, 255, 0.06);
+  --accent-border: rgba(255, 255, 255, 0.20);
+  --accent-contrast: #000000;
+  --crosshair-color: rgba(255, 255, 255, 0.35);
+
+  /* Telemetry Status Signals */
+  --status-verified: #10b981;
+  --status-verified-bg: rgba(16, 185, 129, 0.10);
+  --status-verified-border: rgba(16, 185, 129, 0.25);
+  --status-exam: #f59e0b;
+  --status-exam-bg: rgba(245, 158, 11, 0.10);
+  --status-exam-border: rgba(245, 158, 11, 0.25);
+  --status-lab: #06b6d4;
+  --status-lab-bg: rgba(6, 182, 212, 0.10);
+  --status-lab-border: rgba(6, 182, 212, 0.25);
+  --status-danger: #f43f5e;
+  --status-danger-bg: rgba(244, 63, 94, 0.10);
+  --status-danger-border: rgba(244, 63, 94, 0.30);
+
+  /* Typography */
+  --font-serif: 'Instrument Serif', 'Newsreader', 'Iowan Old Style', 'Georgia', serif;
+  --font-display: 'Syne', 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Elevation & Glows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.7);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-glow: 0 0 30px rgba(255, 255, 255, 0.08);
+
+  /* Radii */
+  --radius-sm: 3px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Grid lines */
+  --grid-line: rgba(255, 255, 255, 0.032);
+  --grid-glow: rgba(255, 255, 255, 0.06);
+
+  /* Precise Motion Curves */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-sidebar-open: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-sidebar-close: cubic-bezier(0.4, 0, 0.2, 1);
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  /* Architectural Minimalist High-Contrast Light Mode */
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subdued: #f1f5f9;
+  --bg-muted: #e2e8f0;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --border-subtle: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --border-focus: rgba(0, 0, 0, 0.70);
+
+  --text-primary: #09090b;
+  --text-secondary: #1e293b;
+  --text-muted: #3f3f46;
+
+  --accent-core: #09090b;
+  --accent-hover: #1e293b;
+  --accent-tint: rgba(0, 0, 0, 0.04);
+  --accent-border: rgba(0, 0, 0, 0.16);
+  --accent-contrast: #ffffff;
+  --crosshair-color: rgba(0, 0, 0, 0.28);
+
+  --status-verified: #059669;
+  --status-verified-bg: #ecfdf5;
+  --status-verified-border: #a7f3d0;
+  --status-exam: #d97706;
+  --status-exam-bg: #fffbeb;
+  --status-exam-border: #fde68a;
+  --status-lab: #0891b2;
+  --status-lab-bg: #ecfeff;
+  --status-lab-border: #a5f3fc;
+  --status-danger: #e11d48;
+  --status-danger-bg: #fff1f2;
+  --status-danger-border: #fecdd3;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px rgba(0, 0, 0, 0.04);
+
+  --grid-line: rgba(0, 0, 0, 0.032);
+  --grid-glow: rgba(0, 0, 0, 0.025);
+
+  color-scheme: light;
+}

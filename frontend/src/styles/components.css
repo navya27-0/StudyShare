@@ -1,0 +1,272 @@
+/* ========================================================
+   DAQ CONSULTING REUSABLE UI CLASSES
+   ======================================================== */
+
+/* High-Contrast Primary Pill Button (Adapts to Light & Dark) */
+.daq-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--accent-core);
+  color: var(--accent-contrast) !important;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 10px var(--accent-tint);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 160ms ease,
+              background-color 160ms ease,
+              border-color 160ms ease;
+  border: 1px solid var(--accent-core);
+  text-decoration: none;
+  cursor: pointer;
+}
+.daq-btn-primary:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 4px 18px var(--accent-border);
+  transform: translateY(-1.5px) scale(1.01);
+}
+.daq-btn-primary:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* Subtle Outline Pill Button */
+.daq-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary) !important;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 160ms ease,
+              border-color 160ms ease,
+              box-shadow 160ms ease;
+  text-decoration: none;
+  cursor: pointer;
+}
+.daq-btn-secondary:hover {
+  background-color: var(--bg-subdued);
+  border-color: var(--text-secondary);
+  color: var(--text-primary) !important;
+  transform: translateY(-1.5px);
+  box-shadow: 0 3px 12px var(--shadow-sm);
+}
+.daq-btn-secondary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* DAQ Micro-Badge */
+.daq-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  padding: 2.5px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--accent-tint);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 140ms ease;
+}
+.daq-tag:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+/* DAQ Status Dot Indicator */
+.daq-beacon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  animation: daq-pulse 2s infinite ease-in-out;
+}
+
+/* Card Surface with DAQ Hairline Borders & Smooth Hover */
+.daq-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms ease,
+              background-color 200ms ease,
+              box-shadow 200ms ease;
+  position: relative;
+}
+.daq-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px -6px var(--shadow-sm);
+}
+
+.daq-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  opacity: 0.7;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.daq-card:hover::before {
+  opacity: 1;
+}
+
+/* Dotted Corner Crosshair */
+.daq-crosshair {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+}
+.daq-crosshair::before, .daq-crosshair::after {
+  content: '';
+  position: absolute;
+  background-color: var(--crosshair-color);
+  transition: background-color 200ms ease;
+}
+.daq-crosshair::before {
+  top: 2px;
+  left: 0;
+  width: 5px;
+  height: 1px;
+}
+.daq-crosshair::after {
+  top: 0;
+  left: 2px;
+  width: 1px;
+  height: 5px;
+}
+.daq-crosshair-tl { top: -1px; left: -1px; }
+.daq-crosshair-tr { top: -1px; right: -1px; }
+.daq-crosshair-bl { bottom: -1px; left: -1px; }
+.daq-crosshair-br { bottom: -1px; right: -1px; }
+
+/* Institutional Ledger Card Refinements */
+.ledger-resource-card {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 180ms ease,
+              box-shadow 220ms ease,
+              background-color 180ms ease;
+}
+.ledger-resource-card:hover {
+  transform: translateY(-2.5px);
+  border-color: var(--border-strong);
+  box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
+}
+.ledger-resource-card:hover .resource-title-link {
+  color: var(--accent-core);
+}
+.ledger-resource-card:hover .resource-title-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+.resource-title-arrow {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+}
+
+/* Keyboard Shortcut Badge */
+.kbd-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background-color: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 5px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Verified Seal */
+.verified-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--status-verified);
+  background-color: var(--status-verified-bg);
+  border: 1px solid var(--status-verified-border);
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+/* Rank Badges */
+.rank-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.rank-badge-gold {
+  color: var(--status-exam);
+  background-color: var(--status-exam-bg);
+  border: 1px solid var(--status-exam-border);
+}
+.rank-badge-silver {
+  color: var(--text-primary);
+  background-color: var(--bg-muted);
+  border: 1px solid var(--border-strong);
+}
+.rank-badge-bronze {
+  color: var(--text-secondary);
+  background-color: var(--bg-subdued);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Smooth Interactive Filter Chips */
+.filter-chip-btn {
+  transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.filter-chip-btn:hover {
+  border-color: var(--border-strong) !important;
+  transform: translateY(-1px);
+}
+
+.uploader-link {
+  transition: color 140ms ease;
+}
+.uploader-link:hover {
+  color: var(--accent-core) !important;
+  text-decoration: underline;
+}
+.uploader-profile-card:hover div:first-child {
+  border-color: var(--accent-core);
+}

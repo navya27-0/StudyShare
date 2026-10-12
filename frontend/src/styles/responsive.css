@@ -1,0 +1,68 @@
+/* Mobile & Touch utilities */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive tables & horizontal overflow scrolling */
+.table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile bottom nav safe-area padding */
+@media (max-width: 767px) {
+  .mobile-nav-pad {
+    padding-bottom: 74px !important;
+  }
+}
+
+/* ========================================================
+   LOW-BANDWIDTH / LIGHTWEIGHT CAMPUS MODE
+   ======================================================== */
+[data-low-bandwidth='true'] body {
+  background-image: none !important;
+}
+
+[data-low-bandwidth='true'] *,
+[data-low-bandwidth='true'] *::before,
+[data-low-bandwidth='true'] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-low-bandwidth='true'] .daq-crosshair {
+  display: none !important;
+}
+
+/* ========================================================
+   REDUCED MOTION SUPPORT
+   ======================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .door-exit-anim,
+  .cinematic-fade-exit,
+  .cinematic-fade-enter,
+  .page-trans-door-enter,
+  .page-trans-drill-in,
+  .page-trans-drill-back,
+  .page-trans-crossfade,
+  .stagger-item,
+  .title-progress-fill,
+  .daq-card {
+    animation: none !important;
+    transform: none !important;
+  }
+}

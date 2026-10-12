@@ -1,0 +1,68 @@
+/* Sidebar Motion & Label Crossfading */
+.sidebar-rail {
+  transition: width 190ms cubic-bezier(0.16, 1, 0.3, 1), transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}
+
+.sidebar-rail.desktop-collapsed {
+  width: 68px !important;
+  transition: width 230ms cubic-bezier(0.4, 0, 0.2, 1), transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-label {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 100ms ease-in, max-width 190ms cubic-bezier(0.16, 1, 0.3, 1), transform 120ms ease;
+  opacity: 1;
+  max-width: 200px;
+}
+
+.sidebar-rail.desktop-collapsed .sidebar-label {
+  opacity: 0 !important;
+  max-width: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(-4px);
+  transition: opacity 80ms ease-out, max-width 230ms cubic-bezier(0.4, 0, 0.2, 1), transform 100ms ease;
+}
+
+.sidebar-rail.desktop-collapsed .sidebar-hide-collapsed {
+  display: none !important;
+}
+
+.sidebar-rail.desktop-collapsed .sidebar-center-collapsed {
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* ========================================================
+   ACADEMIC BLUEPRINT & FORMAL LUXURY UTILITIES
+   ======================================================== */
+.academic-grid-bg {
+  background-size: 36px 36px;
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+}
+
+.academic-serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.formal-mono-caps {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-feature-settings: 'tnum', 'zero';
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'zero';
+}

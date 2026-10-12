@@ -638,18 +638,10 @@ async def create_resource(
                 detail="A document file must be uploaded for non-link resource types.",
             )
 
-        file_bytes = await file.read()
-        if len(file_bytes) > settings.MAX_UPLOAD_SIZE_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB.",
-            )
-
-        storage_result = await storage.save_file(
-            file_content=file_bytes,
-            filename=file.filename,
-            content_type=file.content_type or "application/octet-stream",
+        storage_result = await storage.save_upload_file(
+            upload_file=file,
             subfolder=f"topic_{topic_id}",
+            max_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES,
         )
         file_url = storage_result.file_url
         file_size_bytes = storage_result.file_size_bytes
@@ -763,17 +755,10 @@ async def update_resource(
             file_url = external_url.strip()
             file_size_bytes = 0
     elif file and file.filename:
-        file_bytes = await file.read()
-        if len(file_bytes) > settings.MAX_UPLOAD_SIZE_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB.",
-            )
-        storage_result = await storage.save_file(
-            file_content=file_bytes,
-            filename=file.filename,
-            content_type=file.content_type or "application/octet-stream",
+        storage_result = await storage.save_upload_file(
+            upload_file=file,
             subfolder=f"topic_{resource.topic_id}",
+            max_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES,
         )
         file_url = storage_result.file_url
         file_size_bytes = storage_result.file_size_bytes
