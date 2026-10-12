@@ -16,7 +16,7 @@ export const Signup: React.FC = () => {
   const [isDoorClosing, setIsDoorClosing] = useState(false);
 
   const { signup } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, updatePreferences, openOnboarding } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +43,11 @@ export const Signup: React.FC = () => {
         department,
         bio: bio.trim() || undefined,
       });
+      updatePreferences({
+        semester,
+        department,
+      });
+      openOnboarding();
       setIsDoorClosing(true);
       setTimeout(() => {
         navigate('/', { replace: true, state: { fromDoor: true } });
@@ -98,7 +103,7 @@ export const Signup: React.FC = () => {
               letterSpacing: '0.04em',
             }}
           >
-            NEW CONTRIBUTOR REGISTRATION
+            STUDENT ACCOUNT REGISTRATION
           </span>
         </div>
 
@@ -190,7 +195,7 @@ export const Signup: React.FC = () => {
                 }}
               >
                 <Award size={14} strokeWidth={1.75} />
-                <span>COMMUNITY REPUTATION</span>
+                <span>STUDY RESOURCES FOR YOUR COURSES</span>
               </div>
 
               <h1
@@ -204,7 +209,7 @@ export const Signup: React.FC = () => {
                   letterSpacing: '-0.02em',
                 }}
               >
-                Join the Campus Study Ledger
+                Join StudyShare
               </h1>
 
               <p
@@ -215,8 +220,7 @@ export const Signup: React.FC = () => {
                   marginBottom: '24px',
                 }}
               >
-                Every student receives an automatic Contributor Profile linked to their university enrollment.
-                Share verified notes, upvote exam questions, and build academic standing.
+                Create your student profile to find lecture notes, past exam papers (PYQs), lab manuals, and study materials organized by course and unit.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -487,11 +491,11 @@ export const Signup: React.FC = () => {
                 }}
               >
                 {isSubmitting ? (
-                  <span>REGISTERING...</span>
+                  <span>CREATING ACCOUNT...</span>
                 ) : (
                   <>
                     <UserPlus size={16} strokeWidth={1.75} />
-                    <span>ENROLL & PROVISION PROFILE</span>
+                    <span>CREATE STUDENT ACCOUNT</span>
                     <ArrowRight size={16} strokeWidth={1.75} />
                   </>
                 )}
@@ -509,7 +513,7 @@ export const Signup: React.FC = () => {
                 fontSize: '13px',
               }}
             >
-              <span style={{ color: 'var(--text-secondary)' }}>Already hold a student ledger identity?</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Already have an account?</span>
               <Link
                 to="/login"
                 style={{

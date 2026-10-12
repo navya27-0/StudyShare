@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
-from app.core.rate_limit import login_rate_limiter
+from app.core.rate_limit import counter_deduplicator, login_rate_limiter, revoked_token_store
 from app.database import get_db_session
 from app.main import app
 
@@ -43,10 +43,14 @@ app.dependency_overrides[get_db_session] = override_get_db_session
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    """Ensure login rate limiter failures are cleared across tests."""
+    """Ensure rate limiters, deduplicators, and token revocation stores are cleared across tests."""
     login_rate_limiter.clear()
+    counter_deduplicator.clear()
+    revoked_token_store.clear()
     yield
     login_rate_limiter.clear()
+    counter_deduplicator.clear()
+    revoked_token_store.clear()
 
 
 @pytest_asyncio.fixture

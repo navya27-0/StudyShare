@@ -6,10 +6,12 @@ import type {
   AuthSuccessResponse,
   AuthTokens,
   BookmarkResponse,
+  DuplicateCheckResponse,
   RatingResponse,
   ReportResponse,
   ResourceDetail,
   ResourceFilterParams,
+  ResourceListItem,
   ResourceListResponse,
   SubjectItem,
   TopicItem,
@@ -24,18 +26,93 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const TOKEN_KEY = 'studyshare_access_token';
 const REFRESH_TOKEN_KEY = 'studyshare_refresh_token';
+const TAXONOMY_CACHE_KEY = 'studyshare_taxonomy_cache_v1';
+const DOWNLOAD_HISTORY_KEY = 'studyshare_download_history_v1';
+const OFFLINE_BOOKMARKS_KEY = 'studyshare_offline_bookmarks_v1';
 
-export const getStoredAccessToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-export const getStoredRefreshToken = (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY);
+// In-memory primary token store (reduces XSS surface while maintaining reload persistence)
+let inMemoryAccessToken: string | null = null;
+
+export const getStoredAccessToken = (): string | null => {
+  if (inMemoryAccessToken) return inMemoryAccessToken;
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const getStoredRefreshToken = (): string | null => {
+  try {
+    return sessionStorage.getItem(REFRESH_TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
 
 export const storeTokens = (tokens: AuthTokens): void => {
-  localStorage.setItem(TOKEN_KEY, tokens.access_token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  inMemoryAccessToken = tokens.access_token;
+  try {
+    sessionStorage.setItem(TOKEN_KEY, tokens.access_token);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+    localStorage.setItem(TOKEN_KEY, tokens.access_token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  } catch {
+    // Ignore storage quota errors
+  }
 };
 
 export const clearStoredTokens = (): void => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  inMemoryAccessToken = null;
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+// Download history & Offline Saved Library helpers for low-bandwidth / exam reliability
+export const getDownloadedIds = (): Set<number> => {
+  try {
+    const raw = localStorage.getItem(DOWNLOAD_HISTORY_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as number[];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+};
+
+export const markResourceDownloaded = (resourceId: number): void => {
+  try {
+    const current = getDownloadedIds();
+    current.add(resourceId);
+    localStorage.setItem(DOWNLOAD_HISTORY_KEY, JSON.stringify(Array.from(current).slice(-200)));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+export const getOfflineBookmarks = (): ResourceListItem[] => {
+  try {
+    const raw = localStorage.getItem(OFFLINE_BOOKMARKS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ResourceListItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveOfflineBookmarks = (items: ResourceListItem[]): void => {
+  try {
+    localStorage.setItem(OFFLINE_BOOKMARKS_KEY, JSON.stringify(items.slice(0, 100)));
+  } catch {
+    // Ignore storage errors
+  }
 };
 
 export class ApiError extends Error {
@@ -51,7 +128,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Base HTTP request wrapper with automatic Bearer token injection and refresh retry.
+ * Base HTTP request wrapper with automatic Bearer token injection, HttpOnly cookie credentials, and refresh retry.
  */
 export async function apiRequest<T>(
   endpoint: string,
@@ -75,6 +152,7 @@ export async function apiRequest<T>(
   try {
     response = await fetch(url, {
       ...options,
+      credentials: 'include',
       headers,
     });
   } catch (netErr: unknown) {
@@ -86,27 +164,26 @@ export async function apiRequest<T>(
     );
   }
 
-  // Handle token expiration & automatic refresh
+  // Handle token expiration & automatic refresh (supports HttpOnly cookie + token rotation)
   if (response.status === 401 && retry) {
     const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      try {
-        const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
+      });
 
-        if (refreshRes.ok) {
-          const newTokens: AuthTokens = await refreshRes.json();
-          storeTokens(newTokens);
-          return apiRequest<T>(endpoint, options, false);
-        } else {
-          clearStoredTokens();
-        }
-      } catch {
+      if (refreshRes.ok) {
+        const newTokens: AuthTokens = await refreshRes.json();
+        storeTokens(newTokens);
+        return apiRequest<T>(endpoint, options, false);
+      } else {
         clearStoredTokens();
       }
+    } catch {
+      clearStoredTokens();
     }
   }
 
@@ -120,7 +197,6 @@ export async function apiRequest<T>(
         if (typeof detail === 'string') {
           errorDetail = detail;
         } else if (Array.isArray(detail)) {
-          // FastAPI validation errors array format
           errorDetail = detail.map((e: { msg?: string; loc?: string[] }) => {
             const field = e.loc ? e.loc[e.loc.length - 1] : '';
             return field ? `${field}: ${e.msg || 'invalid'}` : e.msg || 'validation error';
@@ -130,11 +206,10 @@ export async function apiRequest<T>(
         }
       }
     } catch {
-      // response is not json
       if (response.status === 413) {
-        errorDetail = 'File payload is too large. Server upload limit is 50 MB.';
+        errorDetail = 'File payload is too large. Maximum allowed file size is 50 MB.';
       } else if (response.status === 502 || response.status === 503 || response.status === 504) {
-        errorDetail = 'Backend gateway or server is currently unreachable. Please retry shortly.';
+        errorDetail = 'Backend server is currently unreachable. Please retry shortly.';
       }
     }
     throw new ApiError(errorDetail, response.status, errorData);
@@ -175,113 +250,178 @@ export const authApi = {
   },
 
   logout: (): void => {
+    const refreshToken = getStoredRefreshToken();
     clearStoredTokens();
+    fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
+    }).catch(() => {
+      // Ignore network errors during logout cleanup
+    });
   },
 };
 
-// Academic Taxonomy API methods
+const FALLBACK_TAXONOMY: SubjectItem[] = [
+  {
+    id: 1,
+    code: 'CS201',
+    name: 'Data Structures & Algorithms',
+    semester: 3,
+    units: [
+      {
+        id: 1,
+        subject_id: 1,
+        unit_number: 1,
+        title: 'Linear Data Structures & Amortized Analysis',
+        ordering: 1,
+        topics: [
+          { id: 1, unit_id: 1, title: 'Linked Lists, Stacks & Queue Applications', ordering: 1 },
+        ],
+      },
+      {
+        id: 2,
+        subject_id: 1,
+        unit_number: 2,
+        title: 'Balanced Search Trees & Heaps',
+        ordering: 2,
+        topics: [
+          { id: 2, unit_id: 2, title: 'AVL Tree Rotations & Balance Factor Analysis', ordering: 1 },
+        ],
+      },
+      {
+        id: 3,
+        subject_id: 1,
+        unit_number: 3,
+        title: 'Graph Algorithms & Traversal',
+        ordering: 3,
+        topics: [
+          { id: 3, unit_id: 3, title: 'Dijkstra, Bellman-Ford & Shortest Path Trees', ordering: 1 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 2,
+    code: 'CS204',
+    name: 'Operating Systems & System Programming',
+    semester: 4,
+    units: [
+      {
+        id: 4,
+        subject_id: 2,
+        unit_number: 1,
+        title: 'Process Management, Threads & Concurrency',
+        ordering: 1,
+        topics: [
+          { id: 4, unit_id: 4, title: 'Deadlock Avoidance & Banker Algorithm', ordering: 1 },
+        ],
+      },
+      {
+        id: 5,
+        subject_id: 2,
+        unit_number: 2,
+        title: 'Virtual Memory & Page Replacement',
+        ordering: 2,
+        topics: [
+          { id: 5, unit_id: 5, title: 'LRU, Working Set Model & TLB Hierarchies', ordering: 1 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 3,
+    code: 'CS301',
+    name: 'Database Management Systems',
+    semester: 5,
+    units: [
+      {
+        id: 6,
+        subject_id: 3,
+        unit_number: 1,
+        title: 'Relational Model, Normalization & SQL',
+        ordering: 1,
+        topics: [
+          { id: 6, unit_id: 6, title: '3NF & BCNF Decomposition Algorithms', ordering: 1 },
+        ],
+      },
+      {
+        id: 7,
+        subject_id: 3,
+        unit_number: 2,
+        title: 'ACID Transactions & Concurrency Control',
+        ordering: 2,
+        topics: [
+          { id: 7, unit_id: 7, title: 'Two-Phase Locking (2PL) & Serializability', ordering: 1 },
+        ],
+      },
+    ],
+  },
+];
+
+// Academic Taxonomy API methods with local caching for low-bandwidth campus connections
 export const taxonomyApi = {
-  getSubjectsTree: async (): Promise<SubjectItem[]> => {
+  invalidateCache: (): void => {
     try {
-      return await apiRequest<SubjectItem[]>('/api/resources/taxonomy');
+      localStorage.removeItem(TAXONOMY_CACHE_KEY);
     } catch {
-      // Fallback fallback seed taxonomy if endpoint is still loading or offline
-      return [
-        {
-          id: 1,
-          code: 'CS201',
-          name: 'Data Structures & Algorithms',
-          semester: 3,
-          units: [
-            {
-              id: 1,
-              subject_id: 1,
-              unit_number: 1,
-              title: 'Linear Data Structures & Amortized Analysis',
-              ordering: 1,
-              topics: [
-                { id: 1, unit_id: 1, title: 'Linked Lists, Stacks & Queue Applications', ordering: 1 },
-              ],
-            },
-            {
-              id: 2,
-              subject_id: 1,
-              unit_number: 2,
-              title: 'Balanced Search Trees & Heaps',
-              ordering: 2,
-              topics: [
-                { id: 2, unit_id: 2, title: 'AVL Tree Rotations & Balance Factor Analysis', ordering: 1 },
-              ],
-            },
-            {
-              id: 3,
-              subject_id: 1,
-              unit_number: 3,
-              title: 'Graph Algorithms & Traversal',
-              ordering: 3,
-              topics: [
-                { id: 3, unit_id: 3, title: 'Dijkstra, Bellman-Ford & Shortest Path Trees', ordering: 1 },
-              ],
-            },
-          ],
-        },
-        {
-          id: 2,
-          code: 'CS204',
-          name: 'Operating Systems & System Programming',
-          semester: 4,
-          units: [
-            {
-              id: 4,
-              subject_id: 2,
-              unit_number: 1,
-              title: 'Process Management, Threads & Concurrency',
-              ordering: 1,
-              topics: [
-                { id: 4, unit_id: 4, title: 'Deadlock Avoidance & Banker Algorithm', ordering: 1 },
-              ],
-            },
-            {
-              id: 5,
-              subject_id: 2,
-              unit_number: 2,
-              title: 'Virtual Memory & Page Replacement',
-              ordering: 2,
-              topics: [
-                { id: 5, unit_id: 5, title: 'LRU, Working Set Model & TLB Hierarchies', ordering: 1 },
-              ],
-            },
-          ],
-        },
-        {
-          id: 3,
-          code: 'CS301',
-          name: 'Database Management Systems',
-          semester: 5,
-          units: [
-            {
-              id: 6,
-              subject_id: 3,
-              unit_number: 1,
-              title: 'Relational Model, Normalization & SQL',
-              ordering: 1,
-              topics: [
-                { id: 6, unit_id: 6, title: '3NF & BCNF Decomposition Algorithms', ordering: 1 },
-              ],
-            },
-            {
-              id: 7,
-              subject_id: 3,
-              unit_number: 2,
-              title: 'ACID Transactions & Concurrency Control',
-              ordering: 2,
-              topics: [
-                { id: 7, unit_id: 7, title: 'Two-Phase Locking (2PL) & Serializability', ordering: 1 },
-              ],
-            },
-          ],
-        },
-      ];
+      // Ignore storage errors
+    }
+  },
+
+  getSubjectsTree: async (forceRefresh = false): Promise<SubjectItem[]> => {
+    if (!forceRefresh) {
+      try {
+        const cachedRaw = localStorage.getItem(TAXONOMY_CACHE_KEY);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw) as { ts: number; data: SubjectItem[] };
+          if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
+            // If cached within 10 minutes, return immediately and revalidate silently if older than 2 min
+            const ageMs = Date.now() - (parsed.ts || 0);
+            if (ageMs < 10 * 60 * 1000) {
+              if (ageMs > 2 * 60 * 1000) {
+                apiRequest<SubjectItem[]>('/api/resources/taxonomy')
+                  .then((fresh) => {
+                    localStorage.setItem(
+                      TAXONOMY_CACHE_KEY,
+                      JSON.stringify({ ts: Date.now(), data: fresh })
+                    );
+                  })
+                  .catch(() => {});
+              }
+              return parsed.data;
+            }
+          }
+        }
+      } catch {
+        // Ignore cache read error
+      }
+    }
+
+    try {
+      const fresh = await apiRequest<SubjectItem[]>('/api/resources/taxonomy');
+      try {
+        localStorage.setItem(
+          TAXONOMY_CACHE_KEY,
+          JSON.stringify({ ts: Date.now(), data: fresh })
+        );
+      } catch {
+        // Ignore quota error
+      }
+      return fresh;
+    } catch {
+      // Try stale cache before hardcoded fallback
+      try {
+        const cachedRaw = localStorage.getItem(TAXONOMY_CACHE_KEY);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw) as { data: SubjectItem[] };
+          if (parsed?.data?.length) return parsed.data;
+        }
+      } catch {
+        // Ignore
+      }
+      return FALLBACK_TAXONOMY;
     }
   },
 };
@@ -297,6 +437,7 @@ export const resourcesApi = {
     if (params.semester) search.set('semester', String(params.semester));
     if (params.type) search.set('type', params.type);
     if (params.min_rating) search.set('min_rating', String(params.min_rating));
+    if (params.is_verified !== undefined) search.set('is_verified', String(params.is_verified));
     if (params.uploader_id) search.set('uploader_id', String(params.uploader_id));
     if (params.q && params.q.trim()) search.set('q', params.q.trim());
     if (params.sort_by) search.set('sort_by', params.sort_by);
@@ -306,6 +447,24 @@ export const resourcesApi = {
     const queryString = search.toString();
     const endpoint = queryString ? `/api/resources?${queryString}` : '/api/resources';
     return apiRequest<ResourceListResponse>(endpoint);
+  },
+
+  checkDuplicate: async (params: {
+    title?: string;
+    filename?: string;
+    topic_id?: number;
+    unit_id?: number;
+    subject_id?: number;
+    file_size_bytes?: number;
+  }): Promise<DuplicateCheckResponse> => {
+    const search = new URLSearchParams();
+    if (params.title && params.title.trim()) search.set('title', params.title.trim());
+    if (params.filename && params.filename.trim()) search.set('filename', params.filename.trim());
+    if (params.topic_id) search.set('topic_id', String(params.topic_id));
+    if (params.unit_id) search.set('unit_id', String(params.unit_id));
+    if (params.subject_id) search.set('subject_id', String(params.subject_id));
+    if (params.file_size_bytes) search.set('file_size_bytes', String(params.file_size_bytes));
+    return apiRequest<DuplicateCheckResponse>(`/api/resources/check-duplicate?${search.toString()}`);
   },
 
   get: async (resourceId: number): Promise<ResourceDetail> => {
@@ -341,23 +500,28 @@ export const resourcesApi = {
   },
 
   recordDownload: async (resourceId: number): Promise<{ resource_id: number; downloads_count: number }> => {
+    markResourceDownloaded(resourceId);
     return apiRequest<{ resource_id: number; downloads_count: number }>(`/api/resources/${resourceId}/download`, {
       method: 'POST',
     });
   },
 
   createUnit: async (subjectId: number, title: string, unitNumber?: number): Promise<UnitItem> => {
-    return apiRequest<UnitItem>('/api/resources/units', {
+    const res = await apiRequest<UnitItem>('/api/resources/units', {
       method: 'POST',
       body: JSON.stringify({ subject_id: subjectId, title, unit_number: unitNumber }),
     });
+    taxonomyApi.invalidateCache();
+    return res;
   },
 
   createTopic: async (unitId: number, title: string): Promise<TopicItem> => {
-    return apiRequest<TopicItem>('/api/resources/topics', {
+    const res = await apiRequest<TopicItem>('/api/resources/topics', {
       method: 'POST',
       body: JSON.stringify({ unit_id: unitId, title }),
     });
+    taxonomyApi.invalidateCache();
+    return res;
   },
 
   vote: async (resourceId: number, voteType: 'up' | 'down'): Promise<VoteResponse> => {

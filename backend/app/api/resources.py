@@ -9,16 +9,18 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
+    Request,
     UploadFile,
     status,
 )
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_client_ip, get_current_user, get_optional_current_user
 from app.config import get_settings
 from app.core.ranking import compute_ranking_score, get_ranking_sql_expression
+from app.core.rate_limit import counter_deduplicator
 from app.core.storage import StorageProvider, get_storage_provider
 from app.database import get_db_session
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
@@ -38,6 +40,7 @@ from app.schemas.interactions import (
 )
 from app.schemas.resource import (
     BreadcrumbHierarchy,
+    DuplicateCheckResponse,
     ResourceDetailResponse,
     ResourceListItemResponse,
     ResourceListResponse,
@@ -65,7 +68,11 @@ def _build_breadcrumbs(topic: Topic) -> BreadcrumbHierarchy:
     )
 
 
-def _serialize_resource_item(resource: Resource) -> ResourceListItemResponse:
+def _serialize_resource_item(
+    resource: Resource,
+    is_bookmarked: bool = False,
+    user_vote: str | None = None,
+) -> ResourceListItemResponse:
     breadcrumbs = (
         _build_breadcrumbs(resource.topic) if resource.topic and resource.topic.unit else None
     )
@@ -103,11 +110,17 @@ def _serialize_resource_item(resource: Resource) -> ResourceListItemResponse:
         updated_at=resource.updated_at,
         uploader=UploaderBriefResponse.model_validate(resource.uploader),
         breadcrumbs=breadcrumbs,
+        is_bookmarked=is_bookmarked,
+        user_vote=user_vote,
     )
 
 
-def _serialize_resource_detail(resource: Resource) -> ResourceDetailResponse:
-    base_item = _serialize_resource_item(resource)
+def _serialize_resource_detail(
+    resource: Resource,
+    is_bookmarked: bool = False,
+    user_vote: str | None = None,
+) -> ResourceDetailResponse:
+    base_item = _serialize_resource_item(resource, is_bookmarked=is_bookmarked, user_vote=user_vote)
     current_ver = (
         ResourceVersionResponse.model_validate(resource.current_version)
         if resource.current_version
@@ -124,6 +137,7 @@ def _serialize_resource_detail(resource: Resource) -> ResourceDetailResponse:
 @router.get("", response_model=ResourceListResponse)
 async def list_resources(
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
     subject_id: int | None = Query(None, description="Filter by Subject ID"),
     subject_code: str | None = Query(None, description="Filter by Subject Code (e.g. CS201)"),
     unit_id: int | None = Query(None, description="Filter by Unit ID"),
@@ -131,13 +145,26 @@ async def list_resources(
     semester: int | None = Query(None, ge=1, le=8, description="Filter by semester (1-8)"),
     type: ResourceType | None = Query(None, description="Filter by resource type"),
     min_rating: float | None = Query(None, ge=1.0, le=5.0, description="Minimum average rating"),
+    is_verified: bool | None = Query(
+        None, description="Filter by faculty/syllabus verified status"
+    ),
     uploader_id: int | None = Query(None, description="Filter by uploader user ID"),
     q: str | None = Query(
-        None, min_length=1, description="Full-text search query across title & description"
+        None,
+        min_length=1,
+        description="Student-oriented search across title, description, course code, unit, topic, contributor, and filename",
     ),
     sort_by: str = Query(
         "ranked",
-        enum=["ranked", "recent", "highest_rated", "most_upvoted", "most_downloaded"],
+        enum=[
+            "ranked",
+            "recent",
+            "newest",
+            "recently_updated",
+            "highest_rated",
+            "most_upvoted",
+            "most_downloaded",
+        ],
         description="Sorting criteria ('ranked' uses composite quality + recency score)",
     ),
     page: int = Query(1, ge=1, description="Page number"),
@@ -145,14 +172,15 @@ async def list_resources(
 ):
     """
     List resources with dynamic multi-level filtering (Subject -> Unit -> Topic),
-    PostgreSQL full-text search, and multiple sorting dimensions.
+    student-oriented search (course codes, units, topics, contributors, synonyms),
+    single-request bookmark/vote state hydration, and multiple sorting dimensions.
     """
-    # Base query joining Topic, Unit, Subject for taxonomy filters, excluding deleted items
     base_stmt = (
         select(Resource)
         .join(Resource.topic)
         .join(Topic.unit)
         .join(Unit.subject)
+        .join(Resource.uploader)
         .where(Resource.is_deleted.is_(False))
     )
 
@@ -171,34 +199,95 @@ async def list_resources(
         base_stmt = base_stmt.where(Resource.type == type)
     if min_rating is not None:
         base_stmt = base_stmt.where(Resource.rating_avg >= min_rating)
+    if is_verified is not None:
+        base_stmt = base_stmt.where(Resource.is_verified.is_(is_verified))
     if uploader_id is not None:
         base_stmt = base_stmt.where(Resource.uploader_id == uploader_id)
 
-    # 2. Full-Text Search across Title and Description
+    # 2. Student-Oriented Search across Title, Description, Course, Unit, Topic, Contributor & Synonyms
     if q and q.strip():
         search_query = q.strip()
-        # Robust full-text search: supports websearch_to_tsquery on postgres, with fallback ILIKE
+        q_lower = search_query.lower()
+
+        # Synonym expansion for common student search terms
+        synonym_types: list[ResourceType] = []
+        if any(
+            term in q_lower
+            for term in (
+                "pyq",
+                "past paper",
+                "last year",
+                "question paper",
+                "exam paper",
+                "midterm",
+            )
+        ):
+            synonym_types.extend([ResourceType.PAPER, ResourceType.QUESTION_BANK])
+        if any(term in q_lower for term in ("lab", "manual", "practical", "code")):
+            synonym_types.append(ResourceType.LAB_RECORD)
+        if any(term in q_lower for term in ("note", "lecture", "slide", "summary")):
+            synonym_types.append(ResourceType.NOTES)
+
         bind = db.bind
         dialect_name = bind.dialect.name if bind else "postgresql"
+
+        broad_ilike = [
+            Resource.title.ilike(f"%{search_query}%"),
+            Resource.description.ilike(f"%{search_query}%"),
+            Subject.code.ilike(f"%{search_query}%"),
+            Subject.name.ilike(f"%{search_query}%"),
+            Unit.title.ilike(f"%{search_query}%"),
+            Topic.title.ilike(f"%{search_query}%"),
+            User.display_name.ilike(f"%{search_query}%"),
+            Resource.file_url.ilike(f"%{search_query}%"),
+        ]
+
+        # Multi-token composite matching (e.g. "cs201 graph", "unit 3 dijkstra")
+        tokens = [
+            t
+            for t in q_lower.replace("-", " ").split()
+            if len(t) >= 2 and t not in ("unit", "sem", "semester", "the", "and", "for")
+        ]
+        token_clauses = []
+        if len(tokens) > 1:
+            per_token_matches = []
+            for tok in tokens[:5]:
+                tok_conds = [
+                    Resource.title.ilike(f"%{tok}%"),
+                    Resource.description.ilike(f"%{tok}%"),
+                    Subject.code.ilike(f"%{tok}%"),
+                    Subject.name.ilike(f"%{tok}%"),
+                    Unit.title.ilike(f"%{tok}%"),
+                    Topic.title.ilike(f"%{tok}%"),
+                    User.display_name.ilike(f"%{tok}%"),
+                ]
+                if tok in ("pyq", "pyqs", "paper", "papers"):
+                    tok_conds.append(
+                        Resource.type.in_([ResourceType.PAPER, ResourceType.QUESTION_BANK])
+                    )
+                if tok in ("note", "notes"):
+                    tok_conds.append(Resource.type == ResourceType.NOTES)
+                if tok.isdigit():
+                    tok_conds.append(Unit.unit_number == int(tok))
+                per_token_matches.append(or_(*tok_conds))
+            token_clauses.append(and_(*per_token_matches))
+
+        if synonym_types and len(tokens) == 1:
+            broad_ilike.append(Resource.type.in_(synonym_types))
+
         if dialect_name == "postgresql":
             ts_vector = func.to_tsvector(
                 "english",
                 Resource.title + " " + func.coalesce(Resource.description, ""),
             )
-            # Combine FTS with substring fallback for partial words/acronyms
             fts_filter = or_(
                 ts_vector.op("@@")(func.websearch_to_tsquery("english", search_query)),
-                Resource.title.ilike(f"%{search_query}%"),
-                Resource.description.ilike(f"%{search_query}%"),
+                *broad_ilike,
+                *token_clauses,
             )
             base_stmt = base_stmt.where(fts_filter)
         else:
-            base_stmt = base_stmt.where(
-                or_(
-                    Resource.title.ilike(f"%{search_query}%"),
-                    Resource.description.ilike(f"%{search_query}%"),
-                )
-            )
+            base_stmt = base_stmt.where(or_(*broad_ilike, *token_clauses))
 
     # 3. Compute Total Count
     count_stmt = select(func.count()).select_from(base_stmt.order_by(None).subquery())
@@ -214,8 +303,10 @@ async def list_resources(
         base_stmt = base_stmt.order_by(Resource.upvotes_count.desc(), Resource.created_at.desc())
     elif sort_by == "most_downloaded":
         base_stmt = base_stmt.order_by(Resource.downloads_count.desc(), Resource.created_at.desc())
-    elif sort_by == "recent":
+    elif sort_by in ("recent", "newest"):
         base_stmt = base_stmt.order_by(Resource.created_at.desc())
+    elif sort_by == "recently_updated":
+        base_stmt = base_stmt.order_by(Resource.updated_at.desc(), Resource.created_at.desc())
     else:  # "ranked" (default)
         base_stmt = base_stmt.order_by(
             get_ranking_sql_expression(Resource).desc(), Resource.created_at.desc()
@@ -235,7 +326,36 @@ async def list_resources(
     result = await db.execute(query_stmt)
     resources = result.scalars().all()
 
-    items = [_serialize_resource_item(r) for r in resources]
+    # 6. Single-pass hydration of user bookmarks and votes (eliminating extra roundtrips on slow networks)
+    bookmarked_ids: set[int] = set()
+    user_votes_map: dict[int, str] = {}
+    if current_user and resources:
+        res_ids = [r.id for r in resources]
+        bm_res = await db.execute(
+            select(Bookmark.resource_id).where(
+                Bookmark.user_id == current_user.id,
+                Bookmark.resource_id.in_(res_ids),
+            )
+        )
+        bookmarked_ids = set(bm_res.scalars().all())
+
+        vote_res = await db.execute(
+            select(Vote.resource_id, Vote.value).where(
+                Vote.user_id == current_user.id,
+                Vote.resource_id.in_(res_ids),
+            )
+        )
+        for r_id, v_val in vote_res.all():
+            user_votes_map[r_id] = str(v_val.value if hasattr(v_val, "value") else v_val)
+
+    items = [
+        _serialize_resource_item(
+            r,
+            is_bookmarked=(r.id in bookmarked_ids),
+            user_vote=user_votes_map.get(r.id),
+        )
+        for r in resources
+    ]
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
     return ResourceListResponse(
@@ -338,14 +458,85 @@ async def create_topic(
     return TopicBriefResponse.model_validate(new_topic)
 
 
+@router.get("/check-duplicate", response_model=DuplicateCheckResponse)
+async def check_duplicate_resource(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    title: str | None = Query(None, description="Candidate resource title"),
+    topic_id: int | None = Query(None, description="Candidate topic ID"),
+    unit_id: int | None = Query(None, description="Candidate unit ID"),
+    subject_id: int | None = Query(None, description="Candidate subject ID"),
+    file_size_bytes: int | None = Query(None, description="Candidate file size in bytes"),
+):
+    """
+    Detect potential duplicate resources before upload using title similarity,
+    course/unit/topic proximity, and exact file size matching.
+    """
+    if not title and not file_size_bytes:
+        return DuplicateCheckResponse(has_duplicates=False, matches=[])
+
+    stmt = (
+        select(Resource)
+        .join(Resource.topic)
+        .join(Topic.unit)
+        .join(Unit.subject)
+        .where(Resource.is_deleted.is_(False))
+    )
+
+    if topic_id is not None:
+        stmt = stmt.where(Resource.topic_id == topic_id)
+    elif unit_id is not None:
+        stmt = stmt.where(Topic.unit_id == unit_id)
+    elif subject_id is not None:
+        stmt = stmt.where(Unit.subject_id == subject_id)
+
+    match_conditions = []
+    if file_size_bytes and file_size_bytes > 0:
+        match_conditions.append(Resource.file_size_bytes == file_size_bytes)
+
+    if title and len(title.strip()) >= 4:
+        clean_title = title.strip()
+        match_conditions.append(Resource.title.ilike(f"%{clean_title}%"))
+        words = [
+            w
+            for w in clean_title.lower().replace("-", " ").replace("_", " ").split()
+            if len(w) >= 4 and w not in ("notes", "lecture", "unit", "exam", "paper", "study")
+        ]
+        if len(words) >= 2:
+            word_clauses = [Resource.title.ilike(f"%{w}%") for w in words[:3]]
+            match_conditions.append(and_(*word_clauses))
+
+    if not match_conditions:
+        return DuplicateCheckResponse(has_duplicates=False, matches=[])
+
+    stmt = (
+        stmt.where(or_(*match_conditions))
+        .order_by(Resource.upvotes_count.desc(), Resource.created_at.desc())
+        .limit(3)
+        .options(
+            selectinload(Resource.uploader),
+            selectinload(Resource.topic).selectinload(Topic.unit).selectinload(Unit.subject),
+        )
+    )
+
+    result = await db.execute(stmt)
+    candidates = result.scalars().all()
+    serialized = [_serialize_resource_item(r) for r in candidates]
+    return DuplicateCheckResponse(
+        has_duplicates=len(serialized) > 0,
+        matches=serialized,
+    )
+
+
 @router.get("/{resource_id}", response_model=ResourceDetailResponse)
 async def get_resource(
     resource_id: int,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ):
     """
     Retrieve single resource by ID with full version history and taxonomy breadcrumbs.
-    Automatically increments view count.
+    Automatically increments view count with per-user/per-IP deduplication.
     """
     stmt = (
         select(Resource)
@@ -367,15 +558,40 @@ async def get_resource(
             detail=f"Resource with ID {resource_id} was not found.",
         )
 
-    # Increment view counter
-    resource.views_count += 1
-    await db.commit()
+    # Deduplicated view counter increment (prevents refresh spam)
+    actor_key = f"user:{current_user.id}" if current_user else f"ip:{get_client_ip(request)}"
+    if counter_deduplicator.should_increment(actor_key, resource_id, "view"):
+        resource.views_count += 1
+        await db.commit()
 
-    return _serialize_resource_detail(resource)
+    is_bookmarked = False
+    user_vote: str | None = None
+    if current_user:
+        bm = (
+            await db.execute(
+                select(Bookmark.id).where(
+                    Bookmark.user_id == current_user.id, Bookmark.resource_id == resource_id
+                )
+            )
+        ).scalar_one_or_none()
+        is_bookmarked = bm is not None
+
+        vt = (
+            await db.execute(
+                select(Vote.value).where(
+                    Vote.user_id == current_user.id, Vote.resource_id == resource_id
+                )
+            )
+        ).scalar_one_or_none()
+        if vt is not None:
+            user_vote = str(vt.value if hasattr(vt, "value") else vt)
+
+    return _serialize_resource_detail(resource, is_bookmarked=is_bookmarked, user_vote=user_vote)
 
 
 @router.post("", response_model=ResourceDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_resource(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     storage: Annotated[StorageProvider, Depends(get_storage_provider)],
@@ -488,12 +704,13 @@ async def create_resource(
     await db.commit()
 
     # Reload complete resource
-    return await get_resource(res_id, db)
+    return await get_resource(res_id, request, db, current_user)
 
 
 @router.put("/{resource_id}", response_model=ResourceDetailResponse)
 async def update_resource(
     resource_id: int,
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     storage: Annotated[StorageProvider, Depends(get_storage_provider)],
@@ -592,7 +809,7 @@ async def update_resource(
     res_id = resource.id
     await db.commit()
 
-    return await get_resource(res_id, db)
+    return await get_resource(res_id, request, db, current_user)
 
 
 # ==============================================================================
@@ -878,10 +1095,12 @@ async def report_resource(
 @router.post("/{resource_id}/download")
 async def record_download(
     resource_id: int,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ):
     """
-    Increment download counter on resource.
+    Increment download counter on resource with per-user/per-IP deduplication.
     """
     resource = await db.get(Resource, resource_id)
     if not resource or resource.is_deleted:
@@ -890,6 +1109,9 @@ async def record_download(
             detail=f"Resource with ID {resource_id} was not found.",
         )
 
-    resource.downloads_count += 1
-    await db.commit()
+    actor_key = f"user:{current_user.id}" if current_user else f"ip:{get_client_ip(request)}"
+    if counter_deduplicator.should_increment(actor_key, resource_id, "download"):
+        resource.downloads_count += 1
+        await db.commit()
+
     return {"resource_id": resource_id, "downloads_count": resource.downloads_count}

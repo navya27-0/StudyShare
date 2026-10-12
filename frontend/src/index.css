@@ -16,8 +16,8 @@
 
   /* High-Contrast Crisp White & Translucent Text */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.88);
-  --text-muted: rgba(255, 255, 255, 0.65);
+  --text-secondary: rgba(255, 255, 255, 0.90);
+  --text-muted: rgba(255, 255, 255, 0.74);
 
   /* High-Contrast Core Accent (White on Black) */
   --accent-core: #ffffff;
@@ -79,13 +79,13 @@
   --bg-subdued: #f1f5f9;
   --bg-muted: #e2e8f0;
   --bg-glass: rgba(255, 255, 255, 0.85);
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.18);
-  --border-focus: rgba(0, 0, 0, 0.65);
+  --border-subtle: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --border-focus: rgba(0, 0, 0, 0.70);
 
   --text-primary: #09090b;
-  --text-secondary: #27272a;
-  --text-muted: #52525b;
+  --text-secondary: #1e293b;
+  --text-muted: #3f3f46;
 
   --accent-core: #09090b;
   --accent-hover: #1e293b;
@@ -898,6 +898,87 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .filter-chip-btn:hover {
   border-color: var(--border-strong) !important;
   transform: translateY(-1px);
+}
+
+/* ========================================================
+   SKIP LINK & ACCESSIBILITY ENHANCEMENTS
+   ======================================================== */
+.skip-to-main {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  padding: 10px 18px;
+  background-color: var(--accent-core);
+  color: var(--accent-contrast) !important;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-150%);
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.skip-to-main:focus,
+.skip-to-main:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--status-verified) !important;
+  outline-offset: 3px !important;
+}
+
+/* ========================================================
+   COMFORTABLE READING MODE (Extended Study Sessions)
+   ======================================================== */
+[data-reading-mode='comfortable'] body {
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+[data-reading-mode='comfortable'] {
+  --text-muted: rgba(255, 255, 255, 0.84);
+  --border-subtle: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.28);
+}
+
+[data-theme='light'][data-reading-mode='comfortable'] {
+  --text-muted: #27272a;
+  --border-subtle: rgba(0, 0, 0, 0.16);
+  --border-strong: rgba(0, 0, 0, 0.30);
+}
+
+[data-reading-mode='comfortable'] .daq-tag,
+[data-reading-mode='comfortable'] .formal-mono-caps,
+[data-reading-mode='comfortable'] .verified-seal,
+[data-reading-mode='comfortable'] .rank-badge {
+  font-size: 11.5px !important;
+  letter-spacing: 0.08em !important;
+}
+
+[data-reading-mode='comfortable'] .ledger-resource-card {
+  padding: 24px !important;
+}
+
+/* ========================================================
+   LOW-BANDWIDTH / LIGHTWEIGHT CAMPUS MODE
+   ======================================================== */
+[data-low-bandwidth='true'] body {
+  background-image: none !important;
+}
+
+[data-low-bandwidth='true'] *,
+[data-low-bandwidth='true'] *::before,
+[data-low-bandwidth='true'] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-low-bandwidth='true'] .daq-crosshair {
+  display: none !important;
 }
 
 /* ========================================================

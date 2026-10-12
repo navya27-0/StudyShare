@@ -124,6 +124,8 @@ class ResourceListItemResponse(BaseModel):
     updated_at: datetime
     uploader: UploaderBriefResponse
     breadcrumbs: BreadcrumbHierarchy | None = None
+    is_bookmarked: bool = False
+    user_vote: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -139,6 +141,11 @@ class ResourceListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class DuplicateCheckResponse(BaseModel):
+    has_duplicates: bool
+    matches: list[ResourceListItemResponse] = []
 
 
 class ResourceCreateForm(BaseModel):

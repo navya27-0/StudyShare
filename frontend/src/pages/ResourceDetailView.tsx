@@ -24,9 +24,12 @@ import {
   FileCode,
   Copy,
   Check,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
-import { resourcesApi } from '../services/api';
+import { resourcesApi, getDownloadedIds, markResourceDownloaded } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import type { ResourceDetail, ResourceType } from '../types';
 
@@ -34,11 +37,15 @@ export const ResourceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { lowBandwidthMode } = useTheme();
   const { showToast } = useToast();
 
   const [resource, setResource] = useState<ResourceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Lazy PDF preview state (in low-bandwidth mode, wait until user clicks "Preview PDF")
+  const [showPdfPreview, setShowPdfPreview] = useState<boolean>(!lowBandwidthMode);
 
   // Voting & Engagement State
   const [upvotes, setUpvotes] = useState(0);
@@ -61,17 +68,19 @@ export const ResourceDetailView: React.FC = () => {
   // Download State
   const [downloadsCount, setDownloadsCount] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
 
   // Copy link feedback
   const [copied, setCopied] = useState(false);
 
-  // Report Modal State
+  // Report Modal & Transparent Status State
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReasonCategory, setReportReasonCategory] = useState('Outdated Syllabus or Curriculum');
   const [reportDetails, setReportDetails] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [reportSuccessMessage, setReportSuccessMessage] = useState<string | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [hasReported, setHasReported] = useState(false);
 
   // New Version Upload State
   const [showNewVersionForm, setShowNewVersionForm] = useState(false);
@@ -90,6 +99,10 @@ export const ResourceDetailView: React.FC = () => {
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
 
   const resourceId = id ? parseInt(id, 10) : NaN;
+
+  useEffect(() => {
+    setShowPdfPreview(!lowBandwidthMode);
+  }, [lowBandwidthMode, resourceId]);
 
   // Load Resource Data
   const loadResourceData = async () => {
@@ -110,18 +123,8 @@ export const ResourceDetailView: React.FC = () => {
       setRatingAvg(data.rating_avg);
       setRatingCount(data.rating_count);
       setDownloadsCount(data.downloads_count);
-
-      // Check bookmark status
-      if (user) {
-        try {
-          const bmData = await resourcesApi.getUserBookmarks(user.id);
-          const list = bmData?.items || bmData?.bookmarks || [];
-          const hasBookmarked = list.some((b: { resource_id: number }) => b.resource_id === data.id);
-          setIsBookmarked(hasBookmarked);
-        } catch {
-          // Ignore bookmark check error
-        }
-      }
+      setIsBookmarked(Boolean(data.is_bookmarked));
+      setIsDownloaded(getDownloadedIds().has(data.id));
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'Unable to load study resource.');
     } finally {
@@ -269,6 +272,8 @@ export const ResourceDetailView: React.FC = () => {
       // Increment download counter via API
       await resourcesApi.recordDownload(resource.id);
       setDownloadsCount((prev) => prev + 1);
+      markResourceDownloaded(resource.id);
+      setIsDownloaded(true);
 
       // Open or trigger download
       const targetUrl = resolveFileUrl(resource.file_url);
@@ -283,9 +288,12 @@ export const ResourceDetailView: React.FC = () => {
         link.click();
         document.body.removeChild(link);
       }
+      showToast('Download started. Marked as Downloaded ✓', 'success');
     } catch (err: unknown) {
       // Fallback: trigger download directly
       try {
+        markResourceDownloaded(resource.id);
+        setIsDownloaded(true);
         window.open(resolveFileUrl(resource.file_url), '_blank');
       } catch {
         showToast(err instanceof Error ? err.message : 'Failed to download resource file.', 'error');
@@ -315,8 +323,9 @@ export const ResourceDetailView: React.FC = () => {
 
     try {
       await resourcesApi.report(resource.id, fullReason);
-      setReportSuccessMessage('Thank you. Your report has been submitted for moderation review.');
-      showToast('Report submitted for administrative moderation review.', 'success');
+      setHasReported(true);
+      setReportSuccessMessage('Thank you. Your report has been queued for Admin Review.');
+      showToast('Report submitted for Admin Review.', 'success');
       setTimeout(() => {
         setShowReportModal(false);
         setReportSuccessMessage(null);
@@ -575,13 +584,55 @@ export const ResourceDetailView: React.FC = () => {
         </div>
       </div>
 
+      {/* Transparent Report Status Banner */}
+      {hasReported && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            marginBottom: '18px',
+            padding: '12px 16px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-strong)',
+            borderLeft: '4px solid var(--accent-core)',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            fontSize: '13px',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Flag size={15} style={{ color: 'var(--accent-core)' }} aria-hidden="true" />
+            <span>
+              <strong>Report received</strong> — queued for Admin Review ({reportReasonCategory}).
+            </span>
+          </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              padding: '2px 8px',
+              backgroundColor: 'var(--accent-tint)',
+              color: 'var(--accent-core)',
+              borderRadius: 'var(--radius-sm)',
+              fontWeight: 600,
+            }}
+          >
+            Pending Review
+          </span>
+        </div>
+      )}
+
       {/* Main Grid: Left content (68%) / Right sidebar (32%) */}
       <div className="resource-detail-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '28px' }}>
         {/* Left Column: Details, Preview, Versions */}
         <div>
           {/* Resource Title Header */}
           <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -611,8 +662,9 @@ export const ResourceDetailView: React.FC = () => {
               >
                 Sem {resource.semester}
               </div>
-              {resource.is_verified && (
+              {resource.is_verified ? (
                 <div
+                  title="Reviewed by an approved course administrator or faculty moderator"
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: '11px',
@@ -624,9 +676,68 @@ export const ResourceDetailView: React.FC = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
+                    cursor: 'help',
                   }}
                 >
-                  <CheckCircle2 size={12} /> VERIFIED
+                  <ShieldCheck size={13} aria-hidden="true" /> Faculty verified
+                </div>
+              ) : ratingCount >= 2 && ratingAvg >= 3.8 ? (
+                <div
+                  title="Rated positively by multiple students in this course"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '3px 8px',
+                    borderRadius: '2px',
+                    backgroundColor: 'var(--accent-tint)',
+                    color: 'var(--accent-core)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'help',
+                  }}
+                >
+                  <CheckCircle2 size={12} aria-hidden="true" /> Community reviewed
+                </div>
+              ) : (
+                <div
+                  title="Uploaded by a student and awaiting more peer reviews"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    padding: '3px 8px',
+                    borderRadius: '2px',
+                    backgroundColor: 'var(--bg-subdued)',
+                    color: 'var(--text-secondary)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'help',
+                  }}
+                >
+                  Community uploaded
+                </div>
+              )}
+
+              {isDownloaded && (
+                <div
+                  title="You have downloaded this file on this device"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '3px 8px',
+                    borderRadius: '2px',
+                    backgroundColor: 'var(--status-verified-bg)',
+                    color: 'var(--status-verified)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  Downloaded ✓
                 </div>
               )}
             </div>
@@ -723,6 +834,8 @@ export const ResourceDetailView: React.FC = () => {
                 fontSize: '12px',
                 fontWeight: 600,
                 color: 'var(--text-secondary)',
+                flexWrap: 'wrap',
+                gap: '8px',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -735,7 +848,28 @@ export const ResourceDetailView: React.FC = () => {
                 ) : null}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isPdf && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfPreview((prev) => !prev)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '12px',
+                      color: 'var(--text-secondary)',
+                      fontWeight: 600,
+                      padding: '3px 8px',
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    <Eye size={13} aria-hidden="true" />
+                    {showPdfPreview ? 'Hide Preview' : 'Preview PDF'}
+                  </button>
+                )}
                 <a
                   href={fileUrl}
                   target="_blank"
@@ -756,48 +890,81 @@ export const ResourceDetailView: React.FC = () => {
 
             {/* Viewer Component */}
             {isPdf ? (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div
-                  className="mobile-pdf-banner"
-                  style={{
-                    display: 'none',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    backgroundColor: 'var(--bg-subdued)',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    fontSize: '12px',
-                    gap: '8px',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span style={{ color: 'var(--text-secondary)' }}>
-                    Viewing on phone? Open full document:
-                  </span>
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              showPdfPreview ? (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div
+                    className="mobile-pdf-banner"
                     style={{
-                      color: 'var(--accent-core)',
-                      fontWeight: 600,
-                      display: 'inline-flex',
+                      display: 'none',
                       alignItems: 'center',
-                      gap: '4px',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      backgroundColor: 'var(--bg-subdued)',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      fontSize: '12px',
+                      gap: '8px',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <span>Full Screen PDF</span>
-                    <ExternalLink size={12} aria-hidden="true" />
-                  </a>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      Viewing on phone? Open full document:
+                    </span>
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'var(--accent-core)',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>Full Screen PDF</span>
+                      <ExternalLink size={12} aria-hidden="true" />
+                    </a>
+                  </div>
+                  <div style={{ width: '100%', height: '580px', backgroundColor: '#525659' }} className="pdf-iframe-container">
+                    <iframe
+                      src={`${fileUrl}#toolbar=1&navpanes=0`}
+                      title={`PDF preview of ${resource.title}`}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </div>
                 </div>
-                <div style={{ width: '100%', height: '580px', backgroundColor: '#525659' }} className="pdf-iframe-container">
-                  <iframe
-                    src={`${fileUrl}#toolbar=1&navpanes=0`}
-                    title={`PDF preview of ${resource.title}`}
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                  />
+              ) : (
+                <div style={{ padding: '44px 24px', textAlign: 'center' }}>
+                  <FileCode size={42} style={{ color: 'var(--accent-core)', margin: '0 auto 14px' }} aria-hidden="true" />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 600, marginBottom: '6px' }}>
+                    PDF Preview Paused to Save Data
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 20px' }}>
+                    {resource.file_size_bytes
+                      ? `File size: ${formatFileSize(resource.file_size_bytes)}${resource.page_count ? ` • ${resource.page_count} pages` : ''}. Click below to load the interactive PDF preview or download directly.`
+                      : 'Click below to load the interactive PDF preview in your browser.'}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPdfPreview(true)}
+                      className="daq-btn-primary"
+                      style={{ padding: '10px 22px', fontSize: '13px' }}
+                    >
+                      <Eye size={15} aria-hidden="true" /> Preview PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className="daq-btn-secondary"
+                      style={{ padding: '10px 22px', fontSize: '13px' }}
+                    >
+                      <Download size={15} aria-hidden="true" /> Download{resource.file_size_bytes ? ` (${formatFileSize(resource.file_size_bytes)})` : ''}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )
             ) : resource.type === 'link' ? (
               <div style={{ padding: '36px 24px', textAlign: 'center' }}>
                 <div
@@ -1194,13 +1361,19 @@ export const ResourceDetailView: React.FC = () => {
                 fontSize: '13.5px',
               }}
             >
-              {resource.type === 'link' ? (
+              {isDownloading ? (
+                <span>Starting Download...</span>
+              ) : resource.type === 'link' ? (
                 <>
                   <ExternalLink size={16} aria-hidden="true" /> Open Resource Link
                 </>
+              ) : isDownloaded ? (
+                <>
+                  <CheckCircle2 size={16} aria-hidden="true" /> Downloaded ✓ • Download Again
+                </>
               ) : (
                 <>
-                  <Download size={16} aria-hidden="true" /> Download File ({downloadsCount})
+                  <Download size={16} aria-hidden="true" /> Download{resource.file_size_bytes ? ` (${formatFileSize(resource.file_size_bytes)})` : ` (${downloadsCount})`}
                 </>
               )}
             </button>

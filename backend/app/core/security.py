@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -45,7 +46,7 @@ def create_access_token(subject: str | int, extra_claims: dict[str, Any] | None 
 
 
 def create_refresh_token(subject: str | int) -> str:
-    """Generate long-lived JWT refresh token."""
+    """Generate long-lived JWT refresh token with unique jti for rotation."""
     now = datetime.now(UTC)
     expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
@@ -54,6 +55,7 @@ def create_refresh_token(subject: str | int) -> str:
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
         "type": "refresh",
+        "jti": uuid.uuid4().hex,
     }
 
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)

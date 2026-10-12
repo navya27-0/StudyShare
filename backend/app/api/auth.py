@@ -1,14 +1,14 @@
 from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_client_ip, get_current_user
 from app.config import get_settings
-from app.core.rate_limit import login_rate_limiter
+from app.core.rate_limit import login_rate_limiter, revoked_token_store
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -32,10 +32,26 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 settings = get_settings()
 
+REFRESH_COOKIE_NAME = "studyshare_refresh_token"
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    """Attach HttpOnly, SameSite refresh token cookie for defense-in-depth token security."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        path="/api/auth",
+    )
+
 
 @router.post("/signup", response_model=AuthSuccessResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     signup_data: UserSignupRequest,
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
     """Register a new student account, automatically provision a contributor profile, and issue auth tokens."""
@@ -90,6 +106,7 @@ async def signup(
         extra_claims={"email": user_loaded.email, "role": user_loaded.role},
     )
     refresh_token = create_refresh_token(subject=user_loaded.id)
+    _set_refresh_cookie(response, refresh_token)
 
     tokens = TokenResponse(
         access_token=access_token,
@@ -108,6 +125,7 @@ async def signup(
 async def login(
     login_data: UserLoginRequest,
     request: Request,
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
     """Authenticate user with email and password, protected by sliding-window rate limiting."""
@@ -151,6 +169,7 @@ async def login(
         extra_claims={"email": user.email, "role": user.role},
     )
     refresh_token = create_refresh_token(subject=user.id)
+    _set_refresh_cookie(response, refresh_token)
 
     tokens = TokenResponse(
         access_token=access_token,
@@ -167,12 +186,33 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token_endpoint(
-    refresh_data: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    refresh_data: RefreshTokenRequest | None = Body(None),
 ):
-    """Issue a new access token using a valid, non-expired refresh token."""
+    """Issue a new access token and rotated refresh token using body token or HttpOnly cookie."""
+    raw_token = (
+        refresh_data.refresh_token
+        if refresh_data and refresh_data.refresh_token
+        else request.cookies.get(REFRESH_COOKIE_NAME)
+    )
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token was not provided.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if revoked_token_store.is_revoked(raw_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     try:
-        payload = decode_token(refresh_data.refresh_token)
+        payload = decode_token(raw_token)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -213,12 +253,15 @@ async def refresh_token_endpoint(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Issue new access token and rotated refresh token
+    # Rotate refresh token: revoke consumed token and issue new pair
+    revoked_token_store.revoke(raw_token)
+
     new_access_token = create_access_token(
         subject=user.id,
         extra_claims={"email": user.email, "role": user.role},
     )
     new_refresh_token = create_refresh_token(subject=user.id)
+    _set_refresh_cookie(response, new_refresh_token)
 
     return TokenResponse(
         access_token=new_access_token,
@@ -226,6 +269,24 @@ async def refresh_token_endpoint(
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+
+
+@router.post("/logout")
+async def logout_endpoint(
+    request: Request,
+    response: Response,
+    refresh_data: RefreshTokenRequest | None = Body(None),
+):
+    """Revoke refresh token and clear HttpOnly session cookie."""
+    raw_token = (
+        refresh_data.refresh_token
+        if refresh_data and refresh_data.refresh_token
+        else request.cookies.get(REFRESH_COOKIE_NAME)
+    )
+    if raw_token:
+        revoked_token_store.revoke(raw_token)
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/auth")
+    return {"message": "Signed out and session token revoked."}
 
 
 @router.get("/me", response_model=UserResponse)

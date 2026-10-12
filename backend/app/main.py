@@ -1,7 +1,9 @@
+import logging
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -13,6 +15,7 @@ from app.api.users import router as users_router
 from app.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger("studyshare.observability")
 
 
 @asynccontextmanager
@@ -30,6 +33,24 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def add_observability_headers(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+    response.headers["X-Process-Time-Ms"] = f"{elapsed_ms:.2f}"
+    if elapsed_ms > 1000 or response.status_code >= 500:
+        logger.warning(
+            "method=%s path=%s status=%d duration_ms=%.2f",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
+
 
 # CORS Middleware configuration
 app.add_middleware(

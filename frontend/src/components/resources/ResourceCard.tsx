@@ -7,23 +7,33 @@ import {
   BookOpen,
   Link as LinkIcon,
   CheckCircle2,
+  ShieldCheck,
   ChevronUp,
   ChevronDown,
   Bookmark,
   Download,
   Eye,
   Star,
-  ExternalLink,
   ArrowRight,
   User,
+  Check,
 } from 'lucide-react';
 import type { ResourceListItem, ResourceType } from '../../types';
-import { resourcesApi } from '../../services/api';
+import {
+  resourcesApi,
+  getDownloadedIds,
+  markResourceDownloaded,
+} from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 interface ResourceCardProps {
   resource: ResourceListItem;
-  onVoteChange?: (resourceId: number, upvotes: number, downvotes: number, userVote: 'up' | 'down' | null) => void;
+  onVoteChange?: (
+    resourceId: number,
+    upvotes: number,
+    downvotes: number,
+    userVote: 'up' | 'down' | null
+  ) => void;
   onBookmarkChange?: (resourceId: number, isBookmarked: boolean) => void;
   viewMode?: 'dense' | 'compact';
 }
@@ -43,6 +53,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const [isBookmarking, setIsBookmarking] = useState(false);
   const [animatingVote, setAnimatingVote] = useState<'up' | 'down' | null>(null);
   const [animatingBookmark, setAnimatingBookmark] = useState(false);
+  const [downloadsCount, setDownloadsCount] = useState(resource.downloads_count);
+  const [isDownloaded, setIsDownloaded] = useState<boolean>(() =>
+    getDownloadedIds().has(resource.id)
+  );
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
   const downloadUrl = resource.file_url.startsWith('http')
@@ -64,11 +79,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 30) return `${diffDays}d ago`;
-      if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-      return `${Math.floor(diffDays / 365)}y ago`;
+      if (diffDays <= 0) return 'Updated today';
+      if (diffDays === 1) return 'Updated yesterday';
+      if (diffDays < 30) return `Updated ${diffDays} days ago`;
+      if (diffDays < 365) return `Updated ${Math.floor(diffDays / 30)}mo ago`;
+      return `Updated ${Math.floor(diffDays / 365)}y ago`;
     } catch {
       return '';
     }
@@ -79,44 +94,50 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
     switch (type) {
       case 'question_bank':
         return {
-          label: 'PYQ BANK',
-          icon: <FileQuestion size={13} strokeWidth={1.75} />,
+          label: 'PAST PAPER / PYQ',
+          shortFormat: 'PDF',
+          icon: <FileQuestion size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--status-exam-bg)',
           color: 'var(--status-exam)',
         };
       case 'lab_record':
         return {
-          label: 'LAB CODE',
-          icon: <FlaskConical size={13} strokeWidth={1.75} />,
+          label: 'LAB MANUAL',
+          shortFormat: 'LAB PDF',
+          icon: <FlaskConical size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--status-lab-bg)',
           color: 'var(--status-lab)',
         };
       case 'paper':
         return {
-          label: 'MONOGRAPH',
-          icon: <BookOpen size={13} strokeWidth={1.75} />,
+          label: 'REFERENCE PAPER',
+          shortFormat: 'PDF',
+          icon: <BookOpen size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--status-verified-bg)',
           color: 'var(--status-verified)',
         };
       case 'notes':
         return {
-          label: 'NOTES',
-          icon: <FileText size={13} strokeWidth={1.75} />,
+          label: 'LECTURE NOTES',
+          shortFormat: 'PDF',
+          icon: <FileText size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--accent-tint)',
           color: 'var(--accent-core)',
         };
       case 'link':
         return {
-          label: 'PORTAL LINK',
-          icon: <LinkIcon size={13} strokeWidth={1.75} />,
+          label: 'WEB RESOURCE',
+          shortFormat: 'LINK',
+          icon: <LinkIcon size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--bg-muted)',
           color: 'var(--text-secondary)',
         };
       case 'pdf':
       default:
         return {
-          label: 'DOC (PDF)',
-          icon: <FileText size={13} strokeWidth={1.75} />,
+          label: 'STUDY GUIDE',
+          shortFormat: 'PDF',
+          icon: <FileText size={13} strokeWidth={1.75} aria-hidden="true" />,
           bg: 'var(--bg-muted)',
           color: 'var(--text-primary)',
         };
@@ -124,6 +145,28 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   };
 
   const badge = getTypeBadge(resource.type);
+
+  // Verification status with clear student explanation (Priority 5.13)
+  const isCommunityReviewed =
+    !resource.is_verified &&
+    ((resource.rating_count >= 2 && resource.rating_avg >= 4.0) || upvotes - downvotes >= 3);
+
+  const handleDownloadClick = () => {
+    setIsDownloading(true);
+    markResourceDownloaded(resource.id);
+    setIsDownloaded(true);
+    resourcesApi
+      .recordDownload(resource.id)
+      .then((res) => {
+        setDownloadsCount(res.downloads_count);
+      })
+      .catch(() => {
+        // non-blocking telemetry
+      })
+      .finally(() => {
+        setTimeout(() => setIsDownloading(false), 400);
+      });
+  };
 
   // Voting action with pop animation
   const handleVote = async (type: 'up' | 'down') => {
@@ -138,7 +181,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       setUserVote(res.vote_type);
       onVoteChange?.(resource.id, res.upvotes_count, res.downvotes_count, res.vote_type);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to register vote. Please check your network connection.';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Failed to register vote. Please check your network connection.';
       showToast(`Vote error: ${msg}`, 'error');
     } finally {
       setIsVoting(false);
@@ -156,19 +202,24 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       setIsBookmarked(res.bookmarked);
       onBookmarkChange?.(resource.id, res.bookmarked);
       showToast(
-        res.bookmarked ? 'Resource bookmarked to your library.' : 'Resource removed from saved library.',
+        res.bookmarked
+          ? 'Saved to My Bookmarks for quick revision.'
+          : 'Removed from My Bookmarks.',
         'info',
         2500
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update bookmark. Please check your network connection.';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Failed to update bookmark. Please check your network connection.';
       showToast(`Bookmark error: ${msg}`, 'error');
     } finally {
       setIsBookmarking(false);
     }
   };
 
-  // Determine left status spine color per DESIGN.md Section 5
+  // Determine left status spine color
   let spineColor = 'transparent';
   if (userVote === 'up') {
     spineColor = 'var(--accent-core)';
@@ -184,10 +235,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '80px 100px 1fr 140px 90px 100px 80px',
+          gridTemplateColumns: '95px 110px 1fr 130px 85px 95px 90px',
           alignItems: 'center',
           gap: '12px',
-          padding: '8px 14px',
+          padding: '9px 14px',
           backgroundColor: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
           borderLeft: `3px solid ${spineColor}`,
@@ -208,22 +259,25 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             color: badge.color,
             textAlign: 'center',
             whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {badge.label}
         </div>
 
-        {/* Taxonomy Code */}
+        {/* Course & Unit */}
         <div
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
+            fontSize: '11.5px',
+            fontWeight: 600,
             color: 'var(--text-secondary)',
             whiteSpace: 'nowrap',
           }}
         >
-          {resource.breadcrumbs?.subject.code || `S${resource.semester}`}
-          {resource.breadcrumbs?.unit ? ` • U${resource.breadcrumbs.unit.unit_number}` : ''}
+          {resource.breadcrumbs?.subject.code || `Sem ${resource.semester}`}
+          {resource.breadcrumbs?.unit ? ` · Unit ${resource.breadcrumbs.unit.unit_number}` : ''}
         </div>
 
         {/* Title */}
@@ -262,13 +316,36 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         </div>
 
         {/* Rating */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-primary)' }}>
-          <Star size={13} fill={resource.rating_avg > 0 ? 'var(--status-exam)' : 'none'} color="var(--status-exam)" strokeWidth={1.75} />
-          <span>{resource.rating_avg > 0 ? resource.rating_avg.toFixed(1) : '—'}</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11.5px',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <Star
+            size={13}
+            fill={resource.rating_avg > 0 ? 'var(--status-exam)' : 'none'}
+            color="var(--status-exam)"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
+          <span>{resource.rating_avg > 0 ? resource.rating_avg.toFixed(1) : 'New'}</span>
         </div>
 
         {/* Net Votes Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+          }}
+        >
           <button
             type="button"
             onClick={() => handleVote('up')}
@@ -282,7 +359,12 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             className="touch-target"
           >
-            <ChevronUp size={14} className={animatingVote === 'up' ? 'vote-pop-up' : ''} strokeWidth={2} aria-hidden="true" />
+            <ChevronUp
+              size={14}
+              className={animatingVote === 'up' ? 'vote-pop-up' : ''}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
           </button>
           <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>
             {upvotes - downvotes}
@@ -300,43 +382,67 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             }}
             className="touch-target"
           >
-            <ChevronDown size={14} className={animatingVote === 'down' ? 'vote-pop-down' : ''} strokeWidth={2} aria-hidden="true" />
+            <ChevronDown
+              size={14}
+              className={animatingVote === 'down' ? 'vote-pop-down' : ''}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
           </button>
         </div>
 
-        {/* Download action */}
+        {/* Save & Download actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
           <button
             type="button"
             onClick={handleBookmarkToggle}
-            aria-label={isBookmarked ? `Remove ${resource.title} from bookmarks` : `Bookmark ${resource.title}`}
+            aria-label={
+              isBookmarked
+                ? `Remove ${resource.title} from bookmarks`
+                : `Save ${resource.title} to bookmarks`
+            }
             style={{
               padding: '6px',
               color: isBookmarked ? 'var(--accent-core)' : 'var(--text-muted)',
             }}
             className="touch-target"
           >
-            <Bookmark size={14} className={animatingBookmark ? 'bookmark-pop' : ''} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} aria-hidden="true" />
+            <Bookmark
+              size={14}
+              className={animatingBookmark ? 'bookmark-pop' : ''}
+              fill={isBookmarked ? 'var(--accent-core)' : 'none'}
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
           </button>
           <a
             href={downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
             download
+            onClick={handleDownloadClick}
             aria-label={`Download ${resource.title}`}
-            style={{ padding: '6px', color: 'var(--text-secondary)' }}
+            style={{
+              padding: '6px',
+              color: isDownloaded ? 'var(--status-verified)' : 'var(--text-secondary)',
+            }}
             className="touch-target"
+            title={isDownloaded ? 'Downloaded on this device' : 'Download resource'}
           >
-            <Download size={14} strokeWidth={1.75} aria-hidden="true" />
+            {isDownloaded ? (
+              <Check size={14} strokeWidth={2.2} aria-hidden="true" />
+            ) : (
+              <Download size={14} strokeWidth={1.75} aria-hidden="true" />
+            )}
           </a>
         </div>
       </div>
     );
   }
 
-  // STANDARD HIGH-DENSITY LEDGER CARD LIST ITEM
+  // STANDARD INFORMATIVE STUDENT RESOURCE CARD
   return (
-    <div
+    <article
       className="daq-card ledger-resource-card"
       style={{
         backgroundColor: 'var(--bg-surface)',
@@ -346,7 +452,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         padding: '18px 22px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '11px',
         position: 'relative',
       }}
     >
@@ -354,9 +460,58 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       <div className="daq-crosshair daq-crosshair-tr" />
       <div className="daq-crosshair daq-crosshair-bl" />
       <div className="daq-crosshair daq-crosshair-br" />
-      {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+
+      {/* Top Row: Course · Unit + Resource Type + Verification Badge + Downloaded Indicator */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          flexWrap: 'wrap',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Course & Unit Context Pill */}
+          {resource.breadcrumbs?.subject ? (
+            <Link
+              to={`/?subject_code=${resource.breadcrumbs.subject.code}${
+                resource.breadcrumbs.unit ? `&unit_id=${resource.breadcrumbs.unit.id}` : ''
+              }`}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-subdued)',
+                border: '1px solid var(--border-strong)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              title={`${resource.breadcrumbs.subject.code}: ${resource.breadcrumbs.subject.name}`}
+            >
+              {resource.breadcrumbs.subject.code}
+              {resource.breadcrumbs.unit
+                ? ` · Unit ${resource.breadcrumbs.unit.unit_number}`
+                : ` · Sem ${resource.semester}`}
+            </Link>
+          ) : (
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-subdued)',
+                border: '1px solid var(--border-subtle)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Semester {resource.semester}
+            </span>
+          )}
+
           {/* Document Type Badge */}
           <div
             style={{
@@ -377,67 +532,88 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             <span>{badge.label}</span>
           </div>
 
-          {/* Academic Taxonomy Breadcrumb Tag */}
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-            }}
-          >
-            {resource.breadcrumbs?.subject.code || `Semester ${resource.semester}`}
-            {resource.breadcrumbs?.unit ? ` • Unit 0${resource.breadcrumbs.unit.unit_number}` : ''}
-            {resource.breadcrumbs?.topic ? ` • ${resource.breadcrumbs.topic.title}` : ''}
-          </span>
+          {/* Topic Tag if present */}
+          {resource.breadcrumbs?.topic && (
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                fontWeight: 500,
+              }}
+            >
+              {resource.breadcrumbs.topic.title}
+            </span>
+          )}
 
-          {/* Verified Syllabus Tag */}
-          {resource.is_verified && (
+          {/* Clear Verification Status Badge with Explanatory Tooltip (Priority 5.13) */}
+          {resource.is_verified ? (
             <div
               className="verified-seal"
-              title="Verified according to university syllabus"
+              title="Reviewed by an approved course administrator or faculty member for syllabus accuracy."
             >
-              <CheckCircle2 size={11} strokeWidth={2.2} />
-              <span>SYLLABUS VERIFIED</span>
+              <CheckCircle2 size={11} strokeWidth={2.2} aria-hidden="true" />
+              <span>Faculty verified</span>
             </div>
-          )}
-        </div>
-
-        {/* Top Right Action: Bookmark Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {isBookmarked && (
+          ) : isCommunityReviewed ? (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                color: 'var(--status-lab)',
+                backgroundColor: 'var(--status-lab-bg)',
+                border: '1px solid var(--status-lab-border)',
+                padding: '2px 7px',
+                borderRadius: '2px',
+              }}
+              title="Positively rated and verified by fellow students taking this course."
+            >
+              <ShieldCheck size={11} strokeWidth={2} aria-hidden="true" />
+              <span>Community reviewed</span>
+            </div>
+          ) : (
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '10px',
-                fontWeight: 700,
-                color: 'var(--accent-core)',
-                backgroundColor: 'var(--accent-tint)',
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-subdued)',
+                border: '1px solid var(--border-subtle)',
                 padding: '2px 6px',
                 borderRadius: '2px',
-                letterSpacing: '0.04em',
               }}
+              title="Uploaded by a student contributor."
             >
-              SAVED
+              Community uploaded
             </span>
           )}
-          <button
-            type="button"
-            onClick={handleBookmarkToggle}
-            disabled={isBookmarking}
-            aria-label={isBookmarked ? 'Remove revision bookmark' : 'Save to revision desk'}
-            style={{
-              padding: '6px',
-              borderRadius: 'var(--radius-sm)',
-              color: isBookmarked ? 'var(--accent-core)' : 'var(--text-muted)',
-              backgroundColor: isBookmarked ? 'var(--accent-tint)' : 'transparent',
-              border: isBookmarked ? '1px solid var(--accent-border)' : '1px solid transparent',
-            }}
-            title={isBookmarked ? 'Saved to Bookmarks' : 'Save for Revision'}
-          >
-            <Bookmark size={15} className={animatingBookmark ? 'bookmark-pop' : ''} fill={isBookmarked ? 'var(--accent-core)' : 'none'} strokeWidth={1.75} />
-          </button>
         </div>
+
+        {/* Downloaded Badge */}
+        {isDownloaded && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '10.5px',
+              fontWeight: 700,
+              color: 'var(--status-verified)',
+              backgroundColor: 'var(--status-verified-bg)',
+              border: '1px solid var(--status-verified-border)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+            }}
+            title="You have already downloaded this file on this device"
+          >
+            <Check size={11} strokeWidth={2.4} aria-hidden="true" />
+            <span>Downloaded</span>
+          </span>
+        )}
       </div>
 
       {/* Resource Title */}
@@ -446,7 +622,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           to={`/resources/${resource.id}`}
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: '16.5px',
+            fontSize: '17px',
             fontWeight: 600,
             color: 'var(--text-primary)',
             letterSpacing: '-0.01em',
@@ -458,7 +634,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           className="resource-title-link"
         >
           <span>{resource.title}</span>
-          <ArrowRight size={14} className="resource-title-arrow" />
+          <ArrowRight size={14} className="resource-title-arrow" aria-hidden="true" />
         </Link>
       </h3>
 
@@ -480,19 +656,64 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         </p>
       )}
 
-      {/* Metadata Row */}
+      {/* At-a-Glance Student Metadata Summary Row:
+          PDF · 24 pages · 4.2 MB · Updated 3 days ago · 4.6 ★ · 142 downloads */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          fontSize: '12px',
+          gap: '8px',
+          fontSize: '12.5px',
           color: 'var(--text-muted)',
-          fontFamily: 'var(--font-mono)',
           flexWrap: 'wrap',
           paddingTop: '2px',
         }}
       >
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          {badge.shortFormat}
+        </span>
+
+        {resource.page_count && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{resource.page_count} pages</span>
+          </>
+        )}
+
+        {resource.file_size_bytes && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>
+              {formatFileSize(resource.file_size_bytes)}
+            </span>
+          </>
+        )}
+
+        <span aria-hidden="true">·</span>
+        <span>{formatDate(resource.created_at)}</span>
+
+        <span aria-hidden="true">·</span>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+            color: 'var(--text-primary)',
+            fontWeight: 600,
+          }}
+          aria-label={
+            resource.rating_avg > 0
+              ? `Rated ${resource.rating_avg.toFixed(1)} out of 5 stars`
+              : 'No ratings yet'
+          }
+        >
+          {resource.rating_avg > 0 ? `${resource.rating_avg.toFixed(1)} ★` : 'New ★'}
+        </span>
+
+        <span aria-hidden="true">·</span>
+        <span>{downloadsCount} downloads</span>
+
+        <span aria-hidden="true">·</span>
         <Link
           to={`/profile/${resource.uploader.id}`}
           style={{
@@ -506,47 +727,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           className="uploader-link"
         >
           <User size={12} strokeWidth={1.75} aria-hidden="true" />
-          <span>By {resource.uploader.display_name}</span>
+          <span>{resource.uploader.display_name}</span>
         </Link>
-        <span>•</span>
-        <span>{formatDate(resource.created_at)}</span>
-
-        {resource.file_size_bytes && (
-          <>
-            <span>•</span>
-            <span>{formatFileSize(resource.file_size_bytes)}</span>
-          </>
-        )}
-
-        {resource.page_count && (
-          <>
-            <span>•</span>
-            <span>{resource.page_count} Pages</span>
-          </>
-        )}
-
-        {resource.downloads_count > 0 && (
-          <>
-            <span>•</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-              <Download size={11} strokeWidth={1.75} />
-              {resource.downloads_count}
-            </span>
-          </>
-        )}
-
-        {resource.views_count > 0 && (
-          <>
-            <span>•</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-              <Eye size={11} strokeWidth={1.75} />
-              {resource.views_count}
-            </span>
-          </>
-        )}
       </div>
 
-      {/* Interactive Footer Bar */}
+      {/* Interactive Footer Bar: Votes on left, [Preview] [Download] [Save] on right */}
       <div
         style={{
           display: 'flex',
@@ -559,9 +744,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           gap: '10px',
         }}
       >
-        {/* Left Interactive Group: Vote Pill & Rating */}
+        {/* Left Interactive Group: Helpful Vote Pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Net Votes Pill */}
           <div
             style={{
               display: 'inline-flex',
@@ -580,14 +764,18 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '6px 8px',
+                padding: '5px 8px',
                 borderRadius: '2px',
                 color: userVote === 'up' ? 'var(--accent-core)' : 'var(--text-secondary)',
               }}
-              className="touch-target"
-              title="Upvote verified accuracy"
+              title="Mark as helpful for this course"
             >
-              <ChevronUp size={15} className={animatingVote === 'up' ? 'vote-pop-up' : ''} strokeWidth={2.2} aria-hidden="true" />
+              <ChevronUp
+                size={15}
+                className={animatingVote === 'up' ? 'vote-pop-up' : ''}
+                strokeWidth={2.2}
+                aria-hidden="true"
+              />
             </button>
 
             <span
@@ -612,62 +800,33 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '6px 8px',
+                padding: '5px 8px',
                 borderRadius: '2px',
                 color: userVote === 'down' ? 'var(--status-danger)' : 'var(--text-muted)',
               }}
-              className="touch-target"
-              title="Downvote inaccurate note"
+              title="Downvote if inaccurate or incomplete"
             >
-              <ChevronDown size={15} className={animatingVote === 'down' ? 'vote-pop-down' : ''} strokeWidth={2.2} aria-hidden="true" />
+              <ChevronDown
+                size={15}
+                className={animatingVote === 'down' ? 'vote-pop-down' : ''}
+                strokeWidth={2.2}
+                aria-hidden="true"
+              />
             </button>
-          </div>
-
-          {/* Rating Pill */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '12px',
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--bg-subdued)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-secondary)',
-            }}
-            aria-label={`Average rating: ${resource.rating_avg.toFixed(1)} out of 5 stars from ${resource.rating_count} ratings`}
-          >
-            <Star
-              size={13}
-              fill={resource.rating_avg > 0 ? 'var(--status-exam)' : 'none'}
-              color="var(--status-exam)"
-              strokeWidth={1.75}
-              aria-hidden="true"
-            />
-            <strong style={{ color: 'var(--text-primary)' }}>
-              {resource.rating_avg > 0 ? resource.rating_avg.toFixed(1) : '—'}
-            </strong>
-            {resource.rating_count > 0 && (
-              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                ({resource.rating_count})
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Right Action Triggers: Inspect & Direct Download */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Right Action Triggers: [Preview] [Download] [Save] */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* [Preview] */}
           <Link
             to={`/resources/${resource.id}`}
-            aria-label={`Inspect resource details: ${resource.title}`}
+            aria-label={`Preview ${resource.title}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11.5px',
+              fontSize: '12.5px',
               fontWeight: 600,
               padding: '6px 12px',
               borderRadius: 'var(--radius-sm)',
@@ -675,24 +834,26 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-primary)',
             }}
-            className="touch-target"
           >
-            <span>INSPECT</span>
-            <ExternalLink size={12} strokeWidth={1.75} aria-hidden="true" />
+            <Eye size={13} strokeWidth={1.8} aria-hidden="true" />
+            <span>Preview</span>
           </Link>
 
+          {/* [Download] */}
           <a
             href={downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
             download
-            aria-label={`Download ${resource.title}`}
+            onClick={handleDownloadClick}
+            aria-label={`Download ${resource.title}${
+              resource.file_size_bytes ? ` (${formatFileSize(resource.file_size_bytes)})` : ''
+            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11.5px',
+              fontSize: '12.5px',
               fontWeight: 600,
               padding: '6px 14px',
               borderRadius: 'var(--radius-full)',
@@ -702,21 +863,55 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               boxShadow: '0 2px 12px var(--accent-tint)',
               transition: 'all 160ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
-            className="touch-target"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent-core)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
           >
-            <Download size={13} strokeWidth={1.75} aria-hidden="true" />
-            <span>DOWNLOAD</span>
+            <Download size={13} strokeWidth={1.9} aria-hidden="true" />
+            <span>
+              {isDownloading
+                ? 'Downloading...'
+                : isDownloaded
+                  ? 'Download again'
+                  : `Download${
+                      resource.file_size_bytes
+                        ? ` (${formatFileSize(resource.file_size_bytes)})`
+                        : ''
+                    }`}
+            </span>
           </a>
+
+          {/* [Save] */}
+          <button
+            type="button"
+            onClick={handleBookmarkToggle}
+            disabled={isBookmarking}
+            aria-pressed={isBookmarked}
+            aria-label={isBookmarked ? `Saved: ${resource.title}` : `Save ${resource.title} to bookmarks`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              color: isBookmarked ? 'var(--accent-core)' : 'var(--text-secondary)',
+              backgroundColor: isBookmarked ? 'var(--accent-tint)' : 'var(--bg-subdued)',
+              border: isBookmarked
+                ? '1px solid var(--accent-core)'
+                : '1px solid var(--border-subtle)',
+            }}
+            title={isBookmarked ? 'Saved in My Bookmarks' : 'Save to My Bookmarks'}
+          >
+            <Bookmark
+              size={13}
+              className={animatingBookmark ? 'bookmark-pop' : ''}
+              fill={isBookmarked ? 'var(--accent-core)' : 'none'}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span>{isBookmarked ? 'Saved' : 'Save'}</span>
+          </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 };

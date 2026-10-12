@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.database import async_session_maker
+from app.database import Base, async_session_maker, engine
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
 from app.models.interactions import Bookmark, ModerationAction, Rating, Report, Vote
 from app.models.profile import ContributorProfile
@@ -806,6 +806,8 @@ async def seed_data(session: AsyncSession) -> None:
 
 
 async def main():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     async with async_session_maker() as session:
         await seed_data(session)
 

@@ -65,7 +65,26 @@ import math
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import case, func, literal
+from sqlalchemy import Float, case, func, literal
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.expression import FunctionElement
+
+
+class _AgeInDays(FunctionElement):
+    type = Float()
+    inherit_cache = True
+
+
+@compiles(_AgeInDays)
+def _compile_age_in_days_default(element: Any, compiler: Any, **kw: Any) -> str:
+    (col,) = list(element.clauses)
+    return f"(EXTRACT(epoch FROM (now() - {compiler.process(col, **kw)})) / 86400.0)"
+
+
+@compiles(_AgeInDays, "sqlite")
+def _compile_age_in_days_sqlite(element: Any, compiler: Any, **kw: Any) -> str:
+    (col,) = list(element.clauses)
+    return f"(julianday(CURRENT_TIMESTAMP) - julianday({compiler.process(col, **kw)}))"
 
 
 def compute_ranking_score(
@@ -112,7 +131,7 @@ def compute_ranking_score(
 def get_ranking_sql_expression(resource_cls: Any) -> Any:
     """
     Generate the equivalent SQLAlchemy column expression to order by ranking score
-    directly inside the database engine.
+    directly inside the database engine (compatible with both PostgreSQL and SQLite).
     """
     # 1. Bayesian Rating (prior 3.5 stars, weight 3.0)
     r_adj = (resource_cls.rating_count * resource_cls.rating_avg + 3.0 * 3.5) / (
@@ -139,10 +158,11 @@ def get_ranking_sql_expression(resource_cls: Any) -> Any:
     authority_term = case((resource_cls.is_verified.is_(True), literal(2.0)), else_=literal(0.0))
 
     # 5. Recency Decay
-    age_seconds = func.greatest(
-        literal(0.0), func.extract("epoch", func.now() - resource_cls.created_at)
+    raw_age_days = _AgeInDays(resource_cls.created_at)
+    age_days = case(
+        (raw_age_days > literal(0.0), raw_age_days),
+        else_=literal(0.0),
     )
-    age_days = age_seconds / literal(86400.0)
     decay_term = func.power(literal(1.0) + (age_days / literal(30.0)), literal(0.4))
 
     return (rating_term + vote_term + engagement_term + authority_term) / decay_term

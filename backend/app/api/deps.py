@@ -87,6 +87,19 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> User | None:
+    """Optionally resolve the authenticated user if a valid Bearer token is present."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        return await get_current_user(credentials, db)
+    except HTTPException:
+        return None
+
+
 async def get_current_admin(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:

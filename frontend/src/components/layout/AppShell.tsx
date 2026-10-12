@@ -16,16 +16,30 @@ import {
   User as UserIcon,
   PanelLeft,
   PanelLeftClose,
+  Eye,
+  Sparkles,
+  Wifi,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ErrorBoundary } from '../common/ErrorBoundary';
+import { OnboardingModal } from '../onboarding/OnboardingModal';
 import type { SubjectItem } from '../../types';
 import { taxonomyApi } from '../../services/api';
 
 export const AppShell: React.FC = () => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const {
+    theme,
+    toggleTheme,
+    readingMode,
+    toggleReadingMode,
+    lowBandwidthMode,
+    toggleLowBandwidthMode,
+    isOnboardingOpen,
+    openOnboarding,
+    closeOnboarding,
+  } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -34,6 +48,7 @@ export const AppShell: React.FC = () => {
   const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const treeContainerRef = useRef<HTMLDivElement>(null);
 
   // Persisted Desktop Collapsible Sidebar
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
@@ -56,21 +71,62 @@ export const AppShell: React.FC = () => {
     });
   }, []);
 
-  // Keyboard shortcut Ctrl+B / Cmd+B for sidebar toggle
+  // Keyboard shortcuts:
+  // - Ctrl+Shift+B (avoids browser bookmark conflict Ctrl+B) to toggle sidebar
+  // - "/" or Ctrl+K / Cmd+K to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
-        const target = e.target as HTMLElement;
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-          return;
-        }
+      const target = e.target as HTMLElement | null;
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         toggleSidebar();
+        return;
+      }
+
+      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') || (!isEditable && e.key === '/')) {
+        e.preventDefault();
+        const searchInput = document.getElementById('global-resource-search') as HTMLInputElement | null;
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        } else {
+          navigate('/');
+          setTimeout(() => {
+            const inputAfterNav = document.getElementById('global-resource-search') as HTMLInputElement | null;
+            inputAfterNav?.focus();
+          }, 120);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+  }, [toggleSidebar, navigate]);
+
+  // Arrow-key navigation inside curriculum tree
+  const handleTreeKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+    const container = treeContainerRef.current;
+    if (!container) return;
+    const focusables = Array.from(
+      container.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
+    );
+    if (focusables.length === 0) return;
+    const currentIndex = focusables.indexOf(document.activeElement as HTMLElement);
+    if (currentIndex === -1) return;
+    e.preventDefault();
+    const nextIndex =
+      e.key === 'ArrowDown'
+        ? Math.min(focusables.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1);
+    focusables[nextIndex]?.focus();
+  };
 
   // Direction-Aware Route Navigation Transition
   const prevPathRef = useRef(location.pathname);
@@ -199,6 +255,18 @@ export const AppShell: React.FC = () => {
         color: 'var(--text-primary)',
       }}
     >
+      {/* Skip to Main Content Link for Keyboard & Screen Reader Users */}
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
+
+      {/* Student Onboarding & Personalization Modal */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={closeOnboarding}
+        subjects={subjects}
+      />
+
       {/* Mobile Drawer Backdrop */}
       {mobileMenuOpen && (
         <div
@@ -215,6 +283,8 @@ export const AppShell: React.FC = () => {
 
       {/* Collapsible Left Sidebar Rail (260px expanded <-> 68px collapsed) */}
       <aside
+        id="curriculum-sidebar"
+        aria-label="Course navigation and study menu"
         style={{
           width: sidebarCollapsed ? '68px' : '260px',
           flexShrink: 0,
@@ -245,7 +315,7 @@ export const AppShell: React.FC = () => {
         >
           <Link
             to="/"
-            title={sidebarCollapsed ? 'Expand sidebar (Ctrl+B)' : 'StudyShare Home'}
+            title={sidebarCollapsed ? 'Expand sidebar (Ctrl+Shift+B)' : 'StudyShare Home'}
             onClick={(e) => {
               if (sidebarCollapsed) {
                 e.preventDefault();
@@ -278,7 +348,7 @@ export const AppShell: React.FC = () => {
                 cursor: sidebarCollapsed ? 'pointer' : 'default',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polygon points="12 2 2 7 12 12 22 7 12 2" />
                 <polyline points="2 17 12 22 22 17" />
                 <polyline points="2 12 12 17 22 12" />
@@ -298,19 +368,17 @@ export const AppShell: React.FC = () => {
                   >
                     STUDYSHARE
                   </span>
-                  <span className="daq-beacon" title="Network Connected" />
+                  <span className="daq-beacon" title="Online" aria-hidden="true" />
                 </div>
                 <span
                   style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '9px',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '10.5px',
                     fontWeight: 500,
-                    letterSpacing: '0.16em',
                     color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
                   }}
                 >
-                  Academic Intelligence
+                  Study resources for your courses
                 </span>
               </div>
             )}
@@ -321,8 +389,8 @@ export const AppShell: React.FC = () => {
             <button
               type="button"
               onClick={toggleSidebar}
-              aria-label="Collapse sidebar (Ctrl+B)"
-              title="Collapse sidebar (Ctrl+B)"
+              aria-label="Collapse sidebar (Ctrl+Shift+B)"
+              title="Collapse sidebar (Ctrl+Shift+B)"
               className="sidebar-desktop-toggle"
               style={{
                 padding: '6px',
@@ -357,7 +425,7 @@ export const AppShell: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <Link
               to="/"
-              title={sidebarCollapsed ? 'Browse Catalog' : undefined}
+              title={sidebarCollapsed ? 'Find Resources' : undefined}
               className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
@@ -383,13 +451,13 @@ export const AppShell: React.FC = () => {
                 }`,
               }}
             >
-              <Layers size={17} strokeWidth={1.8} />
-              <span className="sidebar-label">Browse Catalog</span>
+              <Layers size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span className="sidebar-label">Find Resources</span>
             </Link>
 
             <Link
               to="/upload"
-              title={sidebarCollapsed ? 'Upload Resource' : undefined}
+              title={sidebarCollapsed ? 'Upload Notes' : undefined}
               className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
@@ -413,13 +481,13 @@ export const AppShell: React.FC = () => {
                 }`,
               }}
             >
-              <Upload size={17} strokeWidth={1.8} />
-              <span className="sidebar-label">Upload Resource</span>
+              <Upload size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span className="sidebar-label">Upload Notes</span>
             </Link>
 
             <Link
               to="/bookmarks"
-              title={sidebarCollapsed ? 'Saved Archives' : undefined}
+              title={sidebarCollapsed ? 'My Bookmarks' : undefined}
               className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
@@ -445,13 +513,13 @@ export const AppShell: React.FC = () => {
                 }`,
               }}
             >
-              <Bookmark size={17} strokeWidth={1.8} />
-              <span className="sidebar-label">Saved Archives</span>
+              <Bookmark size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span className="sidebar-label">My Bookmarks</span>
             </Link>
 
             <Link
               to="/profile"
-              title={sidebarCollapsed ? 'Contributor Profile' : undefined}
+              title={sidebarCollapsed ? 'My Profile' : undefined}
               className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
               style={{
                 display: 'flex',
@@ -477,14 +545,14 @@ export const AppShell: React.FC = () => {
                 }`,
               }}
             >
-              <UserIcon size={17} strokeWidth={1.8} />
-              <span className="sidebar-label">Contributor Profile</span>
+              <UserIcon size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span className="sidebar-label">My Profile</span>
             </Link>
 
             {user?.role === 'admin' && (
               <Link
                 to="/admin"
-                title={sidebarCollapsed ? 'Moderation Portal' : undefined}
+                title={sidebarCollapsed ? 'Admin Review' : undefined}
                 className={sidebarCollapsed ? 'sidebar-center-collapsed' : undefined}
                 style={{
                   display: 'flex',
@@ -502,8 +570,8 @@ export const AppShell: React.FC = () => {
                       : 'transparent',
                 }}
               >
-                <ShieldAlert size={17} strokeWidth={1.75} />
-                <span className="sidebar-label">Moderation Portal</span>
+                <ShieldAlert size={17} strokeWidth={1.75} aria-hidden="true" />
+                <span className="sidebar-label">Admin Review</span>
               </Link>
             )}
           </div>
@@ -524,8 +592,8 @@ export const AppShell: React.FC = () => {
             <button
               type="button"
               onClick={toggleSidebar}
-              title="Expand Curriculum Tree (Ctrl+B)"
-              aria-label="Expand Curriculum Tree"
+              title="Expand Course List (Ctrl+Shift+B)"
+              aria-label="Expand Course List"
               style={{
                 width: '38px',
                 height: '38px',
@@ -553,11 +621,13 @@ export const AppShell: React.FC = () => {
                 transform: 'rotate(180deg)',
               }}
             >
-              CURRICULUM
+              COURSES
             </span>
           </div>
         ) : (
           <div
+            ref={treeContainerRef}
+            onKeyDown={handleTreeKeyDown}
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -585,7 +655,7 @@ export const AppShell: React.FC = () => {
                 textTransform: 'uppercase',
               }}
             >
-              CURRICULUM TREE
+              COURSES & UNITS
             </span>
             <span
               style={{
@@ -611,10 +681,11 @@ export const AppShell: React.FC = () => {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              <Search size={13} strokeWidth={1.75} color="var(--text-muted)" />
+              <Search size={13} strokeWidth={1.75} color="var(--text-muted)" aria-hidden="true" />
               <input
                 type="text"
-                placeholder="Jump to course code..."
+                aria-label="Filter courses in sidebar"
+                placeholder="Filter course or unit..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 style={{
@@ -940,48 +1011,85 @@ export const AppShell: React.FC = () => {
             </Link>
           </div>
 
-          {/* Quick Actions (Dark Mode + Logout) */}
+          {/* Quick Actions (Dark Mode + Reading Comfort + Logout) */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: sidebarCollapsed ? 'center' : 'space-between',
-              gap: sidebarCollapsed ? '6px' : 0,
+              gap: '6px',
               paddingTop: '8px',
               borderTop: '1px solid var(--border-subtle)',
+              flexWrap: 'wrap',
             }}
           >
-            <button
-              type="button"
-              onClick={toggleTheme}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-mono)',
-                padding: sidebarCollapsed ? '6px' : '4px 8px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid var(--border-subtle)',
-                cursor: 'pointer',
-              }}
-              title="Toggle theme palette"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? (
-                <>
-                  <Moon size={12} strokeWidth={1.75} />
-                  {!sidebarCollapsed && <span className="sidebar-label">DARK</span>}
-                </>
-              ) : (
-                <>
-                  <Sun size={12} strokeWidth={1.75} />
-                  {!sidebarCollapsed && <span className="sidebar-label">LIGHT</span>}
-                </>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11px',
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'var(--font-mono)',
+                  padding: sidebarCollapsed ? '6px' : '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                }}
+                title="Toggle theme palette"
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? (
+                  <>
+                    <Moon size={12} strokeWidth={1.75} aria-hidden="true" />
+                    {!sidebarCollapsed && <span className="sidebar-label">DARK</span>}
+                  </>
+                ) : (
+                  <>
+                    <Sun size={12} strokeWidth={1.75} aria-hidden="true" />
+                    {!sidebarCollapsed && <span className="sidebar-label">LIGHT</span>}
+                  </>
+                )}
+              </button>
+
+              {!sidebarCollapsed && (
+                <button
+                  type="button"
+                  onClick={toggleReadingMode}
+                  aria-pressed={readingMode === 'comfortable'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '10.5px',
+                    color:
+                      readingMode === 'comfortable'
+                        ? 'var(--accent-core)'
+                        : 'var(--text-secondary)',
+                    fontFamily: 'var(--font-mono)',
+                    padding: '4px 7px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor:
+                      readingMode === 'comfortable' ? 'var(--accent-tint)' : 'transparent',
+                    border: `1px solid ${
+                      readingMode === 'comfortable'
+                        ? 'var(--accent-core)'
+                        : 'var(--border-subtle)'
+                    }`,
+                    cursor: 'pointer',
+                  }}
+                  title="Toggle comfortable reading mode (larger text & spacing)"
+                  aria-label="Toggle comfortable reading mode"
+                >
+                  <Eye size={12} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{readingMode === 'comfortable' ? 'COMFORT' : 'READ'}</span>
+                </button>
               )}
-            </button>
+            </div>
 
             <button
               type="button"
@@ -1004,8 +1112,8 @@ export const AppShell: React.FC = () => {
               title="Sign out"
               aria-label="Sign out"
             >
-              <LogOut size={12} strokeWidth={1.75} />
-              {!sidebarCollapsed && <span className="sidebar-label">EXIT</span>}
+              <LogOut size={12} strokeWidth={1.75} aria-hidden="true" />
+              {!sidebarCollapsed && <span className="sidebar-label">SIGN OUT</span>}
             </button>
           </div>
         </div>
@@ -1048,8 +1156,8 @@ export const AppShell: React.FC = () => {
                 type="button"
                 onClick={toggleSidebar}
                 className="desktop-expand-sidebar-btn"
-                aria-label="Expand sidebar (Ctrl+B)"
-                title="Expand sidebar (Ctrl+B)"
+                aria-label="Expand sidebar (Ctrl+Shift+B)"
+                title="Expand sidebar (Ctrl+Shift+B)"
                 style={{
                   display: 'none',
                   padding: '6px',
@@ -1071,7 +1179,7 @@ export const AppShell: React.FC = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              aria-label="Open syllabus tree"
+              aria-label="Open course list drawer"
               aria-expanded={mobileMenuOpen}
               aria-controls="curriculum-sidebar"
               style={{
@@ -1100,9 +1208,6 @@ export const AppShell: React.FC = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              <span className="daq-tag" style={{ padding: '1px 6px', fontSize: '9.5px' }}>
-                01
-              </span>
               <Link
                 to="/"
                 style={{
@@ -1111,7 +1216,7 @@ export const AppShell: React.FC = () => {
                   letterSpacing: '0.04em',
                 }}
               >
-                CURRICULUM
+                ALL COURSES
               </Link>
 
               {currentSubject && (
@@ -1125,7 +1230,7 @@ export const AppShell: React.FC = () => {
                       letterSpacing: '0.04em',
                     }}
                   >
-                    {currentSubject.code}
+                    {currentSubject.code} · {currentSubject.name}
                   </Link>
                 </>
               )}
@@ -1140,7 +1245,7 @@ export const AppShell: React.FC = () => {
                       fontWeight: 500,
                     }}
                   >
-                    U{currentUnit.unit_number}
+                    Unit {currentUnit.unit_number}
                   </Link>
                 </>
               )}
@@ -1157,7 +1262,62 @@ export const AppShell: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Personalize Courses Button */}
+            <button
+              type="button"
+              onClick={openOnboarding}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '6px 11px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                transition: 'all 160ms ease',
+              }}
+              title="Set your semester, courses, and reading preferences"
+              aria-label="Personalize your semester and courses"
+            >
+              <Sparkles size={13} strokeWidth={2} style={{ color: 'var(--status-verified)' }} aria-hidden="true" />
+              <span className="upload-text-full">My Courses</span>
+            </button>
+
+            {/* Low-Bandwidth Toggle */}
+            <button
+              type="button"
+              onClick={toggleLowBandwidthMode}
+              aria-pressed={lowBandwidthMode}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: lowBandwidthMode ? 'var(--accent-tint)' : 'var(--bg-surface)',
+                border: `1px solid ${lowBandwidthMode ? 'var(--accent-core)' : 'var(--border-subtle)'}`,
+                color: lowBandwidthMode ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10.5px',
+                fontWeight: 600,
+              }}
+              title={
+                lowBandwidthMode
+                  ? 'Low-bandwidth mode active (fast loading, no heavy effects)'
+                  : 'Enable Low-Bandwidth Mode for slow campus Wi-Fi'
+              }
+              aria-label="Toggle low-bandwidth mode"
+            >
+              <Wifi size={12} strokeWidth={2} aria-hidden="true" />
+              <span className="upload-text-full">{lowBandwidthMode ? 'LITE ON' : 'LITE'}</span>
+            </button>
+
             {/* Quick Theme Toggle Button */}
             <button
               type="button"
@@ -1183,12 +1343,12 @@ export const AppShell: React.FC = () => {
             >
               {theme === 'dark' ? (
                 <>
-                  <Sun size={13} strokeWidth={2} style={{ color: '#f59e0b' }} />
+                  <Sun size={13} strokeWidth={2} style={{ color: '#f59e0b' }} aria-hidden="true" />
                   <span className="upload-text-full">LIGHT</span>
                 </>
               ) : (
                 <>
-                  <Moon size={13} strokeWidth={2} style={{ color: '#6366f1' }} />
+                  <Moon size={13} strokeWidth={2} style={{ color: '#6366f1' }} aria-hidden="true" />
                   <span className="upload-text-full">DARK</span>
                 </>
               )}
@@ -1198,25 +1358,26 @@ export const AppShell: React.FC = () => {
               to="/upload"
               className="daq-btn-primary touch-target"
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                letterSpacing: '0.08em',
+                fontSize: '12px',
+                fontWeight: 600,
                 padding: '7px 16px',
               }}
-              title="Upload academic resource"
+              title="Upload notes, past papers, or study guides"
             >
               <Upload size={13} strokeWidth={2.2} aria-hidden="true" />
-              <span className="upload-text-full">UPLOAD ASSET</span>
-              <span className="upload-text-compact" style={{ display: 'none' }}>UPLOAD</span>
+              <span className="upload-text-full">Upload Notes</span>
+              <span className="upload-text-compact" style={{ display: 'none' }}>Upload</span>
             </Link>
           </div>
         </header>
 
         {/* Dynamic Routed Content Container */}
         <main
+          id="main-content"
+          tabIndex={-1}
           key={location.pathname}
           className={`app-main-content mobile-nav-pad ${routeTransitionClass}`}
-          style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}
+          style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto', outline: 'none' }}
         >
           <ErrorBoundary>
             <Outlet />
@@ -1244,7 +1405,7 @@ export const AppShell: React.FC = () => {
           boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
         }}
       >
-        {/* 1. Catalog */}
+        {/* 1. Find Resources */}
         <Link
           to="/"
           style={{
@@ -1262,14 +1423,14 @@ export const AppShell: React.FC = () => {
           className="touch-target"
         >
           <Layers size={18} strokeWidth={1.75} aria-hidden="true" />
-          <span>CATALOG</span>
+          <span>FIND</span>
         </Link>
 
-        {/* 2. Syllabus Tree Drawer trigger */}
+        {/* 2. Course List Drawer trigger */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          aria-label="Open Curriculum Syllabus Drawer"
+          aria-label="Open Course & Unit List Drawer"
           aria-expanded={mobileMenuOpen}
           style={{
             display: 'flex',
@@ -1286,7 +1447,7 @@ export const AppShell: React.FC = () => {
           className="touch-target"
         >
           <Search size={18} strokeWidth={1.75} aria-hidden="true" />
-          <span>SYLLABUS</span>
+          <span>COURSES</span>
           {activeSubjectCode && (
             <span
               style={{
@@ -1303,7 +1464,7 @@ export const AppShell: React.FC = () => {
           )}
         </button>
 
-        {/* 3. Upload (Quick Contribution) */}
+        {/* 3. Upload Notes */}
         <Link
           to="/upload"
           style={{
@@ -1345,7 +1506,7 @@ export const AppShell: React.FC = () => {
           <span>SAVED</span>
         </Link>
 
-        {/* 5. Profile or Admin Portal */}
+        {/* 5. Profile or Admin Review */}
         {user?.role === 'admin' ? (
           <Link
             to="/admin"

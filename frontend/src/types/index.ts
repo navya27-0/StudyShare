@@ -60,6 +60,8 @@ export interface SubjectItem {
   units?: UnitItem[];
 }
 
+export type SubjectWithHierarchy = SubjectItem;
+
 export type ResourceType =
   | 'notes'
   | 'pdf'
@@ -71,9 +73,27 @@ export type ResourceType =
 export type SortByOption =
   | 'ranked'
   | 'recent'
+  | 'newest'
+  | 'recently_updated'
   | 'highest_rated'
   | 'most_upvoted'
   | 'most_downloaded';
+
+export interface StudentOnboardingPreferences {
+  university: string;
+  department: string;
+  semester: number | null;
+  selectedCourseIds: number[];
+  readingMode: 'standard' | 'comfortable';
+  lowBandwidthMode: boolean;
+  wantsToContribute: boolean;
+  completedAt: string | null;
+}
+
+export interface DuplicateCheckResponse {
+  has_duplicates: boolean;
+  matches: ResourceListItem[];
+}
 
 export interface UploaderBrief {
   id: number;
@@ -146,6 +166,7 @@ export interface ResourceFilterParams {
   semester?: number;
   type?: ResourceType;
   min_rating?: number;
+  is_verified?: boolean;
   uploader_id?: number;
   q?: string;
   sort_by?: SortByOption;

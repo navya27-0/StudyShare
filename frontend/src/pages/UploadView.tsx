@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   UploadCloud,
   FileText,
@@ -14,10 +14,20 @@ import {
   ArrowLeft,
   FileCode,
   RotateCcw,
+  Sparkles,
+  ExternalLink,
+  AlertTriangle,
+  Check,
 } from 'lucide-react';
 import { taxonomyApi, resourcesApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import type { SubjectItem, UnitItem, TopicItem, ResourceType } from '../types';
+import type {
+  SubjectItem,
+  UnitItem,
+  TopicItem,
+  ResourceType,
+  ResourceListItem,
+} from '../types';
 
 interface TypeOption {
   type: ResourceType;
@@ -34,39 +44,76 @@ const RESOURCE_TYPES: TypeOption[] = [
     icon: <FileText size={18} />,
   },
   {
-    type: 'pdf',
-    label: 'Reference PDF',
-    desc: 'Textbook chapters, syllabus guides & slide decks',
-    icon: <FileCode size={18} />,
-  },
-  {
-    type: 'paper',
-    label: 'Past Exam Paper',
-    desc: 'Previous year question papers (PYQs) & midterms',
+    type: 'question_bank',
+    label: 'Past Papers / PYQs',
+    desc: 'Previous year question papers, midterms & solutions',
     icon: <FileQuestion size={18} />,
   },
   {
-    type: 'question_bank',
-    label: 'Question Bank',
-    desc: 'Curated practice problem sets with solutions',
-    icon: <BookOpen size={18} />,
+    type: 'pdf',
+    label: 'Study Guide (PDF)',
+    desc: 'Complete unit guides, formula sheets & slide decks',
+    icon: <FileCode size={18} />,
   },
   {
     type: 'lab_record',
     label: 'Lab Manual / Code',
-    desc: 'Experiment write-ups, source code & execution logs',
+    desc: 'Experiment write-ups, source code & lab solutions',
     icon: <FlaskConical size={18} />,
+  },
+  {
+    type: 'paper',
+    label: 'Reference Paper',
+    desc: 'Academic papers, monographs & supplementary reading',
+    icon: <BookOpen size={18} />,
   },
   {
     type: 'link',
     label: 'External Link',
-    desc: 'Google Drive, GitHub repo, Overleaf, or video playlist',
+    desc: 'Google Drive folder, GitHub repo, Overleaf, or video playlist',
     icon: <LinkIcon size={18} />,
   },
 ];
 
+const UPLOAD_DRAFT_KEY = 'studyshare_upload_draft_v1';
+
+/**
+ * Clean up messy student filenames like "notes_final_latest_new_dijkstra_algorithm.pdf"
+ * into a clean, readable title like "CS201 Unit 3 — Dijkstra Algorithm".
+ */
+function cleanFilenameToTitle(
+  filename: string,
+  subjectCode?: string,
+  unitNumber?: number
+): string {
+  const withoutExt = filename.replace(/\.[^/.]+$/, '');
+  const cleanedTokens = withoutExt
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b(final|latest|new|v\d+|copy|draft|scan|scanned|doc|pdf)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanedTokens) return '';
+
+  const titleCased = cleanedTokens
+    .split(' ')
+    .map((word) => {
+      if (word.length <= 4 && /^[A-Z0-9]+$/.test(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+
+  const prefix =
+    subjectCode && !titleCased.toUpperCase().includes(subjectCode.toUpperCase())
+      ? `${subjectCode}${unitNumber ? ` Unit ${unitNumber}` : ''} — `
+      : '';
+
+  return `${prefix}${titleCased}`.slice(0, 120);
+}
+
 export const UploadView: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,7 +135,7 @@ export const UploadView: React.FC = () => {
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
 
-  // Form Fields State
+  // Form Fields State (hydrated from local draft if present)
   const [resourceType, setResourceType] = useState<ResourceType>('notes');
   const [semester, setSemester] = useState<number>(3);
   const [title, setTitle] = useState('');
@@ -98,11 +145,43 @@ export const UploadView: React.FC = () => {
   const [pageCount, setPageCount] = useState<number | ''>('');
   const [changelog, setChangelog] = useState('Initial upload');
 
+  // Duplicate Detection State (Priority 5.14)
+  const [duplicateMatches, setDuplicateMatches] = useState<ResourceListItem[]>([]);
+  const [dismissedDuplicateWarning, setDismissedDuplicateWarning] = useState(false);
+
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Fetch taxonomy on mount with error feedback
+  // Hydrate saved draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(UPLOAD_DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.title) setTitle(draft.title);
+        if (draft.description) setDescription(draft.description);
+        if (draft.resourceType) setResourceType(draft.resourceType);
+        if (draft.pageCount) setPageCount(draft.pageCount);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Save draft to localStorage when fields change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        UPLOAD_DRAFT_KEY,
+        JSON.stringify({ title, description, resourceType, pageCount })
+      );
+    } catch {
+      // ignore
+    }
+  }, [title, description, resourceType, pageCount]);
+
+  // Fetch taxonomy on mount with support for pre-selected URL params
   const loadTaxonomy = useCallback(async () => {
     setLoadingTaxonomy(true);
     setTaxonomyError(null);
@@ -110,25 +189,31 @@ export const UploadView: React.FC = () => {
       const data = await taxonomyApi.getSubjectsTree();
       setSubjects(data);
       if (data.length > 0) {
-        setSelectedSubjectId(data[0].id);
-        setSemester(data[0].semester);
-        const firstUnits = data[0].units || [];
+        const paramSubjId = Number(searchParams.get('subject_id'));
+        const initialSubj = data.find((s) => s.id === paramSubjId) || data[0];
+        setSelectedSubjectId(initialSubj.id);
+        setSemester(initialSubj.semester);
+        const firstUnits = initialSubj.units || [];
         if (firstUnits.length > 0) {
-          setSelectedUnitId(firstUnits[0].id);
-          const firstTopics = firstUnits[0].topics || [];
+          const paramUnitId = Number(searchParams.get('unit_id'));
+          const initialUnit =
+            firstUnits.find((u) => u.id === paramUnitId) || firstUnits[0];
+          setSelectedUnitId(initialUnit.id);
+          const firstTopics = initialUnit.topics || [];
           if (firstTopics.length > 0) {
             setSelectedTopicId(firstTopics[0].id);
           }
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to query curriculum taxonomy';
+      const msg =
+        err instanceof Error ? err.message : 'Failed to load course list';
       setTaxonomyError(msg);
-      showToast(`Curriculum loading error: ${msg}`, 'error');
+      showToast(`Course list loading error: ${msg}`, 'error');
     } finally {
       setLoadingTaxonomy(false);
     }
-  }, [showToast]);
+  }, [searchParams, showToast]);
 
   useEffect(() => {
     loadTaxonomy();
@@ -138,6 +223,36 @@ export const UploadView: React.FC = () => {
   const availableUnits = activeSubject?.units || [];
   const activeUnit = availableUnits.find((u) => u.id === selectedUnitId);
   const availableTopics = activeUnit?.topics || [];
+  const activeTopic = availableTopics.find((t) => t.id === selectedTopicId);
+
+  // Live Duplicate Detection (Priority 5.14)
+  useEffect(() => {
+    if (!selectedTopicId || title.trim().length < 4) {
+      setDuplicateMatches([]);
+      return;
+    }
+    setDismissedDuplicateWarning(false);
+    const timer = setTimeout(() => {
+      resourcesApi
+        .checkDuplicate({
+          topic_id: Number(selectedTopicId),
+          title: title.trim(),
+          filename: selectedFile?.name,
+        })
+        .then((res) => {
+          if (res.has_duplicates) {
+            setDuplicateMatches(res.matches);
+          } else {
+            setDuplicateMatches([]);
+          }
+        })
+        .catch(() => {
+          // non-blocking
+        });
+    }, 380);
+
+    return () => clearTimeout(timer);
+  }, [selectedTopicId, title, selectedFile?.name]);
 
   // When subject changes, reset unit and topic
   const handleSubjectChange = (newSubId: number) => {
@@ -177,8 +292,13 @@ export const UploadView: React.FC = () => {
     setFormError(null);
     try {
       const unitNum = newUnitNumber === '' ? undefined : Number(newUnitNumber);
-      const created = await resourcesApi.createUnit(Number(selectedSubjectId), newUnitTitle.trim(), unitNum);
-      
+      const created = await resourcesApi.createUnit(
+        Number(selectedSubjectId),
+        newUnitTitle.trim(),
+        unitNum
+      );
+      taxonomyApi.invalidateCache();
+
       const updatedUnit: UnitItem = {
         id: created.id,
         subject_id: created.subject_id,
@@ -188,7 +308,6 @@ export const UploadView: React.FC = () => {
         topics: [],
       };
 
-      // Update state
       setSubjects((prev) =>
         prev.map((s) => {
           if (s.id === selectedSubjectId) {
@@ -218,7 +337,11 @@ export const UploadView: React.FC = () => {
     setIsCreatingTopic(true);
     setFormError(null);
     try {
-      const created = await resourcesApi.createTopic(Number(selectedUnitId), newTopicTitle.trim());
+      const created = await resourcesApi.createTopic(
+        Number(selectedUnitId),
+        newTopicTitle.trim()
+      );
+      taxonomyApi.invalidateCache();
 
       const updatedTopic: TopicItem = {
         id: created.id,
@@ -252,17 +375,31 @@ export const UploadView: React.FC = () => {
     }
   };
 
+  const applyFileWithSuggestedTitle = (file: File) => {
+    setSelectedFile(file);
+    if (!title.trim()) {
+      const suggested = cleanFilenameToTitle(
+        file.name,
+        activeSubject?.code,
+        activeUnit?.unit_number
+      );
+      if (suggested) {
+        setTitle(suggested);
+      }
+    }
+  };
+
   // File dropzone handlers
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      applyFileWithSuggestedTitle(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      applyFileWithSuggestedTitle(e.target.files[0]);
     }
   };
 
@@ -271,9 +408,8 @@ export const UploadView: React.FC = () => {
     e.preventDefault();
     setFormError(null);
 
-    // Validation
     if (!selectedTopicId) {
-      setFormError('Please select or create an academic topic before uploading.');
+      setFormError('Please select or create a topic before uploading.');
       return;
     }
     if (!title.trim() || title.trim().length < 3) {
@@ -287,7 +423,7 @@ export const UploadView: React.FC = () => {
       }
     } else {
       if (!selectedFile) {
-        setFormError('Please select or drag-and-drop a document file to upload.');
+        setFormError('Please select or drag-and-drop a file to upload.');
         return;
       }
       if (selectedFile.size > 50 * 1024 * 1024) {
@@ -322,13 +458,18 @@ export const UploadView: React.FC = () => {
       }
 
       const res = await resourcesApi.create(formData);
-      showToast('Study resource successfully uploaded to academic ledger!', 'success');
+      try {
+        localStorage.removeItem(UPLOAD_DRAFT_KEY);
+      } catch {
+        // ignore
+      }
+      showToast('Your notes have been uploaded and shared with your course!', 'success');
       navigate(`/resources/${res.id}`);
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error
           ? err.message
-          : 'Upload failed due to a network or server error. Please try again.';
+          : 'Upload failed due to a network or server error. Your draft is saved — please try again.';
       setFormError(errorMsg);
       showToast(`Upload failed: ${errorMsg}`, 'error');
       setIsSubmitting(false);
@@ -340,6 +481,28 @@ export const UploadView: React.FC = () => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  // Compute 7-step completion status (Priority 6.16)
+  const steps = [
+    { num: 1, label: 'Choose course', done: Boolean(selectedSubjectId) },
+    { num: 2, label: 'Choose unit/topic', done: Boolean(selectedUnitId && selectedTopicId) },
+    { num: 3, label: 'Resource type', done: Boolean(resourceType) },
+    { num: 4, label: 'Title & details', done: title.trim().length >= 3 },
+    {
+      num: 5,
+      label: resourceType === 'link' ? 'Add link' : 'Select file',
+      done: resourceType === 'link' ? externalUrl.startsWith('http') : Boolean(selectedFile),
+    },
+    {
+      num: 6,
+      label: 'Review details',
+      done:
+        Boolean(selectedSubjectId && selectedTopicId) &&
+        title.trim().length >= 3 &&
+        (resourceType === 'link' ? externalUrl.startsWith('http') : Boolean(selectedFile)),
+    },
+    { num: 7, label: 'Upload', done: false },
+  ];
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 80px' }}>
@@ -356,19 +519,16 @@ export const UploadView: React.FC = () => {
             fontWeight: 500,
           }}
         >
-          <ArrowLeft size={16} /> Back to Catalog
+          <ArrowLeft size={16} aria-hidden="true" /> Back to Find Resources
         </Link>
       </div>
 
       {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+      <div style={{ marginBottom: '22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
           <span className="daq-tag">
-            <span className="daq-beacon" />
-            01 / CONTRIBUTION PROTOCOL
-          </span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10.5px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-            ACADEMIC LEDGER
+            <span className="daq-beacon" aria-hidden="true" />
+            SHARE STUDY MATERIALS
           </span>
         </div>
         <h1
@@ -382,12 +542,64 @@ export const UploadView: React.FC = () => {
             marginBottom: '8px',
           }}
         >
-          Publish Study Resource
+          Upload Notes &amp; Study Material
         </h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '640px' }}>
-          Contribute verified lecture notes, past exam question banks, lab records, or references to the engineering ledger.
+        <p style={{ fontSize: '14.5px', color: 'var(--text-secondary)', maxWidth: '660px' }}>
+          Share lecture notes, past question papers (PYQs), lab manuals, or study guides with classmates in your course.
         </p>
       </div>
+
+      {/* Priority 6.16: 7-Step Guided Upload Progress Bar */}
+      <nav
+        aria-label="Upload steps"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))',
+          gap: '8px',
+          padding: '12px 14px',
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '24px',
+        }}
+      >
+        {steps.map((step) => (
+          <div
+            key={step.num}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              fontSize: '12px',
+              color: step.done ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontWeight: step.done ? 600 : 500,
+            }}
+          >
+            <span
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: step.done ? 'var(--status-verified)' : 'var(--bg-subdued)',
+                color: step.done ? '#000' : 'var(--text-muted)',
+                border: `1px solid ${step.done ? 'var(--status-verified)' : 'var(--border-strong)'}`,
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10.5px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {step.done ? <Check size={11} strokeWidth={2.6} /> : step.num}
+            </span>
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {step.label}
+            </span>
+          </div>
+        ))}
+      </nav>
 
       {/* Curriculum Taxonomy Loading Error Banner */}
       {taxonomyError && (
@@ -409,7 +621,7 @@ export const UploadView: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} aria-hidden="true" />
-            <span>Curriculum network error: {taxonomyError}</span>
+            <span>Could not load courses: {taxonomyError}</span>
           </div>
           <button
             type="button"
@@ -473,8 +685,8 @@ export const UploadView: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-        {/* Step 1: Academic Taxonomy Hierarchy */}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Steps 1 & 2: Choose Course & Unit/Topic */}
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -495,25 +707,44 @@ export const UploadView: React.FC = () => {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              STEP 1
+              STEPS 1 &amp; 2
             </span>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Curriculum Taxonomy Placement
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}
+            >
+              Choose Course, Unit &amp; Topic
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '18px',
+            }}
+          >
             {/* Subject Selector */}
             <div>
               <label
                 htmlFor="upload-subject-select"
-                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '6px',
+                }}
               >
-                Subject / Course <span style={{ color: 'var(--accent-core)' }}>*</span>
+                1. Course <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <select
                 id="upload-subject-select"
-                aria-label="Select Subject / Course"
+                aria-label="Select Course"
                 value={selectedSubjectId}
                 onChange={(e) => handleSubjectChange(Number(e.target.value))}
                 disabled={loadingTaxonomy || subjects.length === 0}
@@ -529,31 +760,37 @@ export const UploadView: React.FC = () => {
 
             {/* Unit Selector with inline create */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '6px',
+                }}
+              >
                 <label
                   htmlFor="upload-unit-select"
                   style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}
                 >
-                  Unit / Module <span style={{ color: 'var(--accent-core)' }}>*</span>
+                  2a. Unit / Module <span style={{ color: 'var(--accent-core)' }}>*</span>
                 </label>
                 {!showNewUnitForm && (
                   <button
                     type="button"
                     onClick={() => setShowNewUnitForm(true)}
                     aria-expanded={showNewUnitForm}
-                    aria-label="Add new unit inline"
+                    aria-label="Add new unit"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      fontSize: '11px',
+                      fontSize: '11.5px',
                       fontWeight: 600,
                       color: 'var(--accent-core)',
-                      padding: '4px',
+                      padding: '2px 4px',
                     }}
-                    className="touch-target"
                   >
-                    <Plus size={13} aria-hidden="true" /> Add Unit
+                    <Plus size={13} aria-hidden="true" /> New Unit
                   </button>
                 )}
               </div>
@@ -561,13 +798,13 @@ export const UploadView: React.FC = () => {
               {!showNewUnitForm ? (
                 <select
                   id="upload-unit-select"
-                  aria-label="Select Unit / Module"
+                  aria-label="Select Unit"
                   value={selectedUnitId}
                   onChange={(e) => handleUnitChange(Number(e.target.value))}
                   disabled={availableUnits.length === 0}
                   style={{ width: '100%', height: '40px' }}
                 >
-                  {availableUnits.length === 0 && <option value="">No units defined yet</option>}
+                  {availableUnits.length === 0 && <option value="">No units yet — click New Unit</option>}
                   {availableUnits.map((u) => (
                     <option key={u.id} value={u.id}>
                       Unit {u.unit_number}: {u.title}
@@ -587,13 +824,14 @@ export const UploadView: React.FC = () => {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>New Unit</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Add New Unit
+                    </span>
                     <button
                       type="button"
                       onClick={() => setShowNewUnitForm(false)}
                       aria-label="Cancel new unit"
                       style={{ padding: '4px' }}
-                      className="touch-target"
                     >
                       <X size={14} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
                     </button>
@@ -612,21 +850,23 @@ export const UploadView: React.FC = () => {
                       placeholder="Unit # (optional)"
                       aria-label="Unit number"
                       value={newUnitNumber}
-                      onChange={(e) => setNewUnitNumber(e.target.value === '' ? '' : Number(e.target.value))}
+                      onChange={(e) =>
+                        setNewUnitNumber(e.target.value === '' ? '' : Number(e.target.value))
+                      }
                       style={{ width: '120px' }}
                     />
                     <button
                       type="button"
                       onClick={handleCreateUnit}
                       disabled={isCreatingUnit || !newUnitTitle.trim()}
-                      className="daq-btn-primary touch-target"
+                      className="daq-btn-primary"
                       style={{
                         padding: '6px 14px',
                         fontSize: '12px',
                         flex: 1,
                       }}
                     >
-                      {isCreatingUnit ? 'Saving...' : 'Add Unit'}
+                      {isCreatingUnit ? 'Saving...' : 'Save Unit'}
                     </button>
                   </div>
                 </div>
@@ -635,31 +875,37 @@ export const UploadView: React.FC = () => {
 
             {/* Topic Selector with inline create */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '6px',
+                }}
+              >
                 <label
                   htmlFor="upload-topic-select"
                   style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}
                 >
-                  Topic / Subtopic <span style={{ color: 'var(--accent-core)' }}>*</span>
+                  2b. Topic <span style={{ color: 'var(--accent-core)' }}>*</span>
                 </label>
                 {!showNewTopicForm && selectedUnitId !== '' && (
                   <button
                     type="button"
                     onClick={() => setShowNewTopicForm(true)}
                     aria-expanded={showNewTopicForm}
-                    aria-label="Add new topic inline"
+                    aria-label="Add new topic"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      fontSize: '11px',
+                      fontSize: '11.5px',
                       fontWeight: 600,
                       color: 'var(--accent-core)',
-                      padding: '4px',
+                      padding: '2px 4px',
                     }}
-                    className="touch-target"
                   >
-                    <Plus size={13} aria-hidden="true" /> Add Topic
+                    <Plus size={13} aria-hidden="true" /> New Topic
                   </button>
                 )}
               </div>
@@ -667,13 +913,15 @@ export const UploadView: React.FC = () => {
               {!showNewTopicForm ? (
                 <select
                   id="upload-topic-select"
-                  aria-label="Select Topic / Subtopic"
+                  aria-label="Select Topic"
                   value={selectedTopicId}
                   onChange={(e) => setSelectedTopicId(Number(e.target.value))}
                   disabled={availableTopics.length === 0}
                   style={{ width: '100%', height: '40px' }}
                 >
-                  {availableTopics.length === 0 && <option value="">No topics in this unit yet</option>}
+                  {availableTopics.length === 0 && (
+                    <option value="">No topics yet — click New Topic</option>
+                  )}
                   {availableTopics.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.title}
@@ -693,13 +941,20 @@ export const UploadView: React.FC = () => {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>New Topic</span>
-                    <button type="button" onClick={() => setShowNewTopicForm(false)}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Add New Topic
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Cancel new topic"
+                      onClick={() => setShowNewTopicForm(false)}
+                    >
                       <X size={14} style={{ color: 'var(--text-muted)' }} />
                     </button>
                   </div>
                   <input
                     type="text"
+                    aria-label="New Topic Title"
                     placeholder="Topic Title (e.g. Dijkstra Shortest Path)"
                     value={newTopicTitle}
                     onChange={(e) => setNewTopicTitle(e.target.value)}
@@ -709,14 +964,14 @@ export const UploadView: React.FC = () => {
                     type="button"
                     onClick={handleCreateTopic}
                     disabled={isCreatingTopic || !newTopicTitle.trim()}
-                    className="daq-btn-primary touch-target"
+                    className="daq-btn-primary"
                     style={{
                       padding: '6px 14px',
                       fontSize: '12px',
                       width: '100%',
                     }}
                   >
-                    {isCreatingTopic ? 'Saving...' : 'Add Topic'}
+                    {isCreatingTopic ? 'Saving...' : 'Save Topic'}
                   </button>
                 </div>
               )}
@@ -724,7 +979,7 @@ export const UploadView: React.FC = () => {
           </div>
         </div>
 
-        {/* Step 2: Resource Type & Metadata */}
+        {/* Steps 3 & 4: Select Resource Type + Add Title & Description */}
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -745,10 +1000,17 @@ export const UploadView: React.FC = () => {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              STEP 2
+              STEPS 3 &amp; 4
             </span>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Resource Classification & Details
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}
+            >
+              Resource Type, Title &amp; Description
             </h2>
           </div>
 
@@ -756,14 +1018,24 @@ export const UploadView: React.FC = () => {
           <div style={{ marginBottom: '20px' }}>
             <label
               id="upload-category-label"
-              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                marginBottom: '8px',
+              }}
             >
-              Resource Category <span style={{ color: 'var(--accent-core)' }}>*</span>
+              3. Select Resource Type <span style={{ color: 'var(--accent-core)' }}>*</span>
             </label>
             <div
               role="radiogroup"
               aria-labelledby="upload-category-label"
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                gap: '10px',
+              }}
             >
               {RESOURCE_TYPES.map((opt) => {
                 const isSelected = resourceType === opt.type;
@@ -786,7 +1058,9 @@ export const UploadView: React.FC = () => {
                       gap: '12px',
                       padding: '12px 14px',
                       borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${isSelected ? 'var(--accent-core)' : 'var(--border-subtle)'}`,
+                      border: `1.5px solid ${
+                        isSelected ? 'var(--accent-core)' : 'var(--border-subtle)'
+                      }`,
                       backgroundColor: isSelected ? 'var(--accent-tint)' : 'var(--bg-surface)',
                       cursor: 'pointer',
                       transition: 'all 120ms ease',
@@ -812,7 +1086,7 @@ export const UploadView: React.FC = () => {
                       >
                         {opt.label}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.35 }}>
                         {opt.desc}
                       </div>
                     </div>
@@ -822,19 +1096,62 @@ export const UploadView: React.FC = () => {
             </div>
           </div>
 
+          {/* Priority 6.17: Upload Title Guidance Box */}
+          <div
+            style={{
+              padding: '12px 14px',
+              backgroundColor: 'var(--bg-subdued)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '16px',
+              fontSize: '12.5px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={13} color="var(--status-verified)" aria-hidden="true" />
+              <span>Tip: Clear titles help classmates find your notes during exams</span>
+            </div>
+            <div style={{ color: 'var(--status-verified)', fontFamily: 'var(--font-mono)', fontSize: '11.5px' }}>
+              ✓ Good title: {activeSubject?.code || 'CS201'}{' '}
+              {activeUnit ? `Unit ${activeUnit.unit_number}` : 'Unit 3'} —{' '}
+              {activeTopic?.title || 'Dijkstra Algorithm'} Lecture Notes
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11.5px' }}>
+              ✗ Avoid: notes_final_latest_new.pdf
+            </div>
+          </div>
+
           {/* Title & Semester Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '18px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '16px',
+              marginBottom: '16px',
+            }}
+          >
             <div>
               <label
                 htmlFor="upload-resource-title"
-                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '6px',
+                }}
               >
-                Resource Title <span style={{ color: 'var(--accent-core)' }}>*</span>
+                4. Resource Title <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <input
                 id="upload-resource-title"
                 type="text"
-                placeholder="e.g. Complete Unit 2 AVL Tree Rotations & Solved PYQs"
+                placeholder={`e.g. ${activeSubject?.code || 'CS201'} Unit ${
+                  activeUnit?.unit_number || 3
+                } — ${activeTopic?.title || 'Dijkstra Algorithm'} Lecture Notes`}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -844,7 +1161,13 @@ export const UploadView: React.FC = () => {
             <div>
               <label
                 htmlFor="upload-resource-semester"
-                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '6px',
+                }}
               >
                 Semester <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
@@ -863,17 +1186,76 @@ export const UploadView: React.FC = () => {
             </div>
           </div>
 
+          {/* Priority 5.14: Duplicate Resource Warning Banner */}
+          {duplicateMatches.length > 0 && !dismissedDuplicateWarning && (
+            <div
+              role="alert"
+              style={{
+                padding: '14px 16px',
+                backgroundColor: 'var(--status-exam-bg)',
+                border: '1px solid var(--status-exam-border)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <AlertTriangle
+                  size={18}
+                  color="var(--status-exam)"
+                  style={{ flexShrink: 0, marginTop: '2px' }}
+                  aria-hidden="true"
+                />
+                <div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    A similar resource already exists: &ldquo;{duplicateMatches[0].title}&rdquo;
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Uploaded by {duplicateMatches[0].uploader.display_name} ·{' '}
+                    {duplicateMatches[0].downloads_count} downloads. Check if your file adds new content before uploading.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <Link
+                  to={`/resources/${duplicateMatches[0].id}`}
+                  className="daq-btn-secondary"
+                  style={{ padding: '5px 12px', fontSize: '12px' }}
+                >
+                  <ExternalLink size={13} aria-hidden="true" />
+                  <span>View existing resource</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setDismissedDuplicateWarning(true)}
+                  className="daq-btn-secondary"
+                  style={{ padding: '5px 12px', fontSize: '12px' }}
+                >
+                  <span>Upload anyway</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           <div style={{ marginBottom: '18px' }}>
             <label
               htmlFor="upload-resource-desc"
-              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                marginBottom: '6px',
+              }}
             >
-              Description & Context (Optional)
+              Description &amp; Topics Covered (Optional)
             </label>
             <textarea
               id="upload-resource-desc"
-              placeholder="Outline what topics this document covers, formulas included, professor hints, or specific exam references..."
+              placeholder="Briefly mention what topics, theorems, or exam years this file covers..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -886,9 +1268,15 @@ export const UploadView: React.FC = () => {
             <div style={{ maxWidth: '200px' }}>
               <label
                 htmlFor="upload-resource-pages"
-                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '6px',
+                }}
               >
-                Estimated Pages
+                Number of Pages (Optional)
               </label>
               <input
                 id="upload-resource-pages"
@@ -897,14 +1285,16 @@ export const UploadView: React.FC = () => {
                 max={2000}
                 placeholder="e.g. 24"
                 value={pageCount}
-                onChange={(e) => setPageCount(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) =>
+                  setPageCount(e.target.value === '' ? '' : Number(e.target.value))
+                }
                 style={{ width: '100%', height: '40px' }}
               />
             </div>
           )}
         </div>
 
-        {/* Step 3: Payload (File or External Link) */}
+        {/* Step 5: Select File or External Link */}
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -925,10 +1315,17 @@ export const UploadView: React.FC = () => {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              STEP 3
+              STEP 5
             </span>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {resourceType === 'link' ? 'Resource External URL' : 'Document File Upload'}
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {resourceType === 'link' ? 'Add Resource Link' : 'Select Document File'}
             </h2>
           </div>
 
@@ -936,9 +1333,15 @@ export const UploadView: React.FC = () => {
             <div>
               <label
                 htmlFor="upload-external-url"
-                style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '6px',
+                }}
               >
-                Outbound Link URL <span style={{ color: 'var(--accent-core)' }}>*</span>
+                Resource Link URL <span style={{ color: 'var(--accent-core)' }}>*</span>
               </label>
               <input
                 id="upload-external-url"
@@ -950,12 +1353,11 @@ export const UploadView: React.FC = () => {
                 style={{ width: '100%', height: '40px' }}
               />
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                Ensure this link is set to publicly viewable by university peers (e.g. "Anyone with the link can view").
+                Make sure sharing permissions are set to &ldquo;Anyone with the link can view&rdquo;.
               </p>
             </div>
           ) : (
             <div>
-              {/* Dropzone */}
               <div
                 role="button"
                 tabIndex={0}
@@ -970,10 +1372,14 @@ export const UploadView: React.FC = () => {
                   }
                 }}
                 style={{
-                  border: `2px dashed ${selectedFile ? 'var(--status-verified)' : 'var(--border-strong)'}`,
-                  backgroundColor: selectedFile ? 'var(--status-verified-bg)' : 'var(--bg-subdued)',
+                  border: `2px dashed ${
+                    selectedFile ? 'var(--status-verified)' : 'var(--border-strong)'
+                  }`,
+                  backgroundColor: selectedFile
+                    ? 'var(--status-verified-bg)'
+                    : 'var(--bg-subdued)',
                   borderRadius: 'var(--radius-md)',
-                  padding: '36px 20px',
+                  padding: '32px 20px',
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 120ms ease',
@@ -989,23 +1395,57 @@ export const UploadView: React.FC = () => {
                 />
 
                 {selectedFile ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={36} style={{ color: 'var(--status-verified)' }} aria-hidden="true" />
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <CheckCircle2
+                      size={36}
+                      style={{ color: 'var(--status-verified)' }}
+                      aria-hidden="true"
+                    />
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                      }}
+                    >
                       {selectedFile.name}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      Size: {formatFileSize(selectedFile.size)} • Click or press Enter to replace file
+                      Size: {formatFileSize(selectedFile.size)} · Click or press Enter to replace file
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <UploadCloud size={40} style={{ color: 'var(--accent-core)' }} aria-hidden="true" />
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      Click or press Enter to browse or drag and drop document
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <UploadCloud
+                      size={40}
+                      style={{ color: 'var(--accent-core)' }}
+                      aria-hidden="true"
+                    />
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      Click to choose a file or drag and drop it here
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      Supported formats: PDF, DOCX, PPTX, ZIP, Code files (Max 50 MB)
+                      Supported formats: PDF, DOCX, PPTX, ZIP, Code files (Max 50 MB). Messy filenames are automatically cleaned up into a readable title!
                     </div>
                   </div>
                 )}
@@ -1013,18 +1453,24 @@ export const UploadView: React.FC = () => {
             </div>
           )}
 
-          {/* Initial Changelog Note */}
-          <div style={{ marginTop: '20px' }}>
+          {/* Version Note */}
+          <div style={{ marginTop: '18px' }}>
             <label
               htmlFor="upload-changelog-input"
-              style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                marginBottom: '6px',
+              }}
             >
-              Version Changelog Note
+              Edition / Version Note (Optional)
             </label>
             <input
               id="upload-changelog-input"
               type="text"
-              placeholder="e.g. Initial upload, verified against 2024 syllabus"
+              placeholder="e.g. Initial upload, updated for current semester syllabus"
               value={changelog}
               onChange={(e) => setChangelog(e.target.value)}
               style={{ width: '100%', height: '38px' }}
@@ -1032,12 +1478,71 @@ export const UploadView: React.FC = () => {
           </div>
         </div>
 
-        {/* Hairline Upload Progress Bar with Active Shimmer */}
+        {/* Step 6: Review Details Summary Card */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '18px 24px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '14px',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                marginBottom: '4px',
+              }}
+            >
+              STEP 6 · REVIEW SUMMARY BEFORE UPLOAD
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {activeSubject ? `${activeSubject.code} (${activeSubject.name})` : 'No course selected'}
+              {activeUnit ? ` → Unit ${activeUnit.unit_number}` : ''}
+              {activeTopic ? ` → ${activeTopic.title}` : ''}
+            </div>
+            <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Title: <strong>{title.trim() || 'Not entered yet'}</strong> · Type:{' '}
+              <strong>
+                {RESOURCE_TYPES.find((r) => r.type === resourceType)?.label || resourceType}
+              </strong>
+              {selectedFile ? ` · File: ${selectedFile.name} (${formatFileSize(selectedFile.size)})` : ''}
+            </div>
+          </div>
+        </div>
+
+        {/* Upload Progress Indicator */}
         {isSubmitting && (
-          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-              <span>TRANSMITTING ASSET TO REPOSITORY...</span>
-              <span>VERIFYING CHECKSUM</span>
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              marginTop: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '12px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span>UPLOADING YOUR RESOURCE...</span>
+              <span>PLEASE KEEP THIS TAB OPEN</span>
             </div>
             <div className="upload-hairline-progress">
               <div className="upload-hairline-progress-bar" />
@@ -1045,20 +1550,20 @@ export const UploadView: React.FC = () => {
           </div>
         )}
 
-        {/* Submit Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '14px', marginTop: '14px' }}>
+        {/* Step 7: Submit Actions */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: '14px',
+            marginTop: '6px',
+          }}
+        >
           <button
             type="button"
             onClick={() => navigate('/')}
-            style={{
-              padding: '10px 18px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: 'var(--text-secondary)',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-            }}
+            className="daq-btn-secondary"
           >
             Cancel
           </button>
@@ -1068,7 +1573,7 @@ export const UploadView: React.FC = () => {
             className="daq-btn-primary touch-target"
             style={{
               padding: '10px 26px',
-              fontSize: '13.5px',
+              fontSize: '14px',
               opacity: isSubmitting ? 0.7 : 1,
             }}
           >
@@ -1084,11 +1589,12 @@ export const UploadView: React.FC = () => {
                     animation: 'spin 1s linear infinite',
                   }}
                 />
-                Uploading to Ledger...
+                <span>Uploading...</span>
               </>
             ) : (
               <>
-                <UploadCloud size={16} /> Publish Resource
+                <UploadCloud size={16} aria-hidden="true" />
+                <span>7. Upload Notes</span>
               </>
             )}
           </button>

@@ -337,7 +337,7 @@ export const Login: React.FC = () => {
                   marginTop: '6px',
                 }}
               >
-                Curating Academic Intelligence &amp; Verified Curricula
+                Study resources for your courses
               </div>
             </div>
 
@@ -352,8 +352,11 @@ export const Login: React.FC = () => {
                 maxWidth: '620px',
               }}
             >
-              Engineered exclusively for university scholars. Structured across Semesters 1 through 8
-              with verifiable cryptographic hashes, faculty audit logs, and merit-backed peer review.
+              Find and share lecture notes, past exam papers (PYQs), lab manuals, and question banks organized by semester, course, and unit.
+              <br />
+              <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '12.5px' }}>
+                Choose your course → Choose a unit → Find notes/PYQs → Preview or download
+              </strong>
             </p>
 
             {/* Feature Pills */}

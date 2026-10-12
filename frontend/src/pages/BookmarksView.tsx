@@ -6,10 +6,15 @@ import {
   BookOpen,
   Filter,
   ArrowRight,
+  WifiOff,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { usersApi } from '../services/api';
+import {
+  usersApi,
+  getOfflineBookmarks,
+  saveOfflineBookmarks,
+} from '../services/api';
 import { ResourceCard } from '../components/resources/ResourceCard';
 import type { ResourceListItem, ResourceType } from '../types';
 
@@ -22,6 +27,7 @@ export const BookmarksView: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUsingOfflineCache, setIsUsingOfflineCache] = useState(false);
 
   // Client-side filtering within saved bookmarks
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +42,7 @@ export const BookmarksView: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
+    setIsUsingOfflineCache(false);
     try {
       const data = await usersApi.getBookmarks(user.id, 1, 100);
       const rawList = data?.items || [];
@@ -46,8 +53,21 @@ export const BookmarksView: React.FC = () => {
       setSavedItems(items);
       setFilteredItems(items);
       setTotalCount(data?.total ?? rawList.length);
+      saveOfflineBookmarks(items);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to retrieve saved bookmarks');
+      const cached = getOfflineBookmarks();
+      if (cached.length > 0) {
+        setSavedItems(cached);
+        setFilteredItems(cached);
+        setTotalCount(cached.length);
+        setIsUsingOfflineCache(true);
+      } else {
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Could not load your saved bookmarks right now.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -87,20 +107,47 @@ export const BookmarksView: React.FC = () => {
   // Handle bookmark removal from card
   const handleBookmarkToggle = (resourceId: number, isBookmarked: boolean) => {
     if (!isBookmarked) {
-      setSavedItems((prev) => prev.filter((item) => item.id !== resourceId));
+      setSavedItems((prev) => {
+        const next = prev.filter((item) => item.id !== resourceId);
+        saveOfflineBookmarks(next);
+        return next;
+      });
       setTotalCount((prev) => Math.max(0, prev - 1));
-      showToast('Resource removed from your saved bookmarks.', 'info');
+      showToast('Removed from My Bookmarks.', 'info');
     }
   };
 
   if (isLoading) {
     return (
       <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '24px 16px' }}>
-        <div style={{ width: '220px', height: '24px', backgroundColor: 'var(--bg-muted)', borderRadius: '4px', marginBottom: '16px' }} />
-        <div style={{ height: '44px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', marginBottom: '24px' }} />
+        <div
+          style={{
+            width: '220px',
+            height: '24px',
+            backgroundColor: 'var(--bg-muted)',
+            borderRadius: '4px',
+            marginBottom: '16px',
+          }}
+        />
+        <div
+          style={{
+            height: '44px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-sm)',
+            marginBottom: '24px',
+          }}
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[1, 2, 3].map((n) => (
-            <div key={n} style={{ height: '80px', backgroundColor: 'var(--bg-subdued)', borderRadius: 'var(--radius-sm)' }} />
+            <div
+              key={n}
+              style={{
+                height: '80px',
+                backgroundColor: 'var(--bg-subdued)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            />
           ))}
         </div>
       </div>
@@ -110,7 +157,13 @@ export const BookmarksView: React.FC = () => {
   return (
     <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '24px 16px 80px' }}>
       {/* Header */}
-      <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '18px', marginBottom: '24px' }}>
+      <div
+        style={{
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '18px',
+          marginBottom: '24px',
+        }}
+      >
         <div
           style={{
             fontFamily: 'var(--font-mono)',
@@ -122,9 +175,17 @@ export const BookmarksView: React.FC = () => {
             textTransform: 'uppercase',
           }}
         >
-          Revision Desk // Personal Library
+          Personal Revision Library
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
           <div>
             <h1
               style={{
@@ -135,10 +196,10 @@ export const BookmarksView: React.FC = () => {
                 margin: 0,
               }}
             >
-              Saved Study Resources
+              My Bookmarks
             </h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Instant offline-friendly access to your bookmarked notes, exam question banks, and lab manuals.
+            <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              Quick access to your saved notes, past papers, and study guides — cached locally on your device for offline review.
             </p>
           </div>
 
@@ -159,8 +220,42 @@ export const BookmarksView: React.FC = () => {
         </div>
       </div>
 
+      {isUsingOfflineCache && (
+        <div
+          role="status"
+          style={{
+            padding: '12px 16px',
+            backgroundColor: 'var(--status-exam-bg)',
+            border: '1px solid var(--status-exam-border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--status-exam)',
+            fontSize: '13px',
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <WifiOff size={15} aria-hidden="true" />
+            Showing your offline cached bookmarks.
+          </span>
+          <button
+            type="button"
+            onClick={loadBookmarks}
+            className="daq-btn-secondary"
+            style={{ padding: '4px 12px', fontSize: '12px' }}
+          >
+            Reconnect
+          </button>
+        </div>
+      )}
+
       {error && (
         <div
+          role="alert"
           style={{
             padding: '14px 18px',
             backgroundColor: 'var(--status-danger-bg)',
@@ -216,10 +311,18 @@ export const BookmarksView: React.FC = () => {
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <Search
               size={15}
-              style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-muted)',
+              }}
             />
             <input
-              type="text"
+              type="search"
+              aria-label="Search your saved bookmarks"
               placeholder="Search your saved library..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -228,8 +331,11 @@ export const BookmarksView: React.FC = () => {
           </div>
 
           <select
+            aria-label="Filter saved bookmarks by semester"
             value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={(e) =>
+              setSelectedSemester(e.target.value === '' ? '' : Number(e.target.value))
+            }
             style={{ height: '36px', minWidth: '130px' }}
           >
             <option value="">All Semesters</option>
@@ -241,21 +347,23 @@ export const BookmarksView: React.FC = () => {
           </select>
 
           <select
+            aria-label="Filter saved bookmarks by resource type"
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value as ResourceType | '')}
             style={{ height: '36px', minWidth: '140px' }}
           >
             <option value="">All Types</option>
             <option value="notes">Lecture Notes</option>
-            <option value="pdf">Reference PDF</option>
-            <option value="paper">Exam PYQ</option>
-            <option value="question_bank">Question Bank</option>
-            <option value="lab_record">Lab Manual</option>
-            <option value="link">External Link</option>
+            <option value="question_bank">Past Papers (PYQs)</option>
+            <option value="pdf">Study Guides (PDF)</option>
+            <option value="lab_record">Lab Manuals</option>
+            <option value="paper">Reference Papers</option>
+            <option value="link">External Links</option>
           </select>
 
           {(searchQuery || selectedSemester !== '' || selectedType !== '') && (
             <button
+              type="button"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedSemester('');
@@ -268,7 +376,7 @@ export const BookmarksView: React.FC = () => {
                 padding: '6px 10px',
               }}
             >
-              Reset Filters
+              Clear filters
             </button>
           )}
         </div>
@@ -283,10 +391,7 @@ export const BookmarksView: React.FC = () => {
               className="stagger-item"
               style={{ '--stagger-i': Math.min(idx, 8) } as React.CSSProperties}
             >
-              <ResourceCard
-                resource={res}
-                onBookmarkChange={handleBookmarkToggle}
-              />
+              <ResourceCard resource={res} onBookmarkChange={handleBookmarkToggle} />
             </div>
           ))}
         </div>
@@ -302,11 +407,14 @@ export const BookmarksView: React.FC = () => {
           }}
         >
           <Filter size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>No saved resources match your filter</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>
+            No saved resources match your filter
+          </h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Try resetting your search query or semester selection.
+            Try clearing your search query or semester filter.
           </p>
           <button
+            type="button"
             onClick={() => {
               setSearchQuery('');
               setSelectedSemester('');
@@ -314,11 +422,11 @@ export const BookmarksView: React.FC = () => {
             }}
             className="daq-btn-primary"
           >
-            Clear Filters
+            Clear filters
           </button>
         </div>
       ) : !error ? (
-        /* Empty Library */
+        /* Priority 1.3: Helpful Empty Library State */
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -341,14 +449,29 @@ export const BookmarksView: React.FC = () => {
               margin: '0 auto 16px',
             }}
           >
-            <Bookmark size={26} />
+            <Bookmark size={26} aria-hidden="true" />
           </div>
 
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>
-            Your revision desk is empty
+          <h3
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '20px',
+              fontWeight: 700,
+              marginBottom: '8px',
+            }}
+          >
+            Your library is empty.
           </h3>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.5 }}>
-            Bookmark syllabus units, formula sheets, or midterm PYQs while browsing to assemble your personalized exam study pack.
+          <p
+            style={{
+              fontSize: '14.5px',
+              color: 'var(--text-secondary)',
+              maxWidth: '440px',
+              margin: '0 auto 22px',
+              lineHeight: 1.6,
+            }}
+          >
+            Save resources here to create your personal revision collection.
           </p>
           <Link
             to="/"
@@ -358,7 +481,9 @@ export const BookmarksView: React.FC = () => {
               fontSize: '13.5px',
             }}
           >
-            <BookOpen size={16} /> Browse Course Catalog <ArrowRight size={15} />
+            <BookOpen size={16} aria-hidden="true" />
+            <span>Browse resources</span>
+            <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>
       ) : null}
