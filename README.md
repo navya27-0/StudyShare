@@ -3,7 +3,7 @@
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 [![Backend Tests](https://img.shields.io/badge/Pytest-56%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-8%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
-[![Code Coverage](https://img.shields.io/badge/Coverage-82%25-brightgreen?style=flat-square)](backend/tests/)
+[![Code Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen?style=flat-square)](backend/tests/)
 [![A11y Compliance](https://img.shields.io/badge/A11y-WCAG%202.1%20AA%20(100%25)-purple?style=flat-square)](frontend/src/styles/accessibility.css)
 [![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
 
@@ -57,7 +57,7 @@
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
 | **Automated Test Suite** | **64 Tests** | 56 backend async Pytests + 8 frontend Vitest component tests (100% passing) |
-| **Backend Code Coverage** | **82% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
+| **Backend Code Coverage** | **89% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
 | **Upload Processing** | **50 MB Limit** | Chunked upload validation (64 KB chunks) with temporary-file staging, SHA-256 integrity check & magic-byte scanning |
@@ -234,7 +234,7 @@ erDiagram
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **64** | **100% PASS** | **82% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **64** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
