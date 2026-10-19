@@ -460,6 +460,9 @@ export const ResourceDetailView: React.FC = () => {
   const badge = getTypeBadge(resource.type);
   const fileUrl = resolveFileUrl(resource.file_url);
   const isPdf = resource.type === 'pdf' || resource.file_url.toLowerCase().endsWith('.pdf');
+  const isImage = ['.png', '.jpg', '.jpeg'].some((ext) =>
+    resource.file_url.toLowerCase().endsWith(ext)
+  );
   const isOwnerOrAdmin = user && (user.id === resource.uploader.id || user.role === 'admin');
 
   return (
@@ -965,6 +968,27 @@ export const ResourceDetailView: React.FC = () => {
                   </div>
                 </div>
               )
+            ) : isImage ? (
+              <div
+                style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  backgroundColor: '#050505',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <img
+                  src={fileUrl}
+                  alt={resource.title}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '520px',
+                    margin: '0 auto',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                  }}
+                />
+              </div>
             ) : resource.type === 'link' ? (
               <div style={{ padding: '36px 24px', textAlign: 'center' }}>
                 <div

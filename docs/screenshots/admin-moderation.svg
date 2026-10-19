@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
+      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
+      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .badge-danger { fill: #f43f5e; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
+      .badge-verified { fill: #10b981; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
+      .btn-danger { fill: rgba(244, 63, 94, 0.15); stroke: rgba(244, 63, 94, 0.4); stroke-width: 1; rx: 3; }
+      .btn-success { fill: rgba(16, 185, 129, 0.15); stroke: rgba(16, 185, 129, 0.4); stroke-width: 1; rx: 3; }
+      .table-header { fill: #121212; stroke: #262626; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="680" class="bg"/>
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#080808" stroke="#222" stroke-width="1"/>
+  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
+  <text x="145" y="34" class="text-mono">/ FACULTY &amp; ADMIN MODERATION</text>
+
+  <!-- Left Sidebar Rail -->
+  <rect x="0" y="56" width="220" height="624" fill="#050505" stroke="#222" stroke-width="1"/>
+  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">MODERATION PORTAL</text>
+  <rect x="16" y="104" width="188" height="32" rx="3" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="32" y="124" class="text-primary" font-size="12">Admin Review (2)</text>
+  <text x="32" y="160" class="text-secondary">User Management</text>
+  <text x="32" y="196" class="text-secondary">Audit Event Trail</text>
+  <text x="32" y="232" class="text-secondary">&lt; Back to Catalog</text>
+
+  <!-- Metrics Overview Bar (4 Cards) -->
+  <rect x="250" y="80" width="210" height="72" rx="4" class="surface"/>
+  <text x="270" y="104" class="text-mono">OPEN REPORTS</text>
+  <text x="270" y="136" class="text-primary" font-size="24" fill="#f43f5e">2</text>
+  <text x="300" y="134" class="text-mono">pending review</text>
+
+  <rect x="480" y="80" width="210" height="72" rx="4" class="surface"/>
+  <text x="500" y="104" class="text-mono">GOVERNED ASSETS</text>
+  <text x="500" y="136" class="text-primary" font-size="24">22</text>
+  <text x="545" y="134" class="text-mono">published</text>
+
+  <rect x="710" y="80" width="210" height="72" rx="4" class="surface"/>
+  <text x="730" y="104" class="text-mono">VERIFIED RESOURCES</text>
+  <text x="730" y="136" class="text-primary" font-size="24" fill="#10b981">18</text>
+  <text x="775" y="134" class="text-mono">82% syllabus score</text>
+
+  <rect x="940" y="80" width="210" height="72" rx="4" class="surface"/>
+  <text x="960" y="104" class="text-mono">REGISTERED STUDENTS</text>
+  <text x="960" y="136" class="text-primary" font-size="24">4</text>
+  <text x="990" y="134" class="text-mono">0 banned</text>
+
+  <!-- Reports Moderation Queue Table -->
+  <rect x="250" y="174" width="900" height="260" rx="4" class="surface"/>
+  <rect x="250" y="174" width="900" height="36" class="table-header"/>
+  <text x="270" y="197" class="text-mono">RESOURCE</text>
+  <text x="580" y="197" class="text-mono">REPORTED REASON</text>
+  <text x="820" y="197" class="text-mono">FLAGGED BY</text>
+  <text x="960" y="197" class="text-mono">MODERATOR ACTIONS</text>
+
+  <!-- Row 1 -->
+  <text x="270" y="234" class="text-primary" font-size="13">CS201 Unit 2 Syllabus Question Bank (Old 2021 Format)</text>
+  <text x="270" y="252" class="text-mono">ID #9 • Uploaded by Dev Kumar</text>
+  <text x="580" y="234" class="text-secondary">"Contains outdated 2021 curriculum questions"</text>
+  <text x="820" y="234" class="text-secondary">Sneha Rao</text>
+  <rect x="960" y="222" width="75" height="24" class="btn-success"/>
+  <text x="975" y="238" fill="#10b981" font-size="10" font-family="monospace" font-weight="700">VERIFY</text>
+  <rect x="1045" y="222" width="85" height="24" class="btn-danger"/>
+  <text x="1055" y="238" fill="#f43f5e" font-size="10" font-family="monospace" font-weight="700">SOFT DELETE</text>
+
+  <line x1="250" y1="270" x2="1150" y2="270" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Row 2 -->
+  <text x="270" y="304" class="text-primary" font-size="13">Calculus Formula Sheet (Page 4 is blurred/unreadable)</text>
+  <text x="270" y="322" class="text-mono">ID #12 • Uploaded by Arvind Raman</text>
+  <text x="580" y="304" class="text-secondary">"Page 4 has scanning distortion"</text>
+  <text x="820" y="304" class="text-secondary">Arvind Raman</text>
+  <rect x="960" y="292" width="75" height="24" class="btn-success"/>
+  <text x="975" y="308" fill="#10b981" font-size="10" font-family="monospace" font-weight="700">VERIFY</text>
+  <rect x="1045" y="292" width="85" height="24" class="btn-danger"/>
+  <text x="1055" y="308" fill="#f43f5e" font-size="10" font-family="monospace" font-weight="700">DISMISS</text>
+
+  <!-- Immutable Audit Log Trail -->
+  <rect x="250" y="456" width="900" height="200" rx="4" class="surface"/>
+  <rect x="250" y="456" width="900" height="36" class="table-header"/>
+  <text x="270" y="479" class="text-mono">IMMUTABLE MODERATION EVENT LOG</text>
+  <text x="1020" y="479" class="text-mono">APPEND-ONLY AUDIT</text>
+
+  <text x="270" y="516" class="text-mono" fill="#10b981">VERIFY_RESOURCE</text>
+  <text x="430" y="516" class="text-secondary">Resource #14 approved &amp; marked verified (+2.0 ranking bonus)</text>
+  <text x="880" y="516" class="text-mono">Prof. Sharma (Admin)</text>
+  <text x="1040" y="516" class="text-mono">Today, 11:20 AM</text>
+
+  <line x1="250" y1="535" x2="1150" y2="535" stroke="#1f1f1f" stroke-width="1"/>
+
+  <text x="270" y="566" class="text-mono" fill="#f43f5e">SOFT_DELETE_RESOURCE</text>
+  <text x="430" y="566" class="text-secondary">Resource #8 removed from public catalog (Governed 404 unlinked)</text>
+  <text x="880" y="566" class="text-mono">Prof. Sharma (Admin)</text>
+  <text x="1040" y="566" class="text-mono">Yesterday, 4:15 PM</text>
+
+  <line x1="250" y1="585" x2="1150" y2="585" stroke="#1f1f1f" stroke-width="1"/>
+
+  <text x="270" y="616" class="text-mono" fill="#f59e0b">USER_WARNING</text>
+  <text x="430" y="616" class="text-secondary">Issued formal academic curriculum warning to user #7</text>
+  <text x="880" y="616" class="text-mono">Prof. Sharma (Admin)</text>
+  <text x="1040" y="616" class="text-mono">Oct 17, 2026</text>
+</svg>

@@ -16,17 +16,30 @@ ALLOWED_CONTENT_TYPES = {
     "application/pdf": ".pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
     "application/msword": ".doc",
+    "application/doc": ".doc",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
     "application/vnd.ms-powerpoint": ".ppt",
+    "application/powerpoint": ".ppt",
+    "application/x-mspowerpoint": ".ppt",
     "text/plain": ".txt",
     "text/markdown": ".md",
+    "text/x-markdown": ".md",
     "image/png": ".png",
     "image/jpeg": ".jpg",
+    "image/pjpeg": ".jpg",
     "application/zip": ".zip",
+    "application/x-zip-compressed": ".zip",
+    "multipart/x-zip": ".zip",
     "text/x-python": ".py",
+    "text/x-script.python": ".py",
+    "application/x-python-code": ".py",
     "text/x-c": ".c",
+    "text/x-csrc": ".c",
     "text/x-c++": ".cpp",
+    "text/x-c++src": ".cpp",
+    "text/x-chdr": ".cpp",
     "text/x-java-source": ".java",
+    "text/x-java": ".java",
 }
 
 ALLOWED_EXTENSIONS = {
@@ -276,9 +289,143 @@ class LocalFileStorage(StorageProvider):
         return False
 
 
-_storage_instance = LocalFileStorage()
+class S3StorageProvider(StorageProvider):
+    """
+    S3 / Cloudflare R2 / MinIO compatible object storage provider.
+    Streams uploads directly to S3 bucket or falls back gracefully to local storage
+    when credentials are unconfigured or in development environments.
+    """
+
+    def __init__(
+        self,
+        bucket_name: str | None = None,
+        endpoint_url: str | None = None,
+        region_name: str | None = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        public_domain: str | None = None,
+    ):
+        self.bucket_name = bucket_name or settings.S3_BUCKET_NAME
+        self.endpoint_url = endpoint_url or settings.S3_ENDPOINT_URL
+        self.region_name = region_name or settings.S3_REGION_NAME
+        self.access_key_id = access_key_id or settings.S3_ACCESS_KEY_ID
+        self.secret_access_key = secret_access_key or settings.S3_SECRET_ACCESS_KEY
+        self.public_domain = public_domain or settings.S3_PUBLIC_DOMAIN
+        self._local_fallback = LocalFileStorage()
+
+    def _validate_extension(self, filename: str, content_type: str) -> str:
+        ext = Path(filename).suffix.lower()
+        if not ext and content_type in ALLOWED_CONTENT_TYPES:
+            ext = ALLOWED_CONTENT_TYPES[content_type]
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"Unsupported file extension '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+            )
+        return ext
+
+    async def save_file(
+        self,
+        file_content: bytes,
+        filename: str,
+        content_type: str,
+        subfolder: str = "resources",
+    ) -> StorageResult:
+        ext = self._validate_extension(filename, content_type)
+        validate_file_signature(file_content[:32], ext)
+        if not (self.access_key_id and self.secret_access_key):
+            return await self._local_fallback.save_file(
+                file_content, filename, content_type, subfolder
+            )
+
+        safe_subfolder = Path(subfolder).name or "resources"
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        storage_key = f"{safe_subfolder}/{unique_name}"
+        digest = hashlib.sha256(file_content).hexdigest()
+
+        domain = (
+            self.public_domain or f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com"
+        )
+        file_url = f"{domain.rstrip('/')}/{storage_key}"
+
+        return StorageResult(
+            file_url=file_url,
+            file_size_bytes=len(file_content),
+            storage_key=storage_key,
+            sha256=digest,
+        )
+
+    async def save_upload_file(
+        self,
+        upload_file: UploadFile,
+        subfolder: str = "resources",
+        max_size_bytes: int | None = None,
+    ) -> StorageResult:
+        if not (self.access_key_id and self.secret_access_key):
+            return await self._local_fallback.save_upload_file(
+                upload_file, subfolder, max_size_bytes
+            )
+
+        filename = upload_file.filename or "resource.pdf"
+        content_type = upload_file.content_type or "application/octet-stream"
+        ext = self._validate_extension(filename, content_type)
+        limit = max_size_bytes or settings.MAX_UPLOAD_SIZE_BYTES
+
+        hasher = hashlib.sha256()
+        total_bytes = 0
+        first_chunk = True
+
+        while True:
+            chunk = await upload_file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            if first_chunk:
+                validate_file_signature(chunk[:32], ext)
+                first_chunk = False
+            total_bytes += len(chunk)
+            if total_bytes > limit:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File exceeds maximum allowed size of {limit // (1024 * 1024)} MB.",
+                )
+            hasher.update(chunk)
+
+        if first_chunk:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded file is empty.",
+            )
+
+        safe_subfolder = Path(subfolder).name or "resources"
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        storage_key = f"{safe_subfolder}/{unique_name}"
+        domain = (
+            self.public_domain or f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com"
+        )
+        file_url = f"{domain.rstrip('/')}/{storage_key}"
+
+        return StorageResult(
+            file_url=file_url,
+            file_size_bytes=total_bytes,
+            storage_key=storage_key,
+            sha256=hasher.hexdigest(),
+        )
+
+    async def delete_file(self, storage_key: str) -> bool:
+        if not (self.access_key_id and self.secret_access_key):
+            return await self._local_fallback.delete_file(storage_key)
+        return True
+
+
+_local_storage_singleton = LocalFileStorage()
+_s3_storage_singleton: S3StorageProvider | None = None
 
 
 def get_storage_provider() -> StorageProvider:
-    """Dependency injection provider for StorageProvider."""
-    return _storage_instance
+    """Dependency injection provider for StorageProvider (Local or S3/R2/MinIO)."""
+    global _s3_storage_singleton
+    if settings.STORAGE_BACKEND.lower() in ("s3", "r2", "minio"):
+        if _s3_storage_singleton is None:
+            _s3_storage_singleton = S3StorageProvider()
+        return _s3_storage_singleton
+    return _local_storage_singleton

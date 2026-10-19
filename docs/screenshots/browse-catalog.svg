@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
+      .surface-highlight { fill: #141414; stroke: #333333; stroke-width: 1; }
+      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
+      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .badge-verified { fill: #10b981; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
+      .badge-bg { fill: rgba(16, 185, 129, 0.1); stroke: rgba(16, 185, 129, 0.25); stroke-width: 1; rx: 3; }
+      .btn-primary { fill: #ffffff; rx: 4; }
+      .btn-primary-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+      .star { fill: #f59e0b; }
+      .border-hairline { stroke: #222222; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="680" class="bg"/>
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#080808" class="border-hairline"/>
+  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
+  <text x="145" y="34" class="text-mono">/ CS CURRICULUM</text>
+
+  <rect x="360" y="12" width="460" height="32" rx="4" class="surface"/>
+  <circle cx="380" cy="28" r="5" stroke="#737373" stroke-width="1.5" fill="none"/>
+  <line x1="384" y1="32" x2="389" y2="37" stroke="#737373" stroke-width="1.5"/>
+  <text x="400" y="32" class="text-secondary" font-size="12">Search course code (e.g. CS201), unit, topic, or "PYQ"...</text>
+
+  <rect x="1060" y="14" width="105" height="28" class="btn-primary"/>
+  <text x="1080" y="32" class="btn-primary-text">+ Upload Notes</text>
+
+  <!-- Left Sidebar Rail -->
+  <rect x="0" y="56" width="220" height="624" fill="#050505" class="border-hairline"/>
+  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">ACADEMIC CATALOG</text>
+  <rect x="16" y="104" width="188" height="32" rx="3" class="surface-highlight"/>
+  <text x="32" y="124" class="text-primary" font-size="12">Find Resources</text>
+
+  <text x="24" y="166" class="text-mono" font-size="10" letter-spacing="1">PERSONAL</text>
+  <text x="32" y="196" class="text-secondary">My Bookmarks (4)</text>
+  <text x="32" y="230" class="text-secondary">Contributor Profile</text>
+  <text x="32" y="264" class="text-secondary">Admin Review</text>
+
+  <text x="24" y="316" class="text-mono" font-size="10" letter-spacing="1">CAMPUS MODES</text>
+  <rect x="24" y="332" width="170" height="26" rx="3" fill="#111111" stroke="#333333"/>
+  <circle cx="36" cy="345" r="4" fill="#10b981"/>
+  <text x="48" y="348" class="text-mono" fill="#cccccc">Comfortable Reading: ON</text>
+  <text x="32" y="380" class="text-secondary">Low-Bandwidth Lite: OFF</text>
+
+  <!-- Main Content Area -->
+  <!-- 4-Step 10-Second Student Flow Guide Banner -->
+  <rect x="244" y="76" width="920" height="64" rx="4" class="surface"/>
+  <text x="264" y="100" class="text-primary" font-size="13">QUICK START STUDENT WORKFLOW</text>
+  <text x="890" y="100" class="text-mono">10 SECONDS TO EXAM NOTES</text>
+
+  <text x="264" y="124" class="text-secondary"><tspan fill="#ffffff" font-weight="700">1.</tspan> Choose Course → <tspan fill="#ffffff" font-weight="700">2.</tspan> Pick Unit → <tspan fill="#ffffff" font-weight="700">3.</tspan> Find Notes/PYQs → <tspan fill="#ffffff" font-weight="700">4.</tspan> Instant Preview &amp; Download</text>
+
+  <!-- Your Semester Strip -->
+  <rect x="244" y="152" width="920" height="44" rx="4" class="surface-highlight"/>
+  <text x="264" y="178" class="text-primary" font-size="12">Your Semester 3 Courses:</text>
+  <rect x="420" y="160" width="85" height="26" rx="3" fill="#ffffff"/>
+  <text x="432" y="177" font-family="monospace" font-size="11" font-weight="700" fill="#000000">CS201 DSA</text>
+  <rect x="515" y="160" width="85" height="26" rx="3" fill="#1a1a1a" stroke="#333333"/>
+  <text x="532" y="177" class="text-mono" fill="#dddddd">CS204 OS</text>
+  <rect x="610" y="160" width="95" height="26" rx="3" fill="#1a1a1a" stroke="#333333"/>
+  <text x="622" y="177" class="text-mono" fill="#dddddd">MA301 LINEAR</text>
+
+  <!-- Resource Card 1 (Lecture Notes) -->
+  <rect x="244" y="210" width="920" height="136" rx="4" class="surface"/>
+  <rect x="264" y="226" width="90" height="20" class="badge-bg"/>
+  <text x="272" y="239" class="badge-verified">LECTURE NOTES</text>
+  <rect x="362" y="226" width="60" height="20" rx="3" fill="#1a1a1a"/>
+  <text x="372" y="239" class="text-mono">SEM 3</text>
+  <rect x="430" y="226" width="115" height="20" rx="3" fill="rgba(16, 185, 129, 0.15)"/>
+  <text x="440" y="239" fill="#10b981" font-family="monospace" font-size="10" font-weight="700">FACULTY VERIFIED</text>
+
+  <text x="264" y="272" class="text-primary" font-size="16">CS201 Unit 2: Balanced Binary Search Trees &amp; AVL Rotations</text>
+  <text x="264" y="296" class="text-secondary">Complete handwritten derivation of single/double tree rotations, balance factors, and proof of O(log N) depth.</text>
+
+  <text x="264" y="328" class="text-mono">CS201 &gt; Unit 2 &gt; AVL Trees • Uploaded by Arvind Raman • 2.4 MB PDF (14 pages)</text>
+  <text x="960" y="244" class="text-primary" font-size="14"><tspan class="star">★</tspan> 4.9 <tspan class="text-mono">(22 reviews)</tspan></text>
+  <text x="960" y="274" class="text-primary" font-size="14">▲ 48 <tspan class="text-mono">upvotes</tspan></text>
+  <rect x="960" y="294" width="90" height="26" rx="3" fill="#1f1f1f" stroke="#383838"/>
+  <text x="982" y="311" class="text-primary" font-size="11">Preview</text>
+  <rect x="1060" y="294" width="85" height="26" rx="3" class="btn-primary"/>
+  <text x="1075" y="311" class="btn-primary-text">Save (✓)</text>
+
+  <!-- Resource Card 2 (PYQ Past Paper) -->
+  <rect x="244" y="358" width="920" height="136" rx="4" class="surface"/>
+  <rect x="264" y="374" width="105" height="20" rx="3" fill="rgba(245, 158, 11, 0.1)" stroke="rgba(245, 158, 11, 0.3)"/>
+  <text x="272" y="387" fill="#f59e0b" font-family="monospace" font-size="10" font-weight="700">PAST PAPER / PYQ</text>
+  <rect x="378" y="374" width="60" height="20" rx="3" fill="#1a1a1a"/>
+  <text x="388" y="387" class="text-mono">SEM 3</text>
+  <rect x="446" y="374" width="135" height="20" rx="3" fill="rgba(59, 130, 246, 0.1)"/>
+  <text x="456" y="387" fill="#60a5fa" font-family="monospace" font-size="10" font-weight="700">COMMUNITY REVIEWED</text>
+
+  <text x="264" y="420" class="text-primary" font-size="16">CS201 Midterm Exam Solutions (Fall 2024 - 2025)</text>
+  <text x="264" y="444" class="text-secondary">Official solved mid-semester exam paper covering Asymptotic notation, amortized array doubling, and heaps.</text>
+
+  <text x="264" y="476" class="text-mono">CS201 &gt; Unit 1 &gt; Midterms • Uploaded by Sneha Rao • 1.1 MB PDF (8 pages)</text>
+  <text x="960" y="392" class="text-primary" font-size="14"><tspan class="star">★</tspan> 4.8 <tspan class="text-mono">(17 reviews)</tspan></text>
+  <text x="960" y="422" class="text-primary" font-size="14">▲ 34 <tspan class="text-mono">upvotes</tspan></text>
+  <rect x="960" y="442" width="90" height="26" rx="3" fill="#1f1f1f" stroke="#383838"/>
+  <text x="982" y="459" class="text-primary" font-size="11">Preview</text>
+  <rect x="1060" y="442" width="85" height="26" rx="3" class="btn-primary"/>
+  <text x="1075" y="459" class="btn-primary-text">Save (✓)</text>
+
+  <!-- Resource Card 3 (Lab Code Manual) -->
+  <rect x="244" y="506" width="920" height="136" rx="4" class="surface"/>
+  <rect x="264" y="522" width="115" height="20" rx="3" fill="rgba(168, 85, 247, 0.1)" stroke="rgba(168, 85, 247, 0.3)"/>
+  <text x="272" y="535" fill="#c084fc" font-family="monospace" font-size="10" font-weight="700">LAB MANUAL / CODE</text>
+  <rect x="388" y="522" width="60" height="20" rx="3" fill="#1a1a1a"/>
+  <text x="398" y="535" class="text-mono">SEM 3</text>
+
+  <text x="264" y="568" class="text-primary" font-size="16">CS201 Lab 4: Dijkstra &amp; Bellman-Ford C++ Implementations</text>
+  <text x="264" y="592" class="text-secondary">Clean benchmarked graph shortest path implementations with edge weight test vectors and CMake build instructions.</text>
+
+  <text x="264" y="624" class="text-mono">CS201 &gt; Unit 4 &gt; Graph Algorithms • Uploaded by Dev Kumar • 45 KB C++ (.cpp)</text>
+  <text x="960" y="540" class="text-primary" font-size="14"><tspan class="star">★</tspan> 5.0 <tspan class="text-mono">(9 reviews)</tspan></text>
+  <text x="960" y="570" class="text-primary" font-size="14">▲ 21 <tspan class="text-mono">upvotes</tspan></text>
+  <rect x="960" y="590" width="90" height="26" rx="3" fill="#1f1f1f" stroke="#383838"/>
+  <text x="982" y="607" class="text-primary" font-size="11">Preview</text>
+  <rect x="1060" y="590" width="85" height="26" rx="3" class="btn-primary"/>
+  <text x="1075" y="607" class="btn-primary-text">Save (✓)</text>
+</svg>

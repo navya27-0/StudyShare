@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
+      .surface-viewer { fill: #111111; stroke: #333333; stroke-width: 1; rx: 4; }
+      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
+      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .btn-primary { fill: #ffffff; rx: 4; }
+      .btn-primary-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+      .btn-secondary { fill: #1c1c1c; stroke: #383838; stroke-width: 1; rx: 4; }
+      .star { fill: #f59e0b; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="680" class="bg"/>
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#080808" stroke="#222" stroke-width="1"/>
+  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
+  <text x="145" y="34" class="text-mono">/ CS201 / UNIT 2 / AVL ROTATIONS</text>
+
+  <!-- Breadcrumbs & Header -->
+  <text x="40" y="86" class="text-mono">&lt; BACK TO CATALOG &gt; CS201 &gt; Unit 2: Balanced Trees &gt; AVL Rotations</text>
+  <text x="40" y="118" class="text-primary" font-size="22">CS201 Unit 2: Balanced Binary Search Trees &amp; AVL Rotations</text>
+  <text x="40" y="140" class="text-secondary">Uploaded by Arvind Raman • Semester 3 • 2.4 MB PDF (14 pages) • Revision v2</text>
+
+  <!-- Left Main Column (Interactive Document Preview) -->
+  <rect x="40" y="160" width="760" height="490" class="surface-viewer"/>
+  <!-- PDF Top Viewer Controls -->
+  <rect x="40" y="160" width="760" height="40" fill="#171717" rx="4"/>
+  <text x="56" y="185" class="text-mono" fill="#aaaaaa">DOCUMENT PREVIEW • PAGE 1 OF 14</text>
+  <rect x="640" y="166" width="70" height="26" class="btn-secondary"/>
+  <text x="655" y="183" class="text-primary" font-size="11">Zoom +</text>
+  <rect x="720" y="166" width="65" height="26" class="btn-secondary"/>
+  <text x="732" y="183" class="text-primary" font-size="11">Open ↗</text>
+
+  <!-- Simulated PDF Page Content -->
+  <rect x="80" y="220" width="680" height="400" fill="#fcfcfc" rx="2"/>
+  <text x="120" y="270" font-family="serif" font-size="20" font-weight="700" fill="#111111">Unit 2: Self-Balancing AVL Trees &amp; Rotations</text>
+  <text x="120" y="300" font-family="serif" font-size="13" fill="#333333">Theorem: An AVL tree with N nodes maintains a maximum height of 1.44 log2(N).</text>
+  <line x1="120" y1="315" x2="720" y2="315" stroke="#dddddd" stroke-width="1"/>
+
+  <!-- Diagram mockup -->
+  <circle cx="340" cy="370" r="16" fill="#e5e5e5" stroke="#222" stroke-width="1.5"/>
+  <text x="335" y="375" font-family="monospace" font-size="12" font-weight="700">A</text>
+  <line x1="330" y1="382" x2="280" y2="420" stroke="#333" stroke-width="1.5"/>
+  <line x1="350" y1="382" x2="400" y2="420" stroke="#333" stroke-width="1.5"/>
+  <circle cx="270" cy="430" r="14" fill="#e5e5e5" stroke="#222" stroke-width="1.5"/>
+  <text x="266" y="434" font-family="monospace" font-size="11">B</text>
+  <circle cx="410" cy="430" r="14" fill="#e5e5e5" stroke="#222" stroke-width="1.5"/>
+  <text x="406" y="434" font-family="monospace" font-size="11">C</text>
+
+  <text x="120" y="520" font-family="serif" font-size="12" fill="#444444">Case 1: Left-Left rotation balances height when BF(A) = +2 and BF(B) = +1.</text>
+  <text x="120" y="545" font-family="serif" font-size="12" fill="#444444">Case 2: Left-Right double rotation handles inner subtree skew.</text>
+
+  <!-- Right Sidebar (Engagement, Download, Rating, Version Timeline) -->
+  <rect x="825" y="160" width="335" height="150" rx="6" class="surface"/>
+  <text x="845" y="190" class="text-primary" font-size="14">Actions &amp; Trust Score</text>
+  <rect x="845" y="206" width="295" height="42" class="btn-primary"/>
+  <text x="930" y="232" class="btn-primary-text" font-size="14">⬇ Download File (2.4 MB)</text>
+
+  <rect x="845" y="258" width="142" height="34" class="btn-secondary"/>
+  <text x="880" y="280" class="text-primary" font-size="12">▲ Upvote (48)</text>
+  <rect x="998" y="258" width="142" height="34" class="btn-secondary"/>
+  <text x="1030" y="280" class="text-primary" font-size="12">★ Rate (4.9 / 5)</text>
+
+  <!-- Revision History Timeline Section -->
+  <rect x="825" y="330" width="335" height="320" rx="6" class="surface"/>
+  <text x="845" y="360" class="text-primary" font-size="14">Revision History &amp; Changelogs</text>
+
+  <!-- v2 item -->
+  <circle cx="855" cy="395" r="5" fill="#10b981"/>
+  <text x="872" y="400" class="text-primary" font-size="13">Version 2 (Current)</text>
+  <text x="872" y="420" class="text-mono">Updated Oct 18, 2026 by Arvind Raman</text>
+  <text x="872" y="440" class="text-secondary" font-size="11">"Added missing double-rotation proof diagrams and unit exercise solutions."</text>
+
+  <line x1="855" y1="405" x2="855" y2="475" stroke="#333" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+  <!-- v1 item -->
+  <circle cx="855" cy="485" r="5" fill="#555555"/>
+  <text x="872" y="490" class="text-secondary" font-size="13">Version 1 (Initial Release)</text>
+  <text x="872" y="510" class="text-mono">Uploaded Sep 24, 2026</text>
+  <text x="872" y="530" class="text-secondary" font-size="11">"Initial lecture notes covering standard BST insertions."</text>
+  <text x="872" y="555" class="text-mono" fill="#60a5fa">Inspect v1 archive (1.9 MB)</text>
+</svg>

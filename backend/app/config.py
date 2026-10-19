@@ -25,8 +25,15 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300
 
     # Storage Settings
+    STORAGE_BACKEND: str = "local"  # "local" | "s3"
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
+    S3_BUCKET_NAME: str = "studyshare-academic-assets"
+    S3_ENDPOINT_URL: str | None = None
+    S3_REGION_NAME: str = "us-east-1"
+    S3_ACCESS_KEY_ID: str | None = None
+    S3_SECRET_ACCESS_KEY: str | None = None
+    S3_PUBLIC_DOMAIN: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

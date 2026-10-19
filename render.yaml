@@ -1,0 +1,55 @@
+services:
+  # 1. FastAPI Backend Web Service
+  - type: web
+    name: studyshare-backend
+    runtime: python
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: studyshare-postgres
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: "https://studyshare.pages.dev,https://studyshare.onrender.com"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: STORAGE_BACKEND
+        value: local
+
+  # 2. React 19 Frontend Static Site
+  - type: static
+    name: studyshare-frontend
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: "./frontend/dist"
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
+    envVars:
+      - key: NODE_VERSION
+        value: 20.12.2
+      - key: VITE_API_URL
+        fromService:
+          name: studyshare-backend
+          type: web
+          property: host
+
+databases:
+  # Managed PostgreSQL 16
+  - name: studyshare-postgres
+    databaseName: studyshare_prod_db
+    user: studyshare
+    plan: free

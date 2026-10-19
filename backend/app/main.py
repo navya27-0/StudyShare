@@ -17,6 +17,7 @@ from app.api.health import router as health_router
 from app.api.resources import router as resources_router
 from app.api.users import router as users_router
 from app.config import get_settings
+from app.core.logging import setup_logging
 from app.database import get_db_session
 from app.models.resource import Resource, ResourceVersion
 
@@ -42,6 +43,7 @@ SEED_DEMO_PDF_BYTES = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     upload_path = Path(settings.UPLOAD_DIR).resolve()
     upload_path.mkdir(parents=True, exist_ok=True)
     yield

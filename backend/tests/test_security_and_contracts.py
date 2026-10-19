@@ -267,3 +267,82 @@ async def test_upload_academic_code_and_doc_extensions(client: AsyncClient, auth
     )
     assert res_bad.status_code == 415
     assert "Binary content detected" in res_bad.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_upload_cpp_and_java_academic_source(client: AsyncClient, auth_headers: dict):
+    """Verify that .cpp and .java source code files upload cleanly."""
+    form_data = {
+        "topic_id": "1",
+        "type": "lab_record",
+        "title": "C++ Shortest Path Benchmark",
+        "semester": "3",
+    }
+    cpp_content = b'#include <iostream>\nint main() { std::cout << "Path"; return 0; }\n'
+    files = {"file": ("solution.cpp", cpp_content, "text/x-c++src")}
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".cpp")
+
+    # Java upload
+    java_content = b"public class Graph { public static void main(String[] args) {} }\n"
+    java_files = {"file": ("Graph.java", java_content, "text/x-java")}
+    form_data["title"] = "Java Graph Representation"
+    res_java = await client.post(
+        "/api/resources", data=form_data, files=java_files, headers=auth_headers
+    )
+    assert res_java.status_code == 201
+    assert res_java.json()["file_url"].endswith(".java")
+
+
+@pytest.mark.asyncio
+async def test_storage_provider_s3_fallback_and_instantiation():
+    """Verify StorageProvider S3 provider and graceful fallback."""
+    from app.core.storage import S3StorageProvider, get_storage_provider
+
+    provider = S3StorageProvider(
+        bucket_name="test-bucket",
+        access_key_id=None,
+        secret_access_key=None,
+    )
+    assert provider.bucket_name == "test-bucket"
+
+    # Save small test file via fallback
+    res = await provider.save_file(
+        b"%PDF-1.4 sample content",
+        "doc.pdf",
+        "application/pdf",
+    )
+    assert res.file_url.startswith("/uploads/")
+    assert len(res.sha256) == 64
+
+    # Default provider should return StorageProvider
+    default_provider = get_storage_provider()
+    assert default_provider is not None
+
+
+def test_structured_logging_formatter():
+    """Verify JSONFormatter formats logs as valid JSON."""
+    import logging
+
+    from app.core.logging import JSONFormatter
+
+    formatter = JSONFormatter()
+    record = logging.LogRecord(
+        name="test_logger",
+        level=logging.INFO,
+        pathname="test.py",
+        lineno=10,
+        msg="Structured logging verification",
+        args=(),
+        exc_info=None,
+    )
+    record.request_id = "req-12345"
+    formatted = formatter.format(record)
+    import json
+
+    parsed = json.loads(formatted)
+    assert parsed["level"] == "INFO"
+    assert parsed["message"] == "Structured logging verification"
+    assert parsed["request_id"] == "req-12345"
+    assert "timestamp" in parsed

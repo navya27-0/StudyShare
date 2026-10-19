@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
+      .surface-warning { fill: rgba(245, 158, 11, 0.08); stroke: rgba(245, 158, 11, 0.3); stroke-width: 1; }
+      .dropzone { fill: #0d0d0d; stroke: #404040; stroke-width: 1.5; stroke-dasharray: 6 6; rx: 8; }
+      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
+      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .btn-primary { fill: #ffffff; rx: 4; }
+      .btn-primary-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+      .btn-accent { fill: #f59e0b; rx: 4; }
+      .btn-accent-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="680" class="bg"/>
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#080808" stroke="#222" stroke-width="1"/>
+  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
+  <text x="145" y="34" class="text-mono">/ UPLOAD CURRICULUM ASSET</text>
+
+  <!-- Left Sidebar Rail -->
+  <rect x="0" y="56" width="220" height="624" fill="#050505" stroke="#222" stroke-width="1"/>
+  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">ACADEMIC CATALOG</text>
+  <text x="32" y="124" class="text-secondary">Find Resources</text>
+  <rect x="16" y="140" width="188" height="32" rx="3" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="32" y="160" class="text-primary" font-size="12">Upload Notes</text>
+  <text x="32" y="196" class="text-secondary">My Bookmarks</text>
+
+  <!-- Main Container -->
+  <text x="260" y="96" class="text-primary" font-size="22">Share Course Study Material</text>
+  <text x="260" y="120" class="text-secondary">Drop your document to automatically detect course codes, units, and resource types.</text>
+
+  <!-- Drag-and-Drop Dropzone -->
+  <rect x="260" y="140" width="900" height="150" class="dropzone"/>
+  <circle cx="710" cy="195" r="24" fill="#171717" stroke="#333" stroke-width="1"/>
+  <path d="M710 185 L710 205 M702 193 L710 185 L718 193" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <text x="710" y="235" text-anchor="middle" class="text-primary" font-size="14">Selected: CS201_Unit2_AVL_Trees_Notes.pdf</text>
+  <text x="710" y="255" text-anchor="middle" class="text-mono">2.4 MB • Magic-byte verified PDF • Streaming SHA-256 integrity check active</text>
+
+  <!-- Duplicate Detection Warning Banner -->
+  <rect x="260" y="306" width="900" height="90" rx="6" class="surface-warning"/>
+  <text x="284" y="332" fill="#f59e0b" font-family="-apple-system, sans-serif" font-weight="700" font-size="13">⚠ Similar study material already exists in this course!</text>
+  <text x="284" y="354" fill="#e5e5e5" font-family="-apple-system, sans-serif" font-size="12">"CS201 Unit 2: Balanced Trees &amp; AVL Rotations" by Arvind Raman is currently published for Unit 2.</text>
+  <text x="284" y="378" fill="#a3a3a3" font-family="-apple-system, sans-serif" font-size="11">To prevent curriculum clutter, you can publish this upload as an updated Revision (v2) with changelogs.</text>
+  <rect x="990" y="332" width="145" height="34" class="btn-accent"/>
+  <text x="1010" y="353" class="btn-accent-text">+ Publish as v2</text>
+
+  <!-- Metadata Form Columns -->
+  <rect x="260" y="412" width="435" height="190" rx="6" class="surface"/>
+  <text x="280" y="438" class="text-primary" font-size="13">1. Curriculum Taxonomy</text>
+  <text x="280" y="468" class="text-mono">COURSE / SUBJECT</text>
+  <rect x="280" y="476" width="395" height="32" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="295" y="497" class="text-primary" font-size="12">CS201 - Data Structures &amp; Algorithms</text>
+
+  <text x="280" y="534" class="text-mono">UNIT / MODULE</text>
+  <rect x="280" y="542" width="395" height="32" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="295" y="563" class="text-primary" font-size="12">Unit 2: Tree Structures &amp; Balanced AVL Trees</text>
+
+  <rect x="725" y="412" width="435" height="190" rx="6" class="surface"/>
+  <text x="745" y="438" class="text-primary" font-size="13">2. Resource Type &amp; Academic Details</text>
+  <text x="745" y="468" class="text-mono">CATEGORY</text>
+
+  <rect x="745" y="476" width="125" height="36" rx="4" fill="#ffffff"/>
+  <text x="758" y="498" class="btn-primary-text">✓ Lecture Notes</text>
+
+  <rect x="880" y="476" width="125" height="36" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="898" y="498" class="text-secondary" font-size="12">Past Papers</text>
+
+  <rect x="1015" y="476" width="125" height="36" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
+  <text x="1035" y="498" class="text-secondary" font-size="12">Lab Manual</text>
+
+  <rect x="745" y="535" width="395" height="38" rx="4" class="btn-primary"/>
+  <text x="900" y="559" class="btn-primary-text" font-size="13">Confirm &amp; Upload Document</text>
+</svg>

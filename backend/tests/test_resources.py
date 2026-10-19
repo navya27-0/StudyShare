@@ -202,3 +202,109 @@ async def test_taxonomy_hierarchy(client: AsyncClient):
         first_unit = first_subject["units"][0]
         assert "unit_number" in first_unit
         assert "topics" in first_unit
+
+
+@pytest.mark.asyncio
+async def test_upload_and_download_docx_resource(client: AsyncClient, auth_headers: dict):
+    """Verify uploading a .docx document with valid PK zip header."""
+    docx_bytes = b"PK\x03\x04\x14\x00\x06\x00word/document.xml sample docx content"
+    form_data = {
+        "topic_id": "1",
+        "type": "notes",
+        "title": "CS201 Syllabus Unit 1 Summary Document",
+        "semester": "3",
+    }
+    files = {
+        "file": (
+            "syllabus.docx",
+            docx_bytes,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    }
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".docx")
+
+
+@pytest.mark.asyncio
+async def test_upload_and_download_pptx_resource(client: AsyncClient, auth_headers: dict):
+    """Verify uploading a .pptx slide deck with valid PK header."""
+    pptx_bytes = b"PK\x03\x04\x14\x00\x06\x00ppt/presentation.xml slide deck content"
+    form_data = {
+        "topic_id": "1",
+        "type": "pdf",
+        "title": "CS201 Lecture 1 Slides Presentation",
+        "semester": "3",
+    }
+    files = {
+        "file": (
+            "lecture1.pptx",
+            pptx_bytes,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        )
+    }
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".pptx")
+
+
+@pytest.mark.asyncio
+async def test_upload_and_download_zip_archive(client: AsyncClient, auth_headers: dict):
+    """Verify uploading a .zip source code bundle."""
+    zip_bytes = b"PK\x03\x04\x0a\x00\x00\x00lab4_code.zip content archive"
+    form_data = {
+        "topic_id": "1",
+        "type": "lab_record",
+        "title": "CS201 Lab 4 Complete Source Code Bundle",
+        "semester": "3",
+    }
+    files = {"file": ("lab4_code.zip", zip_bytes, "application/zip")}
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".zip")
+
+
+@pytest.mark.asyncio
+async def test_upload_and_download_png_image(client: AsyncClient, auth_headers: dict):
+    """Verify uploading an educational diagram image (.png) with magic bytes."""
+    png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDRdiagram"
+    form_data = {
+        "topic_id": "1",
+        "type": "notes",
+        "title": "AVL Tree Rotation Architecture Diagram",
+        "semester": "3",
+    }
+    files = {"file": ("avl_diagram.png", png_bytes, "image/png")}
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".png")
+
+
+@pytest.mark.asyncio
+async def test_upload_and_download_markdown_guide(client: AsyncClient, auth_headers: dict):
+    """Verify uploading Markdown (.md) revision notes."""
+    md_bytes = b"# Asymptotic Analysis Cheat Sheet\n\n- O(1): Constant\n- O(N): Linear\n"
+    form_data = {
+        "topic_id": "1",
+        "type": "notes",
+        "title": "Big-O Notation Markdown Quick Guide",
+        "semester": "3",
+    }
+    files = {"file": ("big_o.md", md_bytes, "text/markdown")}
+    res = await client.post("/api/resources", data=form_data, files=files, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["file_url"].endswith(".md")
+
+
+@pytest.mark.asyncio
+async def test_pre_upload_duplicate_detection_api(client: AsyncClient, auth_headers: dict):
+    """Verify pre-upload duplicate check detects matching titles."""
+    res = await client.get(
+        "/api/resources/check-duplicate",
+        params={"title": "Data Structures", "topic_id": 1},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "has_duplicates" in data
+    assert isinstance(data["matches"], list)

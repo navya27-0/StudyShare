@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; font-weight: 700; }
+      .text-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; }
+      .text-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="680" fill="#050505"/>
+
+  <!-- Top Title -->
+  <text x="40" y="44" fill="#ffffff" font-family="-apple-system, sans-serif" font-size="20" font-weight="700">Adaptive Campus Modes &amp; Architectural Themes</text>
+  <text x="40" y="66" fill="#888888" font-family="-apple-system, sans-serif" font-size="12">Designed for university libraries, late-night cram sessions, and slow hostel Wi-Fi connections.</text>
+
+  <!-- Panel 1: High-Contrast Dark Mode -->
+  <g transform="translate(40, 90)">
+    <rect width="360" height="540" rx="8" fill="#000000" stroke="#222" stroke-width="1.5"/>
+    <rect width="360" height="38" rx="8" fill="#0a0a0a"/>
+    <circle cx="20" cy="19" r="4" fill="#ef4444"/>
+    <circle cx="34" cy="19" r="4" fill="#f59e0b"/>
+    <circle cx="48" cy="19" r="4" fill="#10b981"/>
+    <text x="70" y="24" fill="#ffffff" class="text-mono">DARK MODE (PITCH BLACK)</text>
+
+    <text x="24" y="70" fill="#ffffff" class="text-title">CS201 Data Structures</text>
+    <text x="24" y="90" fill="#888888" class="text-body">#000000 true black background optimizes OLED battery and eliminates eye fatigue during night study.</text>
+
+    <rect x="20" y="115" width="320" height="110" rx="4" fill="#0a0a0a" stroke="#262626" stroke-width="1"/>
+    <rect x="32" y="130" width="80" height="18" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
+    <text x="38" y="142" fill="#10b981" class="text-mono" font-weight="700">VERIFIED NOTE</text>
+    <text x="32" y="170" fill="#ffffff" class="text-title" font-size="13">Unit 2 AVL Rotations</text>
+    <text x="32" y="190" fill="#888888" class="text-body">Handwritten derivations • 14 pages</text>
+    <text x="32" y="210" fill="#f59e0b" class="text-mono">★ 4.9 (22) • ▲ 48 upvotes</text>
+
+    <rect x="20" y="240" width="320" height="110" rx="4" fill="#0a0a0a" stroke="#262626" stroke-width="1"/>
+    <rect x="32" y="255" width="80" height="18" rx="2" fill="rgba(245, 158, 11, 0.15)"/>
+    <text x="38" y="267" fill="#f59e0b" class="text-mono" font-weight="700">PAST PAPER</text>
+    <text x="32" y="295" fill="#ffffff" class="text-title" font-size="13">2024 Midterm Exam Solutions</text>
+    <text x="32" y="315" fill="#888888" class="text-body">Solved questions 1-6 • 8 pages</text>
+    <text x="32" y="335" fill="#f59e0b" class="text-mono">★ 4.8 (17) • ▲ 34 upvotes</text>
+
+    <!-- Key Stats Pill -->
+    <rect x="20" y="480" width="320" height="38" rx="4" fill="#141414" stroke="#333"/>
+    <text x="32" y="503" fill="#ffffff" class="text-mono">Contrast Ratio: 21:1 (AAA Max)</text>
+  </g>
+
+  <!-- Panel 2: Light Paper Mode -->
+  <g transform="translate(420, 90)">
+    <rect width="360" height="540" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+    <rect width="360" height="38" rx="8" fill="#edf2f7"/>
+    <circle cx="20" cy="19" r="4" fill="#cbd5e1"/>
+    <circle cx="34" cy="19" r="4" fill="#cbd5e1"/>
+    <circle cx="48" cy="19" r="4" fill="#cbd5e1"/>
+    <text x="70" y="24" fill="#09090b" class="text-mono">LIGHT PAPER MODE</text>
+
+    <text x="24" y="70" fill="#09090b" class="text-title">CS201 Data Structures</text>
+    <text x="24" y="90" fill="#64748b" class="text-body">Warm terracotta/slate paper palette designed for high ambient daylight reading and lecture halls.</text>
+
+    <rect x="20" y="115" width="320" height="110" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="32" y="130" width="80" height="18" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
+    <text x="38" y="142" fill="#059669" class="text-mono" font-weight="700">VERIFIED NOTE</text>
+    <text x="32" y="170" fill="#09090b" class="text-title" font-size="13">Unit 2 AVL Rotations</text>
+    <text x="32" y="190" fill="#64748b" class="text-body">Handwritten derivations • 14 pages</text>
+    <text x="32" y="210" fill="#d97706" class="text-mono">★ 4.9 (22) • ▲ 48 upvotes</text>
+
+    <rect x="20" y="240" width="320" height="110" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="32" y="255" width="80" height="18" rx="2" fill="rgba(245, 158, 11, 0.15)"/>
+    <text x="38" y="267" fill="#d97706" class="text-mono" font-weight="700">PAST PAPER</text>
+    <text x="32" y="295" fill="#09090b" class="text-title" font-size="13">2024 Midterm Exam Solutions</text>
+    <text x="32" y="315" fill="#64748b" class="text-body">Solved questions 1-6 • 8 pages</text>
+    <text x="32" y="335" fill="#d97706" class="text-mono">★ 4.8 (17) • ▲ 34 upvotes</text>
+
+    <rect x="20" y="480" width="320" height="38" rx="4" fill="#e2e8f0"/>
+    <text x="32" y="503" fill="#0f172a" class="text-mono">Zero Glare: Matte Paper (#F8FAFC)</text>
+  </g>
+
+  <!-- Panel 3: Low-Bandwidth Campus Lite Mode -->
+  <g transform="translate(800, 90)">
+    <rect width="360" height="540" rx="8" fill="#0a0a0a" stroke="#2b2b2b" stroke-width="1.5"/>
+    <rect width="360" height="38" rx="8" fill="#141414"/>
+    <circle cx="20" cy="19" r="4" fill="#10b981"/>
+    <text x="36" y="24" fill="#10b981" class="text-mono" font-weight="700">LOW-BANDWIDTH LITE MODE</text>
+
+    <text x="24" y="70" fill="#ffffff" class="text-title">Hostel Wi-Fi Optimization</text>
+    <text x="24" y="90" fill="#888888" class="text-body">Strips blurs, transitions, and CSS animations. Caches full curriculum taxonomy and bookmarks for offline resilience.</text>
+
+    <!-- Wireframe minimalist layout -->
+    <rect x="20" y="120" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
+    <text x="32" y="145" fill="#ffffff" class="text-mono" font-size="12">1. CS201 Unit 2 AVL Notes [PDF 2.4MB]</text>
+    <text x="32" y="165" fill="#10b981" class="text-mono">CACHED IN OFFLINE STORAGE (AVAILABLE)</text>
+
+    <rect x="20" y="190" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
+    <text x="32" y="215" fill="#ffffff" class="text-mono">2. CS201 Midterm Solutions [PDF 1.1MB]</text>
+    <text x="32" y="235" fill="#aaaaaa" class="text-mono">SAVED TO BOOKMARKS</text>
+
+    <rect x="20" y="260" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
+    <text x="32" y="285" fill="#ffffff" class="text-mono">3. CS201 Lab 4 C++ Source [45KB]</text>
+    <text x="32" y="305" fill="#aaaaaa" class="text-mono">OFFLINE BOOKMARK READY</text>
+
+    <rect x="20" y="480" width="320" height="38" rx="4" fill="#171717" stroke="#333"/>
+    <text x="32" y="503" fill="#10b981" class="text-mono">Payload: 0 kB Remote Calls / Offline Ready</text>
+  </g>
+</svg>
