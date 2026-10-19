@@ -48,7 +48,7 @@ services:
   # 2. React 19 Frontend Static Site
   - type: static
     name: studyshare-frontend
-    buildCommand: "cd frontend && npm install && npm run build"
+    buildCommand: "cd frontend && npm ci && npm run build"
     staticPublishPath: "./frontend/dist"
     routes:
       - type: rewrite

@@ -13,3 +13,4 @@ combine-as-imports = true
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "strict"
+addopts = "--cov=app --cov-fail-under=80"

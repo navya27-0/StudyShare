@@ -77,7 +77,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
         run: |
           cd backend
-          python -m pytest tests/ -v --cov=app --cov-report=term-missing
+          python -m pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=80
 
   frontend-ci:
     name: Frontend Lint, Test & Build
