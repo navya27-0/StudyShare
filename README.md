@@ -1,24 +1,24 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-50%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![Backend Tests](https://img.shields.io/badge/Pytest-56%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-8%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
-[![Code Coverage](https://img.shields.io/badge/Coverage-80%25-brightgreen?style=flat-square)](backend/tests/)
+[![Code Coverage](https://img.shields.io/badge/Coverage-82%25-brightgreen?style=flat-square)](backend/tests/)
 [![A11y Compliance](https://img.shields.io/badge/A11y-WCAG%202.1%20AA%20(100%25)-purple?style=flat-square)](frontend/src/styles/accessibility.css)
-[![Security Hardened](https://img.shields.io/badge/Security-HttpOnly%20Rotate%20%2B%20Magic%20Bytes-orange?style=flat-square)](backend/app/core/storage.py)
+[![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
 
 > **StudyShare is a high-speed, course-organized academic platform engineered for students and faculty to discover, verify, preview, and share syllabus-mapped study resources in under 10 seconds.**
 
 ---
 
-## Live Deployments & Demo Access
+## Deployment Architecture & Cloud Blueprints
 
-| Environment | URL / Target | Description |
+| Target / Blueprint | Configuration | Description |
 | :--- | :--- | :--- |
-| **Frontend Web App** | [`https://studyshare.pages.dev`](https://studyshare.pages.dev) | React 19 SPA deployed on Cloudflare Pages edge CDN |
-| **Backend REST API** | [`https://api.studyshare.internal/api/docs`](https://api.studyshare.internal/api/docs) | FastAPI OpenAPI / Swagger interactive documentation |
-| **Cloud Blueprint** | [`render.yaml`](render.yaml) | 1-Click Render.com deployment (FastAPI + Managed Postgres + Static Frontend) |
-| **Docker Compose** | [`infra/docker-compose.prod.yml`](infra/docker-compose.prod.yml) | Multi-container production deployment stack |
+| **Cloud Blueprint (Render)** | [`render.yaml`](render.yaml) | Full-stack blueprint: FastAPI backend with 10 GB persistent disk (`/app/uploads`), managed PostgreSQL 16, and static React 19 frontend with S3/R2 object storage slots |
+| **Production Compose** | [`infra/docker-compose.prod.yml`](infra/docker-compose.prod.yml) | Multi-container Docker deployment with PostgreSQL 16 health checks, volume persistence, and network isolation |
+| **API Namespace Design** | Reverse Proxy (`/api/...`) | Clean unified API namespace routing `/api/...` to the backend service and root traffic to the React SPA |
+| **Automated Database Backup** | [`infra/backup.sh`](infra/backup.sh) | Daily `pg_dump` cron script with 14-day retention cycle and automated status alerts |
 
 ### Demo Accounts (Seeded by [`python -m app.seed`](backend/app/seed.py))
 
@@ -35,16 +35,19 @@
 ### 1. Catalog Search & 4-Step Student Workflow
 ![Browse Catalog](docs/screenshots/browse-catalog.svg)
 
-### 2. Drag-and-Drop Uploader with Real-Time Duplicate Triage
+### 2. Student Dashboard, Saved Bookmarks & Peer Reputation
+![Student Dashboard](docs/screenshots/student-dashboard.svg)
+
+### 3. Drag-and-Drop Uploader with Real-Time Duplicate Triage
 ![Upload Workflow](docs/screenshots/upload-workflow.svg)
 
-### 3. In-Browser Document Preview & Revision Timeline
+### 4. In-Browser Document Preview & Revision Timeline
 ![Resource Preview](docs/screenshots/resource-preview.svg)
 
-### 4. Admin Review Portal, Metrics & Immutable Audit Trail
+### 5. Admin Review Portal, Metrics & Immutable Audit Trail
 ![Admin Moderation](docs/screenshots/admin-moderation.svg)
 
-### 5. Adaptive Campus Themes & Low-Bandwidth Lite Mode
+### 6. Adaptive Campus Themes & Low-Bandwidth Lite Mode
 ![Campus Themes](docs/screenshots/campus-themes.svg)
 
 ---
@@ -53,13 +56,14 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **58 Tests** | 50 backend async Pytests + 8 frontend Vitest component tests (100% passing) |
-| **Backend Code Coverage** | **80% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
-| **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite, docker validation |
+| **Automated Test Suite** | **64 Tests** | 56 backend async Pytests + 8 frontend Vitest component tests (100% passing) |
+| **Backend Code Coverage** | **82% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
+| **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
+| **Object Storage Engine** | **S3 / R2 & Local Disk** | Boto3 S3 provider with chunked streaming, SHA-256 integrity, magic-byte checks & presigned URLs |
 | **Streaming Upload Limit** | **50 MB** | Chunked 64 KB streaming pipeline with SHA-256 integrity hash & magic-byte scanning |
 | **Token Expiration Model** | **30m / 7d** | 30-minute in-memory/`sessionStorage` access token + 7-day `HttpOnly` refresh cookie rotation |
 | **Curriculum Database** | **PostgreSQL 16 & SQLite** | Multi-dialect asynchronous SQLAlchemy 2.0 ORM with native `_AgeInDays` SQL compiler |
-| **Seeded Academic Baseline** | **22 Resources** | 5 courses (`CS201`, `CS204`, `MA301`, etc.), 15 syllabus units, 30 topics, 3 user roles |
+| **Seeded Academic Baseline** | **13 Resources** | 4 subjects (`CS201`, `CS204`, `CS301`, `MA301`), 11 syllabus units, 14 topics, 5 user accounts |
 | **API Response Latency** | **&lt; 15 ms** | Sub-15ms local response time, sub-45ms containerized under Docker Compose |
 | **Accessibility Compliance** | **100% WCAG 2.1 AA** | High-contrast palettes, keyboard focus rings, semantic landmarks, screen-reader status |
 
@@ -216,7 +220,7 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (58 Passed Tests)
+## Test Suites Breakdown (64 Passed Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
@@ -224,12 +228,13 @@ erDiagram
 | **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 10 | PASSED | Registration, login, refresh rotation, inline unit/topic creation |
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
-| **Security, S3 & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 11 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, secrets |
+| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 11 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, secrets |
+| **Boto3 S3 Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, streaming tempfile, error handling |
 | **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 2 | PASSED | In-memory token isolation, sessionStorage sync, session clearing |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **58** | **100% PASS** | **80% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **64** | **100% PASS** | **82% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
@@ -247,7 +252,7 @@ app/core/logging.py              28     12    57%
 app/core/ranking.py              51      2    96%
 app/core/rate_limit.py           97     15    85%
 app/core/security.py             30      2    93%
-app/core/storage.py             182     59    68%
+app/core/storage.py             235     27    89%
 app/models/interactions.py       72      5    93%
 app/models/profile.py            20      1    95%
 app/models/resource.py           57      2    96%
@@ -258,7 +263,7 @@ app/schemas/auth.py              21      0   100%
 app/schemas/interactions.py      28      1    96%
 app/schemas/resource.py          64      0   100%
 -------------------------------------------------
-TOTAL                          1839    366    80%
+TOTAL                          1758    200    82%
 ```
 
 ---

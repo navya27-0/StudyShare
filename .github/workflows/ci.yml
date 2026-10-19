@@ -71,16 +71,16 @@ jobs:
           cd backend
           python -m app.seed
 
-      - name: Run Pytest Test Suite
+      - name: Run Pytest Test Suite with Coverage
         env:
           DATABASE_URL: postgresql+asyncpg://studyshare:studyshare_test@localhost:5432/studyshare_test_db
           PYTHONPATH: ${{ github.workspace }}/backend
         run: |
           cd backend
-          python -m pytest tests/ -v
+          python -m pytest tests/ -v --cov=app --cov-report=term-missing
 
   frontend-ci:
-    name: Frontend Lint & Build
+    name: Frontend Lint, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -103,6 +103,11 @@ jobs:
         run: |
           cd frontend
           npm run lint
+
+      - name: Run Frontend Tests (Vitest)
+        run: |
+          cd frontend
+          npm run test
 
       - name: Run TypeScript Check & Vite Build
         run: |

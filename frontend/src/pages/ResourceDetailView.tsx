@@ -630,9 +630,9 @@ export const ResourceDetailView: React.FC = () => {
       )}
 
       {/* Main Grid: Left content (68%) / Right sidebar (32%) */}
-      <div className="resource-detail-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '28px' }}>
+      <div className="resource-detail-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '28px', minWidth: 0, width: '100%' }}>
         {/* Left Column: Details, Preview, Versions */}
-        <div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           {/* Resource Title Header */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1359,7 +1359,7 @@ export const ResourceDetailView: React.FC = () => {
         </div>
 
         {/* Right Sidebar Column: Actions, Voting, Rating, Details */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%' }}>
           {/* Main Action Box */}
           <div
             style={{

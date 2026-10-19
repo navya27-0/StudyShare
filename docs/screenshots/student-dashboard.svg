@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
+      .surface-highlight { fill: #141414; stroke: #333333; stroke-width: 1; }
+      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
+      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .badge-verified { fill: #10b981; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
+      .badge-bg { fill: rgba(16, 185, 129, 0.1); stroke: rgba(16, 185, 129, 0.25); stroke-width: 1; rx: 3; }
+      .metric-val { fill: #ffffff; font-family: ui-monospace, monospace; font-size: 24px; font-weight: 700; }
+      .btn-primary { fill: #ffffff; rx: 4; }
+      .btn-primary-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+      .star { fill: #f59e0b; }
+      .border-hairline { stroke: #222222; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="680" class="bg"/>
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#080808" class="border-hairline"/>
+  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
+  <text x="145" y="34" class="text-mono">/ STUDENT DASHBOARD &amp; BOOKMARKS</text>
+
+  <rect x="1060" y="14" width="105" height="28" class="btn-primary"/>
+  <text x="1080" y="32" class="btn-primary-text">+ Upload Notes</text>
+
+  <!-- Left Sidebar Rail -->
+  <rect x="0" y="56" width="220" height="624" fill="#050505" class="border-hairline"/>
+  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">ACADEMIC CATALOG</text>
+  <text x="32" y="120" class="text-secondary">Find Resources</text>
+
+  <text x="24" y="160" class="text-mono" font-size="10" letter-spacing="1">PERSONAL</text>
+  <rect x="16" y="174" width="188" height="32" rx="3" class="surface-highlight"/>
+  <text x="32" y="195" class="text-primary" font-size="12">Student Dashboard</text>
+  <text x="32" y="235" class="text-secondary">My Bookmarks (12)</text>
+  <text x="32" y="270" class="text-secondary">Upload History</text>
+
+  <text x="24" y="320" class="text-mono" font-size="10" letter-spacing="1">CAMPUS MODES</text>
+  <rect x="24" y="336" width="170" height="26" rx="3" fill="#111111" stroke="#333333"/>
+  <circle cx="36" cy="349" r="4" fill="#10b981"/>
+  <text x="48" y="352" class="text-mono" fill="#cccccc">Comfortable Reading: ON</text>
+  <text x="32" y="385" class="text-secondary">Low-Bandwidth Lite: OFF</text>
+
+  <!-- Student Identity Banner -->
+  <g transform="translate(244, 76)">
+    <rect width="920" height="90" rx="6" class="surface"/>
+    <!-- Avatar -->
+    <rect x="20" y="18" width="54" height="54" rx="27" fill="#1f1f1f" stroke="#383838"/>
+    <text x="36" y="52" fill="#ffffff" font-family="ui-monospace, monospace" font-size="18" font-weight="700">AR</text>
+
+    <!-- Student Details -->
+    <text x="90" y="40" class="text-primary" font-size="18">Arvind Raman</text>
+    <rect x="215" y="25" width="85" height="20" rx="3" class="badge-bg"/>
+    <text x="224" y="39" class="badge-verified">TOP 5% PEER</text>
+
+    <text x="90" y="62" class="text-secondary">B.Tech Computer Science • Semester 3 • National Institute of Technology</text>
+    <text x="640" y="52" class="text-mono">REP SCORE: 145 PTS • MEMBER SINCE JULY 2026</text>
+  </g>
+
+  <!-- 4 Key Contributor & Engagement Metrics -->
+  <g transform="translate(244, 184)">
+    <!-- Metric 1: Reputation Points -->
+    <rect x="0" y="0" width="215" height="84" rx="4" class="surface"/>
+    <text x="20" y="28" class="text-mono">CONTRIBUTOR REPUTATION</text>
+    <text x="20" y="60" class="metric-val">145 <tspan font-size="13" fill="#10b981" font-weight="600">+25 this week</tspan></text>
+
+    <!-- Metric 2: Academic Uploads -->
+    <rect x="235" y="0" width="215" height="84" rx="4" class="surface"/>
+    <text x="255" y="28" class="text-mono">NOTES CONTRIBUTED</text>
+    <text x="255" y="60" class="metric-val">4 <tspan font-size="13" fill="#a3a3a3" font-weight="400">files (3 verified)</tspan></text>
+
+    <!-- Metric 3: Saved Bookmarks -->
+    <rect x="470" y="0" width="215" height="84" rx="4" class="surface"/>
+    <text x="490" y="28" class="text-mono">SAVED FOR EXAMS</text>
+    <text x="490" y="60" class="metric-val">12 <tspan font-size="13" fill="#a3a3a3" font-weight="400">bookmarked</tspan></text>
+
+    <!-- Metric 4: Peer Impact Views -->
+    <rect x="705" y="0" width="215" height="84" rx="4" class="surface"/>
+    <text x="725" y="28" class="text-mono">PEER STUDY VIEWS</text>
+    <text x="725" y="60" class="metric-val">1,280 <tspan font-size="13" fill="#10b981" font-weight="600">88 downloads</tspan></text>
+  </g>
+
+  <!-- Two Column Content: Left Bookmarks (580px), Right Activity Feed (320px) -->
+  <g transform="translate(244, 288)">
+    <!-- Left Column: Active Semester Bookmarks -->
+    <rect x="0" y="0" width="580" height="364" rx="6" class="surface"/>
+    <text x="20" y="32" class="text-primary" font-size="14">SAVED STUDY MATERIALS (EXAM REVISION)</text>
+    <text x="480" y="32" class="text-mono">12 TOTAL</text>
+
+    <!-- Bookmark Item 1 -->
+    <g transform="translate(20, 52)">
+      <rect width="540" height="68" rx="4" class="surface-highlight"/>
+      <rect x="12" y="14" width="40" height="40" rx="3" fill="#1f1f1f"/>
+      <text x="21" y="38" fill="#f59e0b" font-family="ui-monospace, monospace" font-size="10" font-weight="700">PDF</text>
+      <text x="64" y="30" class="text-primary" font-size="13">Banker's Algorithm: Resource Request Safety Test Solved Problems</text>
+      <text x="64" y="48" class="text-secondary">CS204 Operating Systems • Unit 3 Deadlocks • 4.8★ (33 ratings) • 105 views</text>
+    </g>
+
+    <!-- Bookmark Item 2 -->
+    <g transform="translate(20, 130)">
+      <rect width="540" height="68" rx="4" class="surface-highlight"/>
+      <rect x="12" y="14" width="40" height="40" rx="3" fill="#1f1f1f"/>
+      <text x="22" y="38" fill="#3b82f6" font-family="ui-monospace, monospace" font-size="10" font-weight="700">PY</text>
+      <text x="64" y="30" class="text-primary" font-size="13">Dijkstra Shortest Path Python Implementation &amp; Adjacency Matrix</text>
+      <text x="64" y="48" class="text-secondary">CS201 Data Structures • Lab Records • 5.0★ (18 ratings) • Verified Syllabus ✓</text>
+    </g>
+
+    <!-- Bookmark Item 3 -->
+    <g transform="translate(20, 208)">
+      <rect width="540" height="68" rx="4" class="surface-highlight"/>
+      <rect x="12" y="14" width="40" height="40" rx="3" fill="#1f1f1f"/>
+      <text x="21" y="38" fill="#f59e0b" font-family="ui-monospace, monospace" font-size="10" font-weight="700">PDF</text>
+      <text x="64" y="30" class="text-primary" font-size="13">Relational Calculus &amp; Normalization (1NF to BCNF) Master Handout</text>
+      <text x="64" y="48" class="text-secondary">CS301 Database Systems • Unit 2 Relational Model • 4.9★ (64 ratings)</text>
+    </g>
+
+    <!-- Bookmark Item 4 -->
+    <g transform="translate(20, 286)">
+      <rect width="540" height="62" rx="4" class="surface-highlight"/>
+      <rect x="12" y="12" width="38" height="38" rx="3" fill="#1f1f1f"/>
+      <text x="20" y="34" fill="#a855f7" font-family="ui-monospace, monospace" font-size="10" font-weight="700">ZIP</text>
+      <text x="64" y="28" class="text-primary" font-size="13">Midterm Solved Papers Collection (2022-2025 R22)</text>
+      <text x="64" y="46" class="text-secondary">MA301 Linear Algebra • PYQs • 14 MB Archive</text>
+    </g>
+
+    <!-- Right Column: Recent Contributor Activity Feed -->
+    <rect x="600" y="0" width="320" height="364" rx="6" class="surface"/>
+    <text x="620" y="32" class="text-primary" font-size="14">RECENT PEER ACTIVITY</text>
+
+    <!-- Activity Item 1 -->
+    <g transform="translate(620, 56)">
+      <circle cx="8" cy="14" r="5" fill="#10b981"/>
+      <text x="24" y="16" class="text-primary" font-size="12">Upvote Received (+10 Rep)</text>
+      <text x="24" y="32" class="text-secondary" font-size="11">Sneha Rao upvoted your CS201 Unit 2 Notes</text>
+      <text x="24" y="46" class="text-mono" font-size="10">2 hours ago</text>
+    </g>
+
+    <!-- Activity Item 2 -->
+    <g transform="translate(620, 126)">
+      <circle cx="8" cy="14" r="5" fill="#3b82f6"/>
+      <text x="24" y="16" class="text-primary" font-size="12">Faculty Verification (+50 Rep)</text>
+      <text x="24" y="32" class="text-secondary" font-size="11">Prof. Sharma verified syllabus alignment</text>
+      <text x="24" y="46" class="text-mono" font-size="10">Yesterday</text>
+    </g>
+
+    <!-- Activity Item 3 -->
+    <g transform="translate(620, 196)">
+      <circle cx="8" cy="14" r="5" fill="#f59e0b"/>
+      <text x="24" y="16" class="text-primary" font-size="12">Version Revision Published</text>
+      <text x="24" y="32" class="text-secondary" font-size="11">Ananya Patel uploaded v2 for OS Memory</text>
+      <text x="24" y="46" class="text-mono" font-size="10">3 days ago</text>
+    </g>
+
+    <!-- Activity Item 4 -->
+    <g transform="translate(620, 266)">
+      <circle cx="8" cy="14" r="5" fill="#a855f7"/>
+      <text x="24" y="16" class="text-primary" font-size="12">Milestone Achieved: 1,000 Views</text>
+      <text x="24" y="32" class="text-secondary" font-size="11">Your uploads crossed 1,000 student reads</text>
+      <text x="24" y="46" class="text-mono" font-size="10">5 days ago</text>
+    </g>
+  </g>
+</svg>

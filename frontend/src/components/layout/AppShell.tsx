@@ -1377,7 +1377,17 @@ export const AppShell: React.FC = () => {
           tabIndex={-1}
           key={location.pathname}
           className={`app-main-content mobile-nav-pad ${routeTransitionClass}`}
-          style={{ flex: 1, padding: '24px 28px', maxWidth: '1200px', width: '100%', margin: '0 auto', outline: 'none' }}
+          style={{
+            flex: 1,
+            padding: '24px 28px',
+            maxWidth: '1200px',
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
+            margin: '0 auto',
+            outline: 'none',
+            overflowX: 'hidden',
+          }}
         >
           <ErrorBoundary>
             <Outlet />

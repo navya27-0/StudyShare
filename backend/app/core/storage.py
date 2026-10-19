@@ -1,4 +1,6 @@
+import asyncio
 import hashlib
+import logging
 import os
 import uuid
 from abc import ABC, abstractmethod
@@ -8,6 +10,7 @@ from fastapi import HTTPException, UploadFile, status
 
 from app.config import get_settings
 
+logger = logging.getLogger("studyshare.storage")
 settings = get_settings()
 
 CHUNK_SIZE = 64 * 1024  # 64 KB streaming chunk size
@@ -312,6 +315,31 @@ class S3StorageProvider(StorageProvider):
         self.secret_access_key = secret_access_key or settings.S3_SECRET_ACCESS_KEY
         self.public_domain = public_domain or settings.S3_PUBLIC_DOMAIN
         self._local_fallback = LocalFileStorage()
+        self._client = None
+
+    def _get_client(self):
+        """Lazy-initialize boto3 S3 client with configured endpoint and credentials."""
+        if self._client is None:
+            import boto3
+
+            client_kwargs: dict[str, str | None] = {
+                "region_name": self.region_name,
+            }
+            if self.endpoint_url:
+                client_kwargs["endpoint_url"] = self.endpoint_url
+            if self.access_key_id and self.secret_access_key:
+                client_kwargs["aws_access_key_id"] = self.access_key_id
+                client_kwargs["aws_secret_access_key"] = self.secret_access_key
+            self._client = boto3.client("s3", **client_kwargs)
+        return self._client
+
+    def _compute_url(self, storage_key: str) -> str:
+        """Calculate publicly accessible URL or CDN endpoint for stored object."""
+        if self.public_domain:
+            return f"{self.public_domain.rstrip('/')}/{storage_key}"
+        if self.endpoint_url:
+            return f"{self.endpoint_url.rstrip('/')}/{self.bucket_name}/{storage_key}"
+        return f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{storage_key}"
 
     def _validate_extension(self, filename: str, content_type: str) -> str:
         ext = Path(filename).suffix.lower()
@@ -343,13 +371,29 @@ class S3StorageProvider(StorageProvider):
         storage_key = f"{safe_subfolder}/{unique_name}"
         digest = hashlib.sha256(file_content).hexdigest()
 
-        domain = (
-            self.public_domain or f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com"
-        )
-        file_url = f"{domain.rstrip('/')}/{storage_key}"
+        try:
+            client = self._get_client()
+            await asyncio.to_thread(
+                client.put_object,
+                Bucket=self.bucket_name,
+                Key=storage_key,
+                Body=file_content,
+                ContentType=content_type,
+            )
+        except Exception as exc:
+            logger.error(
+                "Failed to upload file to S3 bucket %s key %s: %s",
+                self.bucket_name,
+                storage_key,
+                exc,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Object storage service error: failed to persist file.",
+            ) from exc
 
         return StorageResult(
-            file_url=file_url,
+            file_url=self._compute_url(storage_key),
             file_size_bytes=len(file_content),
             storage_key=storage_key,
             sha256=digest,
@@ -374,38 +418,62 @@ class S3StorageProvider(StorageProvider):
         hasher = hashlib.sha256()
         total_bytes = 0
         first_chunk = True
-
-        while True:
-            chunk = await upload_file.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            if first_chunk:
-                validate_file_signature(chunk[:32], ext)
-                first_chunk = False
-            total_bytes += len(chunk)
-            if total_bytes > limit:
-                raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"File exceeds maximum allowed size of {limit // (1024 * 1024)} MB.",
-                )
-            hasher.update(chunk)
-
-        if first_chunk:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded file is empty.",
-            )
-
         safe_subfolder = Path(subfolder).name or "resources"
         unique_name = f"{uuid.uuid4().hex}{ext}"
         storage_key = f"{safe_subfolder}/{unique_name}"
-        domain = (
-            self.public_domain or f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com"
-        )
-        file_url = f"{domain.rstrip('/')}/{storage_key}"
+
+        temp_dir = Path(settings.UPLOAD_DIR) / "_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file_path = temp_dir / f"tmp_{uuid.uuid4().hex}{ext}"
+
+        try:
+            with open(temp_file_path, "wb") as buffer:
+                while True:
+                    chunk = await upload_file.read(CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    if first_chunk:
+                        validate_file_signature(chunk[:32], ext)
+                        first_chunk = False
+                    total_bytes += len(chunk)
+                    if total_bytes > limit:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=f"File exceeds maximum allowed size of {limit // (1024 * 1024)} MB.",
+                        )
+                    hasher.update(chunk)
+                    buffer.write(chunk)
+
+            if first_chunk:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Uploaded file is empty.",
+                )
+
+            client = self._get_client()
+            with open(temp_file_path, "rb") as body_stream:
+                body_bytes = body_stream.read()
+                await asyncio.to_thread(
+                    client.put_object,
+                    Bucket=self.bucket_name,
+                    Key=storage_key,
+                    Body=body_bytes,
+                    ContentType=content_type,
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Failed to stream upload to S3 key %s: %s", storage_key, exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Object storage service error: failed to stream file.",
+            ) from exc
+        finally:
+            if temp_file_path.exists():
+                temp_file_path.unlink(missing_ok=True)
 
         return StorageResult(
-            file_url=file_url,
+            file_url=self._compute_url(storage_key),
             file_size_bytes=total_bytes,
             storage_key=storage_key,
             sha256=hasher.hexdigest(),
@@ -414,7 +482,31 @@ class S3StorageProvider(StorageProvider):
     async def delete_file(self, storage_key: str) -> bool:
         if not (self.access_key_id and self.secret_access_key):
             return await self._local_fallback.delete_file(storage_key)
-        return True
+
+        clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
+        try:
+            client = self._get_client()
+            await asyncio.to_thread(
+                client.delete_object,
+                Bucket=self.bucket_name,
+                Key=clean_key,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Failed to delete S3 object key %s: %s", clean_key, exc)
+            return False
+
+    def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
+        """Generate a secure, time-limited presigned GET URL for private buckets."""
+        if not (self.access_key_id and self.secret_access_key):
+            return f"/uploads/{storage_key.removeprefix('/uploads/').lstrip('/')}"
+        clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
+        client = self._get_client()
+        return client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": self.bucket_name, "Key": clean_key},
+            ExpiresIn=expires_in,
+        )
 
 
 _local_storage_singleton = LocalFileStorage()

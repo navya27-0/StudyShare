@@ -110,6 +110,11 @@
               background-color 200ms ease,
               box-shadow 200ms ease;
   position: relative;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .daq-card:hover {
   transform: translateY(-2px);
@@ -291,6 +296,11 @@
   gap: 6px;
   position: relative;
   transition: border-color 160ms ease, transform 160ms ease;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .admin-metric-card:hover {
   border-color: var(--border-strong);
@@ -304,6 +314,8 @@
   letter-spacing: -0.02em;
   color: var(--text-primary);
   line-height: 1.1;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .admin-metric-label {
@@ -315,19 +327,26 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Admin Data Table */
 .admin-table-container {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background-color: var(--bg-surface);
+  box-sizing: border-box;
 }
 
 .admin-table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   text-align: left;
   font-size: 13.5px;
@@ -351,6 +370,8 @@
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   vertical-align: middle;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .admin-table tr:last-child td {
@@ -374,6 +395,10 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .daq-dropzone:hover,
 .daq-dropzone.drag-active {

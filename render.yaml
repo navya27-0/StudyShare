@@ -27,7 +27,23 @@ services:
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: "7"
       - key: STORAGE_BACKEND
-        value: local
+        value: s3
+      - key: S3_BUCKET_NAME
+        value: studyshare-academic-assets
+      - key: S3_REGION_NAME
+        value: us-east-1
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_DOMAIN
+        sync: false
+    disk:
+      name: studyshare-uploads
+      mountPath: /app/uploads
+      sizeGB: 10
 
   # 2. React 19 Frontend Static Site
   - type: static
