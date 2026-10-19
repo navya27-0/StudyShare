@@ -190,3 +190,80 @@ def test_rate_limiter_and_revoked_token_store_ttl_cleanup():
     limiter.record_failure("ip:127.0.0.1")
     limiter.reset("ip:127.0.0.1")
     assert "ip:127.0.0.1" not in limiter._failures
+
+
+def test_production_security_validation_fails_on_dev_secrets():
+    """
+    Verify that application configuration strictly prevents starting in production
+    with default development JWT secret, weak secret, or dev database credentials.
+    """
+    from app.config import Settings
+
+    # 1. Dev JWT secret in production must fail
+    with pytest.raises(ValueError, match="Production Startup Security Violation"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="studyshare_jwt_secret_dev_key_change_in_production_9e4f01a2",
+            DATABASE_URL="postgresql+asyncpg://produser:prodpass@db.example.com/db",
+            DEBUG=False,
+        )
+
+    # 2. Short / weak secret in production must fail
+    with pytest.raises(ValueError, match="at least 32 characters"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="too-short-secret",
+            DATABASE_URL="postgresql+asyncpg://produser:prodpass@db.example.com/db",
+            DEBUG=False,
+        )
+
+    # 3. Dev database credentials in production must fail
+    with pytest.raises(ValueError, match="DATABASE_URL contains default development credentials"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="c" * 36,
+            DATABASE_URL="postgresql+asyncpg://studyshare:studyshare_dev@localhost/db",
+            DEBUG=False,
+        )
+
+    # 4. Valid production settings must pass
+    valid_prod = Settings(
+        ENVIRONMENT="production",
+        JWT_SECRET_KEY="c" * 36,
+        DATABASE_URL="postgresql+asyncpg://produser:prodpass@db.example.com/db",
+        DEBUG=False,
+    )
+    assert valid_prod.ENVIRONMENT == "production"
+    assert valid_prod.DEBUG is False
+
+
+@pytest.mark.asyncio
+async def test_upload_academic_code_and_doc_extensions(client: AsyncClient, auth_headers: dict):
+    """
+    Verify that academic programming files (.py) with valid text content are supported,
+    while binary executables masquerading as .py are rejected.
+    """
+    form_data = {
+        "topic_id": "1",
+        "type": "lab_record",
+        "title": "Data Structures Dijkstra Python Implementation",
+        "semester": "3",
+    }
+
+    # 1. Valid python source code file
+    py_content = b'def dijkstra(graph, start):\n    """Sample implementation"""\n    return {}\n'
+    py_files = {"file": ("dijkstra.py", py_content, "text/x-python")}
+    res_py = await client.post(
+        "/api/resources", data=form_data, files=py_files, headers=auth_headers
+    )
+    assert res_py.status_code == 201, res_py.text
+    created = res_py.json()
+    assert created["file_url"].endswith(".py")
+
+    # 2. Binary content with null bytes disguised as python code should be rejected
+    bad_py = {"file": ("corrupt.py", b"def main():\x00\x00\x01\x02", "text/x-python")}
+    res_bad = await client.post(
+        "/api/resources", data=form_data, files=bad_py, headers=auth_headers
+    )
+    assert res_bad.status_code == 415
+    assert "Binary content detected" in res_bad.json()["detail"]

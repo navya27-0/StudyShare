@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +37,31 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """Strictly fail application initialization if production runs with insecure dev defaults."""
+        if self.ENVIRONMENT.lower() in ("production", "prod"):
+            errors: list[str] = []
+            if (
+                self.JWT_SECRET_KEY == "studyshare_jwt_secret_dev_key_change_in_production_9e4f01a2"
+                or "dev_key" in self.JWT_SECRET_KEY
+                or len(self.JWT_SECRET_KEY) < 32
+            ):
+                errors.append(
+                    "JWT_SECRET_KEY must be a unique, cryptographically strong secret of at least 32 characters in production."
+                )
+            if "studyshare_dev" in self.DATABASE_URL:
+                errors.append(
+                    "DATABASE_URL contains default development credentials ('studyshare_dev'). A secure managed database credential is required."
+                )
+            if self.DEBUG:
+                errors.append("DEBUG mode must be set to False in production.")
+
+            if errors:
+                raise ValueError("Production Startup Security Violation:\n- " + "\n- ".join(errors))
+
+        return self
 
 
 @lru_cache

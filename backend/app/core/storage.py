@@ -15,15 +15,37 @@ CHUNK_SIZE = 64 * 1024  # 64 KB streaming chunk size
 ALLOWED_CONTENT_TYPES = {
     "application/pdf": ".pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/msword": ".doc",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/vnd.ms-powerpoint": ".ppt",
     "text/plain": ".txt",
     "text/markdown": ".md",
     "image/png": ".png",
     "image/jpeg": ".jpg",
     "application/zip": ".zip",
+    "text/x-python": ".py",
+    "text/x-c": ".c",
+    "text/x-c++": ".cpp",
+    "text/x-java-source": ".java",
 }
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".zip"}
+ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".docx",
+    ".doc",
+    ".pptx",
+    ".ppt",
+    ".txt",
+    ".md",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".zip",
+    ".py",
+    ".c",
+    ".cpp",
+    ".java",
+}
 
 FORBIDDEN_SIGNATURES = (
     (b"MZ", "Windows PE/EXE executable"),
@@ -39,7 +61,11 @@ EXPECTED_MAGIC_BYTES: dict[str, tuple[bytes, ...]] = {
     ".zip": (b"PK\x03\x04", b"PK\x05\x06"),
     ".docx": (b"PK\x03\x04",),
     ".pptx": (b"PK\x03\x04",),
+    ".doc": (b"\xd0\xcf\x11\xe0",),
+    ".ppt": (b"\xd0\xcf\x11\xe0",),
 }
+
+TEXT_CODE_EXTENSIONS = {".txt", ".md", ".py", ".c", ".cpp", ".java"}
 
 
 def validate_file_signature(header_bytes: bytes, ext: str) -> None:
@@ -59,11 +85,19 @@ def validate_file_signature(header_bytes: bytes, ext: str) -> None:
                 detail=f"Executable content ({label}) is prohibited.",
             )
 
-    expected_prefixes = EXPECTED_MAGIC_BYTES.get(ext.lower())
+    ext_lower = ext.lower()
+    expected_prefixes = EXPECTED_MAGIC_BYTES.get(ext_lower)
     if expected_prefixes and not any(header_bytes.startswith(p) for p in expected_prefixes):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"File content signature does not match declared '{ext}' format.",
+        )
+
+    # For text and source code files, ensure no binary null-bytes in file header
+    if ext_lower in TEXT_CODE_EXTENSIONS and b"\x00" in header_bytes[:32]:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Binary content detected in text file '{ext}'. Plain text/UTF-8 is required.",
         )
 
 
@@ -158,7 +192,7 @@ class LocalFileStorage(StorageProvider):
         subfolder: str = "resources",
     ) -> StorageResult:
         ext = self._validate_extension(filename, content_type)
-        validate_file_signature(file_content[:16], ext)
+        validate_file_signature(file_content[:32], ext)
 
         safe_subfolder = Path(subfolder).name or "resources"
         unique_name = f"{uuid.uuid4().hex}{ext}"
@@ -205,7 +239,7 @@ class LocalFileStorage(StorageProvider):
                     if not chunk:
                         break
                     if first_chunk:
-                        validate_file_signature(chunk[:16], ext)
+                        validate_file_signature(chunk[:32], ext)
                         first_chunk = False
                     total_bytes += len(chunk)
                     if total_bytes > limit:
