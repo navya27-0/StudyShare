@@ -59,8 +59,8 @@
 | **Automated Test Suite** | **64 Tests** | 56 backend async Pytests + 8 frontend Vitest component tests (100% passing) |
 | **Backend Code Coverage** | **82% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
-| **Object Storage Engine** | **S3 / R2 & Local Disk** | Boto3 S3 provider with chunked streaming, SHA-256 integrity, magic-byte checks & presigned URLs |
-| **Streaming Upload Limit** | **50 MB** | Chunked 64 KB streaming pipeline with SHA-256 integrity hash & magic-byte scanning |
+| **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
+| **Upload Processing** | **50 MB Limit** | Chunked upload validation (64 KB chunks) with temporary-file staging, SHA-256 integrity check & magic-byte scanning |
 | **Token Expiration Model** | **30m / 7d** | 30-minute in-memory/`sessionStorage` access token + 7-day `HttpOnly` refresh cookie rotation |
 | **Curriculum Database** | **PostgreSQL 16 & SQLite** | Multi-dialect asynchronous SQLAlchemy 2.0 ORM with native `_AgeInDays` SQL compiler |
 | **Seeded Academic Baseline** | **13 Resources** | 4 subjects (`CS201`, `CS204`, `CS301`, `MA301`), 11 syllabus units, 14 topics, 5 user accounts |
@@ -229,7 +229,7 @@ erDiagram
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
 | **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 11 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, secrets |
-| **Boto3 S3 Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, streaming tempfile, error handling |
+| **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
 | **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 2 | PASSED | In-memory token isolation, sessionStorage sync, session clearing |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
