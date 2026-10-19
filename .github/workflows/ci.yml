@@ -123,7 +123,7 @@ jobs:
       - name: Validate Docker Compose Configs
         run: |
           docker compose -f infra/docker-compose.yml config
-          POSTGRES_PASSWORD=test_secret_pass JWT_SECRET_KEY=test_jwt_key docker compose -f infra/docker-compose.prod.yml config
+          POSTGRES_USER=studyshare POSTGRES_PASSWORD=test_secret_pass POSTGRES_DB=studyshare_prod_db CORS_ORIGINS=https://studyshare.pages.dev JWT_SECRET_KEY=test_jwt_key docker compose -f infra/docker-compose.prod.yml config
 
       - name: Build Backend Image
         run: |

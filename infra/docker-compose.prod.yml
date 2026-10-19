@@ -1,6 +1,6 @@
 # StudyShare Production Docker Compose Specification
 # Usage: docker compose -f infra/docker-compose.prod.yml up -d
-# Requires .env.production with strong credentials (no insecure dev defaults).
+# Requires environment variables or .env.production with strong credentials.
 
 services:
   postgres:
@@ -8,13 +8,13 @@ services:
     container_name: studyshare-prod-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required in production}
+      POSTGRES_USER: ${POSTGRES_USER:-studyshare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in production}
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required in production}
+      POSTGRES_DB: ${POSTGRES_DB:-studyshare_prod_db}
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studyshare} -d ${POSTGRES_DB:-studyshare_prod_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,8 +29,8 @@ services:
       ENVIRONMENT: production
       DEBUG: "False"
       BACKEND_PORT: 8000
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required in production}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studyshare}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-studyshare_prod_db}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://studyshare.pages.dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required in production}
     ports:
       - "8000:8000"
@@ -39,6 +39,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
