@@ -28,6 +28,17 @@ async def test_s3_fallback_when_credentials_omitted():
     deleted = await provider.delete_file(result.storage_key)
     assert deleted is True
 
+    # In production, missing credentials must fail-fast with HTTP 500
+    with patch("app.core.storage.settings.ENVIRONMENT", "production"):
+        with pytest.raises(HTTPException) as exc_info:
+            await provider.save_file(
+                file_content=b"%PDF-1.4\nProduction Test Content",
+                filename="prod_notes.pdf",
+                content_type="application/pdf",
+            )
+        assert exc_info.value.status_code == 500
+        assert "Production object storage is misconfigured" in exc_info.value.detail
+
 
 @pytest.mark.asyncio
 async def test_s3_save_file_calls_put_object_and_computes_url():

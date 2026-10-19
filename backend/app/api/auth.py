@@ -3,6 +3,7 @@ from typing import Annotated
 import jwt
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -67,7 +68,7 @@ async def signup(
     # 2. Hash password securely
     hashed_pwd = hash_password(signup_data.password)
 
-    # 3. Create User record
+    # 3. Create User record and profile within concurrency-safe transaction
     new_user = User(
         email=email_clean,
         hashed_password=hashed_pwd,
@@ -76,23 +77,30 @@ async def signup(
         is_active=True,
         is_superuser=False,
     )
-    db.add(new_user)
-    await db.flush()
+    try:
+        db.add(new_user)
+        await db.flush()
 
-    # 4. Automatically create associated ContributorProfile
-    new_profile = ContributorProfile(
-        user_id=new_user.id,
-        bio=signup_data.bio.strip() if signup_data.bio else None,
-        semester=signup_data.semester,
-        department=signup_data.department.strip()
-        if signup_data.department
-        else "Computer Science & Engineering",
-        reputation_points=10,  # Welcome points on registration
-        total_uploads=0,
-        total_upvotes_received=0,
-    )
-    db.add(new_profile)
-    await db.commit()
+        # 4. Automatically create associated ContributorProfile
+        new_profile = ContributorProfile(
+            user_id=new_user.id,
+            bio=signup_data.bio.strip() if signup_data.bio else None,
+            semester=signup_data.semester,
+            department=signup_data.department.strip()
+            if signup_data.department
+            else "Computer Science & Engineering",
+            reputation_points=10,  # Welcome points on registration
+            total_uploads=0,
+            total_upvotes_received=0,
+        )
+        db.add(new_profile)
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email address is already registered.",
+        ) from exc
 
     # 5. Reload user with loaded profile for response serialization
     result = await db.execute(

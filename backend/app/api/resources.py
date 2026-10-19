@@ -1,3 +1,4 @@
+import logging
 import math
 from datetime import UTC, datetime
 from typing import Annotated
@@ -14,6 +15,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,7 +23,7 @@ from app.api.deps import get_client_ip, get_current_user, get_optional_current_u
 from app.config import get_settings
 from app.core.ranking import compute_ranking_score, get_ranking_sql_expression
 from app.core.rate_limit import counter_deduplicator
-from app.core.storage import StorageProvider, get_storage_provider
+from app.core.storage import StorageProvider, StorageResult, get_storage_provider
 from app.database import get_db_session
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
 from app.models.interactions import Bookmark, Rating, Report, Vote
@@ -56,6 +58,21 @@ from app.schemas.resource import (
 
 router = APIRouter(tags=["Resources"])
 settings = get_settings()
+logger = logging.getLogger("studyshare.resources")
+
+
+async def _get_active_resource_or_404(
+    db: AsyncSession,
+    resource_id: int,
+) -> Resource:
+    """Load a resource by ID and verify it has not been soft-deleted by moderation."""
+    resource = await db.get(Resource, resource_id)
+    if not resource or resource.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource with ID {resource_id} was not found.",
+        )
+    return resource
 
 
 def _build_breadcrumbs(topic: Topic) -> BreadcrumbHierarchy:
@@ -424,9 +441,16 @@ async def create_unit(
         title=payload.title.strip(),
         ordering=unit_num,
     )
-    db.add(new_unit)
-    await db.commit()
-    await db.refresh(new_unit)
+    try:
+        db.add(new_unit)
+        await db.commit()
+        await db.refresh(new_unit)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Unit {unit_num} already exists in this subject.",
+        ) from exc
     return UnitBriefResponse.model_validate(new_unit)
 
 
@@ -452,9 +476,16 @@ async def create_topic(
         title=payload.title.strip(),
         ordering=max_order + 1,
     )
-    db.add(new_topic)
-    await db.commit()
-    await db.refresh(new_topic)
+    try:
+        db.add(new_topic)
+        await db.commit()
+        await db.refresh(new_topic)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Topic '{payload.title}' already exists or conflicts in this unit.",
+        ) from exc
     return TopicBriefResponse.model_validate(new_topic)
 
 
@@ -622,6 +653,7 @@ async def create_resource(
     # 2. File and URL Handling
     file_url: str
     file_size_bytes: int | None = None
+    storage_result: StorageResult | None = None
 
     if type == ResourceType.LINK:
         if not external_url or not external_url.strip():
@@ -646,54 +678,67 @@ async def create_resource(
         file_url = storage_result.file_url
         file_size_bytes = storage_result.file_size_bytes
 
-    # 3. Create Resource Record
-    new_resource = Resource(
-        topic_id=topic_id,
-        uploader_id=current_user.id,
-        type=type,
-        title=title.strip(),
-        description=description.strip() if description else None,
-        file_url=file_url,
-        file_size_bytes=file_size_bytes,
-        page_count=page_count,
-        semester=semester,
-        upvotes_count=0,
-        downvotes_count=0,
-        rating_avg=0.0,
-        rating_count=0,
-        views_count=0,
-        downloads_count=0,
-        is_verified=False,
-    )
-    db.add(new_resource)
-    await db.flush()
+    # 3. Create Resource Record with transaction rollback and orphaned file cleanup
+    try:
+        new_resource = Resource(
+            topic_id=topic_id,
+            uploader_id=current_user.id,
+            type=type,
+            title=title.strip(),
+            description=description.strip() if description else None,
+            file_url=file_url,
+            file_size_bytes=file_size_bytes,
+            page_count=page_count,
+            semester=semester,
+            upvotes_count=0,
+            downvotes_count=0,
+            rating_avg=0.0,
+            rating_count=0,
+            views_count=0,
+            downloads_count=0,
+            is_verified=False,
+        )
+        db.add(new_resource)
+        await db.flush()
 
-    # 4. Create Initial Version (Version 1)
-    initial_version = ResourceVersion(
-        resource_id=new_resource.id,
-        version_number=1,
-        file_url=file_url,
-        changelog=changelog.strip() if changelog else "Initial upload",
-        uploaded_by=current_user.id,
-        file_size_bytes=file_size_bytes,
-        page_count=page_count,
-    )
-    db.add(initial_version)
-    await db.flush()
+        # 4. Create Initial Version (Version 1)
+        initial_version = ResourceVersion(
+            resource_id=new_resource.id,
+            version_number=1,
+            file_url=file_url,
+            changelog=changelog.strip() if changelog else "Initial upload",
+            uploaded_by=current_user.id,
+            file_size_bytes=file_size_bytes,
+            page_count=page_count,
+        )
+        db.add(initial_version)
+        await db.flush()
 
-    # 5. Link current version
-    new_resource.current_version_id = initial_version.id
+        # 5. Link current version
+        new_resource.current_version_id = initial_version.id
 
-    # 6. Update Contributor Profile Stats
-    prof_stmt = select(ContributorProfile).where(ContributorProfile.user_id == current_user.id)
-    prof_res = await db.execute(prof_stmt)
-    profile = prof_res.scalar_one_or_none()
-    if profile:
-        profile.total_uploads += 1
-        profile.reputation_points += 15  # 15 reputation points for publishing study material
+        # 6. Update Contributor Profile Stats
+        prof_stmt = select(ContributorProfile).where(ContributorProfile.user_id == current_user.id)
+        prof_res = await db.execute(prof_stmt)
+        profile = prof_res.scalar_one_or_none()
+        if profile:
+            profile.total_uploads += 1
+            profile.reputation_points += 15  # 15 reputation points for publishing study material
 
-    res_id = new_resource.id
-    await db.commit()
+        res_id = new_resource.id
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        if storage_result and storage_result.storage_key:
+            try:
+                await storage.delete_file(storage_result.storage_key)
+            except Exception as cleanup_err:
+                logger.warning(
+                    "Failed to clean up orphaned upload file %s: %s",
+                    storage_result.storage_key,
+                    cleanup_err,
+                )
+        raise
 
     # Reload complete resource
     return await get_resource(res_id, request, db, current_user)
@@ -726,7 +771,7 @@ async def update_resource(
     result = await db.execute(stmt)
     resource = result.scalar_one_or_none()
 
-    if not resource:
+    if not resource or resource.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Resource with ID {resource_id} was not found.",
@@ -749,6 +794,7 @@ async def update_resource(
     # 4. Handle file / link update
     file_url = resource.file_url
     file_size_bytes = resource.file_size_bytes
+    storage_result: StorageResult | None = None
 
     if resource.type == ResourceType.LINK:
         if external_url and external_url.strip():
@@ -763,36 +809,49 @@ async def update_resource(
         file_url = storage_result.file_url
         file_size_bytes = storage_result.file_size_bytes
 
-    # 5. Create new ResourceVersion record
-    new_version = ResourceVersion(
-        resource_id=resource.id,
-        version_number=next_ver_number,
-        file_url=file_url,
-        changelog=changelog.strip(),
-        uploaded_by=current_user.id,
-        file_size_bytes=file_size_bytes,
-        page_count=page_count if page_count is not None else resource.page_count,
-    )
-    db.add(new_version)
-    await db.flush()
+    # 5. Create new ResourceVersion record and update metadata with rollback cleanup
+    try:
+        new_version = ResourceVersion(
+            resource_id=resource.id,
+            version_number=next_ver_number,
+            file_url=file_url,
+            changelog=changelog.strip(),
+            uploaded_by=current_user.id,
+            file_size_bytes=file_size_bytes,
+            page_count=page_count if page_count is not None else resource.page_count,
+        )
+        db.add(new_version)
+        await db.flush()
 
-    # 6. Update resource pointer and metadata
-    if resource.versions is not None:
-        resource.versions.append(new_version)
-    resource.current_version = new_version
-    resource.current_version_id = new_version.id
-    resource.file_url = file_url
-    resource.file_size_bytes = file_size_bytes
-    if page_count is not None:
-        resource.page_count = page_count
-    if title and title.strip():
-        resource.title = title.strip()
-    if description is not None:
-        resource.description = description.strip() if description.strip() else None
-    resource.updated_at = datetime.now(UTC)
+        # 6. Update resource pointer and metadata
+        if resource.versions is not None:
+            resource.versions.append(new_version)
+        resource.current_version = new_version
+        resource.current_version_id = new_version.id
+        resource.file_url = file_url
+        resource.file_size_bytes = file_size_bytes
+        if page_count is not None:
+            resource.page_count = page_count
+        if title and title.strip():
+            resource.title = title.strip()
+        if description is not None:
+            resource.description = description.strip() if description.strip() else None
+        resource.updated_at = datetime.now(UTC)
 
-    res_id = resource.id
-    await db.commit()
+        res_id = resource.id
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        if storage_result and storage_result.storage_key:
+            try:
+                await storage.delete_file(storage_result.storage_key)
+            except Exception as cleanup_err:
+                logger.warning(
+                    "Failed to clean up orphaned update upload file %s: %s",
+                    storage_result.storage_key,
+                    cleanup_err,
+                )
+        raise
 
     return await get_resource(res_id, request, db, current_user)
 
@@ -818,13 +877,8 @@ async def vote_resource(
     Vote counters on the Resource and uploader ContributorProfile are atomically
     recomputed and persisted.
     """
-    # 1. Verify resource exists
-    resource = await db.get(Resource, resource_id)
-    if not resource:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource with ID {resource_id} was not found.",
-        )
+    # 1. Verify resource exists and is active (not soft-deleted)
+    resource = await _get_active_resource_or_404(db, resource_id)
 
     # 2. Check existing vote for (user_id, resource_id)
     vote_stmt = select(Vote).where(Vote.user_id == current_user.id, Vote.resource_id == resource_id)
@@ -910,12 +964,7 @@ async def rate_resource(
     Upserts the rating for the authenticated user and recomputes the resource's
     rating_avg and rating_count.
     """
-    resource = await db.get(Resource, resource_id)
-    if not resource:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource with ID {resource_id} was not found.",
-        )
+    resource = await _get_active_resource_or_404(db, resource_id)
 
     rating_stmt = select(Rating).where(
         Rating.user_id == current_user.id, Rating.resource_id == resource_id
@@ -972,12 +1021,7 @@ async def bookmark_resource(
     Bookmark a resource for quick access in the user's library.
     Idempotent: if already bookmarked, returns bookmarked=True.
     """
-    resource = await db.get(Resource, resource_id)
-    if not resource:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource with ID {resource_id} was not found.",
-        )
+    await _get_active_resource_or_404(db, resource_id)
 
     bm_stmt = select(Bookmark).where(
         Bookmark.user_id == current_user.id, Bookmark.resource_id == resource_id
@@ -1049,12 +1093,7 @@ async def report_resource(
     Submit a moderation report for a resource with a detailed reason.
     Status defaults to 'open' for moderator review.
     """
-    resource = await db.get(Resource, resource_id)
-    if not resource:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource with ID {resource_id} was not found.",
-        )
+    await _get_active_resource_or_404(db, resource_id)
 
     report = Report(
         resource_id=resource_id,
@@ -1087,12 +1126,7 @@ async def record_download(
     """
     Increment download counter on resource with per-user/per-IP deduplication.
     """
-    resource = await db.get(Resource, resource_id)
-    if not resource or resource.is_deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource with ID {resource_id} was not found.",
-        )
+    resource = await _get_active_resource_or_404(db, resource_id)
 
     actor_key = f"user:{current_user.id}" if current_user else f"ip:{get_client_ip(request)}"
     if counter_deduplicator.should_increment(actor_key, resource_id, "download"):

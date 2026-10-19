@@ -362,6 +362,14 @@ class S3StorageProvider(StorageProvider):
         ext = self._validate_extension(filename, content_type)
         validate_file_signature(file_content[:32], ext)
         if not (self.access_key_id and self.secret_access_key):
+            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+                logger.critical(
+                    "S3 storage backend configured in production but S3 credentials are missing."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Production object storage is misconfigured: S3 credentials are required.",
+                )
             return await self._local_fallback.save_file(
                 file_content, filename, content_type, subfolder
             )
@@ -406,6 +414,14 @@ class S3StorageProvider(StorageProvider):
         max_size_bytes: int | None = None,
     ) -> StorageResult:
         if not (self.access_key_id and self.secret_access_key):
+            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+                logger.critical(
+                    "S3 storage backend configured in production but S3 credentials are missing."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Production object storage is misconfigured: S3 credentials are required.",
+                )
             return await self._local_fallback.save_upload_file(
                 upload_file, subfolder, max_size_bytes
             )
@@ -481,6 +497,14 @@ class S3StorageProvider(StorageProvider):
 
     async def delete_file(self, storage_key: str) -> bool:
         if not (self.access_key_id and self.secret_access_key):
+            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+                logger.critical(
+                    "S3 storage backend configured in production but S3 credentials are missing."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Production object storage is misconfigured: S3 credentials are required.",
+                )
             return await self._local_fallback.delete_file(storage_key)
 
         clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
@@ -499,6 +523,14 @@ class S3StorageProvider(StorageProvider):
     def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
         """Generate a secure, time-limited presigned GET URL for private buckets."""
         if not (self.access_key_id and self.secret_access_key):
+            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+                logger.critical(
+                    "S3 storage backend configured in production but S3 credentials are missing."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Production object storage is misconfigured: S3 credentials are required.",
+                )
             return f"/uploads/{storage_key.removeprefix('/uploads/').lstrip('/')}"
         clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
         client = self._get_client()

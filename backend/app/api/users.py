@@ -153,15 +153,20 @@ async def get_user_bookmarks(
             detail=f"User with ID {user_id} was not found.",
         )
 
-    # 2. Total bookmarks count
-    count_stmt = select(func.count(Bookmark.id)).where(Bookmark.user_id == user_id)
+    # 2. Total bookmarks count (excluding soft-deleted resources)
+    count_stmt = (
+        select(func.count(Bookmark.id))
+        .join(Bookmark.resource)
+        .where(Bookmark.user_id == user_id, Resource.is_deleted.is_(False))
+    )
     total = (await db.execute(count_stmt)).scalar_one()
 
     # 3. Query bookmarks with eager-loaded Resource and its dependencies
     offset = (page - 1) * page_size
     stmt = (
         select(Bookmark)
-        .where(Bookmark.user_id == user_id)
+        .join(Bookmark.resource)
+        .where(Bookmark.user_id == user_id, Resource.is_deleted.is_(False))
         .order_by(Bookmark.created_at.desc())
         .offset(offset)
         .limit(page_size)

@@ -124,6 +124,37 @@ async def test_admin_reports_and_moderation_lifecycle(
     pub_res = await client.get(f"/api/resources/{resource_id}")
     assert pub_res.status_code == 404
 
+    # Verify all interactions on soft-deleted resource fail fast with 404
+    vote_res = await client.post(
+        f"/api/resources/{resource_id}/vote", json={"value": "up"}, headers=admin_auth_headers
+    )
+    assert vote_res.status_code == 404
+
+    rate_res = await client.post(
+        f"/api/resources/{resource_id}/rating", json={"stars": 5}, headers=admin_auth_headers
+    )
+    assert rate_res.status_code == 404
+
+    bm_res = await client.post(f"/api/resources/{resource_id}/bookmark", headers=admin_auth_headers)
+    assert bm_res.status_code == 404
+
+    rep_res = await client.post(
+        f"/api/resources/{resource_id}/report",
+        json={"reason": "Attempting report on deleted resource"},
+        headers=admin_auth_headers,
+    )
+    assert rep_res.status_code == 404
+
+    dl_res = await client.post(f"/api/resources/{resource_id}/download")
+    assert dl_res.status_code == 404
+
+    upd_res = await client.put(
+        f"/api/resources/{resource_id}",
+        data={"changelog": "Attempting update on deleted resource"},
+        headers=admin_auth_headers,
+    )
+    assert upd_res.status_code == 404
+
     # 4. Restore resource
     restore_res = await client.post(
         f"/api/admin/resources/{resource_id}/restore",
