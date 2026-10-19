@@ -1,0 +1,14 @@
+[run]
+source = app
+concurrency = greenlet, thread
+omit =
+    app/seed.py
+    tests/*
+
+[report]
+show_missing = True
+fail_under = 80
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:

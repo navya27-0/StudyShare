@@ -13,4 +13,22 @@ combine-as-imports = true
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "strict"
-addopts = "--cov=app --cov-fail-under=80"
+addopts = "--cov=app --cov-config=.coveragerc --cov-fail-under=80"
+
+[tool.coverage.run]
+source = ["app"]
+concurrency = ["greenlet", "thread"]
+omit = [
+    "app/seed.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
