@@ -1,108 +1,285 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="100%" height="100%">
   <defs>
+    <filter id="adminShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+    <linearGradient id="adminCardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141416"/>
+      <stop offset="100%" stop-color="#0b0b0d"/>
+    </linearGradient>
     <style>
-      .bg { fill: #000000; }
-      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
-      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
-      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
-      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
-      .badge-danger { fill: #f43f5e; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
-      .badge-verified { fill: #10b981; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; }
-      .btn-danger { fill: rgba(244, 63, 94, 0.15); stroke: rgba(244, 63, 94, 0.4); stroke-width: 1; rx: 3; }
-      .btn-success { fill: rgba(16, 185, 129, 0.15); stroke: rgba(16, 185, 129, 0.4); stroke-width: 1; rx: 3; }
-      .table-header { fill: #121212; stroke: #262626; stroke-width: 1; }
+      .txt-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .txt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .txt-bold { font-weight: 700; fill: #ffffff; }
+      .txt-sub { fill: #a1a1aa; font-size: 13px; }
+      .txt-muted { fill: #71717a; font-size: 11px; }
     </style>
   </defs>
 
-  <rect width="1200" height="680" class="bg"/>
+  <!-- Ambient Backdrop Canvas -->
+  <rect width="1280" height="820" fill="#030303"/>
+  <circle cx="640" cy="120" r="420" fill="#27272a" opacity="0.16" filter="blur(90px)"/>
 
-  <!-- Top App Navigation Bar -->
-  <rect x="0" y="0" width="1200" height="56" fill="#080808" stroke="#222" stroke-width="1"/>
-  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
-  <text x="145" y="34" class="text-mono">/ FACULTY &amp; ADMIN MODERATION</text>
+  <!-- Desktop App Window Frame with Elevation -->
+  <g filter="url(#adminShadow)">
+    <rect x="30" y="25" width="1220" height="770" rx="12" fill="#09090b" stroke="#27272a" stroke-width="1.2"/>
 
-  <!-- Left Sidebar Rail -->
-  <rect x="0" y="56" width="220" height="624" fill="#050505" stroke="#222" stroke-width="1"/>
-  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">MODERATION PORTAL</text>
-  <rect x="16" y="104" width="188" height="32" rx="3" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="32" y="124" class="text-primary" font-size="12">Admin Review (2)</text>
-  <text x="32" y="160" class="text-secondary">User Management</text>
-  <text x="32" y="196" class="text-secondary">Audit Event Trail</text>
-  <text x="32" y="232" class="text-secondary">&lt; Back to Catalog</text>
+    <!-- Window Title Bar & Navigation Chrome -->
+    <path d="M 30 37 Q 30 25 42 25 L 1238 25 Q 1250 25 1250 37 L 1250 68 L 30 68 Z" fill="#121215" stroke="#27272a" stroke-width="0.8"/>
+    <!-- macOS Window Traffic Lights -->
+    <circle cx="56" cy="46" r="6" fill="#ef4444"/>
+    <circle cx="76" cy="46" r="6" fill="#f59e0b"/>
+    <circle cx="96" cy="46" r="6" fill="#10b981"/>
 
-  <!-- Metrics Overview Bar (4 Cards) -->
-  <rect x="250" y="80" width="210" height="72" rx="4" class="surface"/>
-  <text x="270" y="104" class="text-mono">OPEN REPORTS</text>
-  <text x="270" y="136" class="text-primary" font-size="24" fill="#f43f5e">2</text>
-  <text x="300" y="134" class="text-mono">pending review</text>
+    <!-- Address / Breadcrumb Bar -->
+    <rect x="360" y="34" width="560" height="26" rx="6" fill="#09090b" stroke="#27272a"/>
+    <circle cx="378" cy="47" r="3.5" fill="none" stroke="#71717a" stroke-width="1.2"/>
+    <path d="M 378 41 L 378 44" stroke="#71717a" stroke-width="1.2"/>
+    <text x="394" y="51" class="txt-sans txt-mono" font-size="11" fill="#a1a1aa">https://studyshare.edu/admin/moderation</text>
 
-  <rect x="480" y="80" width="210" height="72" rx="4" class="surface"/>
-  <text x="500" y="104" class="text-mono">GOVERNED ASSETS</text>
-  <text x="500" y="136" class="text-primary" font-size="24">22</text>
-  <text x="545" y="134" class="text-mono">published</text>
+    <!-- Top App Navigation Header -->
+    <g transform="translate(30, 68)">
+      <rect width="1220" height="52" fill="#0d0d10" stroke="#1f1f23" stroke-width="1"/>
+      <text x="24" y="32" class="txt-sans txt-bold" font-size="16" letter-spacing="2">STUDYSHARE</text>
+      <g transform="translate(148, 18)">
+        <rect width="168" height="20" rx="3" fill="rgba(244, 63, 94, 0.12)" stroke="rgba(244, 63, 94, 0.3)" stroke-width="0.8"/>
+        <text x="8" y="14" class="txt-mono" font-size="10" font-weight="700" fill="#f43f5e">FACULTY ADMIN PORTAL</text>
+      </g>
 
-  <rect x="710" y="80" width="210" height="72" rx="4" class="surface"/>
-  <text x="730" y="104" class="text-mono">VERIFIED RESOURCES</text>
-  <text x="730" y="136" class="text-primary" font-size="24" fill="#10b981">18</text>
-  <text x="775" y="134" class="text-mono">82% syllabus score</text>
+      <!-- User Role Indicator Right -->
+      <g transform="translate(1010, 14)">
+        <circle cx="14" cy="12" r="10" fill="#27272a"/>
+        <text x="10" y="16" class="txt-sans" font-size="11" font-weight="700" fill="#ffffff">P</text>
+        <text x="32" y="12" class="txt-sans" font-size="12" font-weight="600" fill="#ffffff">Prof. Sharma</text>
+        <text x="32" y="24" class="txt-mono" font-size="9" fill="#10b981">CAMPUS MODERATOR</text>
+      </g>
+    </g>
 
-  <rect x="940" y="80" width="210" height="72" rx="4" class="surface"/>
-  <text x="960" y="104" class="text-mono">REGISTERED STUDENTS</text>
-  <text x="960" y="136" class="text-primary" font-size="24">4</text>
-  <text x="990" y="134" class="text-mono">0 banned</text>
+    <!-- Main Admin Workspace Layout -->
+    <g transform="translate(30, 120)">
+      <!-- Left Sidebar Navigation Rail (220px wide) -->
+      <g>
+        <rect width="210" height="675" fill="#0c0c0e" stroke="#1f1f23" stroke-width="1"/>
+        <g transform="translate(16, 20)">
+          <text x="0" y="10" class="txt-mono" font-size="10" font-weight="700" fill="#71717a">ADMIN NAVIGATION</text>
 
-  <!-- Reports Moderation Queue Table -->
-  <rect x="250" y="174" width="900" height="260" rx="4" class="surface"/>
-  <rect x="250" y="174" width="900" height="36" class="table-header"/>
-  <text x="270" y="197" class="text-mono">RESOURCE</text>
-  <text x="580" y="197" class="text-mono">REPORTED REASON</text>
-  <text x="820" y="197" class="text-mono">FLAGGED BY</text>
-  <text x="960" y="197" class="text-mono">MODERATOR ACTIONS</text>
+          <!-- Nav Item 1: Active Review Queue -->
+          <g transform="translate(0, 24)">
+            <rect width="178" height="34" rx="4" fill="#18181b" stroke="#27272a"/>
+            <text x="12" y="21" class="txt-sans" font-size="12.5" font-weight="600" fill="#ffffff">Admin Review</text>
+            <rect x="142" y="8" width="22" height="18" rx="9" fill="#f43f5e"/>
+            <text x="150" y="20" class="txt-mono" font-size="10" font-weight="700" fill="#ffffff">2</text>
+          </g>
 
-  <!-- Row 1 -->
-  <text x="270" y="234" class="text-primary" font-size="13">CS201 Unit 2 Syllabus Question Bank (Old 2021 Format)</text>
-  <text x="270" y="252" class="text-mono">ID #9 • Uploaded by Dev Kumar</text>
-  <text x="580" y="234" class="text-secondary">"Contains outdated 2021 curriculum questions"</text>
-  <text x="820" y="234" class="text-secondary">Sneha Rao</text>
-  <rect x="960" y="222" width="75" height="24" class="btn-success"/>
-  <text x="975" y="238" fill="#10b981" font-size="10" font-family="monospace" font-weight="700">VERIFY</text>
-  <rect x="1045" y="222" width="85" height="24" class="btn-danger"/>
-  <text x="1055" y="238" fill="#f43f5e" font-size="10" font-family="monospace" font-weight="700">SOFT DELETE</text>
+          <!-- Nav Item 2: User Directory -->
+          <g transform="translate(0, 68)">
+            <text x="12" y="18" class="txt-sans" font-size="12.5" fill="#a1a1aa">User Accounts</text>
+            <text x="146" y="18" class="txt-mono" font-size="10" fill="#71717a">4</text>
+          </g>
 
-  <line x1="250" y1="270" x2="1150" y2="270" stroke="#1f1f1f" stroke-width="1"/>
+          <!-- Nav Item 3: Audit Trail -->
+          <g transform="translate(0, 104)">
+            <text x="12" y="18" class="txt-sans" font-size="12.5" fill="#a1a1aa">Audit Event Trail</text>
+            <circle cx="152" cy="14" r="3.5" fill="#10b981"/>
+          </g>
 
-  <!-- Row 2 -->
-  <text x="270" y="304" class="text-primary" font-size="13">Calculus Formula Sheet (Page 4 is blurred/unreadable)</text>
-  <text x="270" y="322" class="text-mono">ID #12 • Uploaded by Arvind Raman</text>
-  <text x="580" y="304" class="text-secondary">"Page 4 has scanning distortion"</text>
-  <text x="820" y="304" class="text-secondary">Arvind Raman</text>
-  <rect x="960" y="292" width="75" height="24" class="btn-success"/>
-  <text x="975" y="308" fill="#10b981" font-size="10" font-family="monospace" font-weight="700">VERIFY</text>
-  <rect x="1045" y="292" width="85" height="24" class="btn-danger"/>
-  <text x="1055" y="308" fill="#f43f5e" font-size="10" font-family="monospace" font-weight="700">DISMISS</text>
+          <!-- Nav Item 4: Taxonomy Settings -->
+          <g transform="translate(0, 140)">
+            <text x="12" y="18" class="txt-sans" font-size="12.5" fill="#a1a1aa">Curriculum Editor</text>
+          </g>
 
-  <!-- Immutable Audit Log Trail -->
-  <rect x="250" y="456" width="900" height="200" rx="4" class="surface"/>
-  <rect x="250" y="456" width="900" height="36" class="table-header"/>
-  <text x="270" y="479" class="text-mono">IMMUTABLE MODERATION EVENT LOG</text>
-  <text x="1020" y="479" class="text-mono">APPEND-ONLY AUDIT</text>
+          <line x1="0" y1="180" x2="178" y2="180" stroke="#1f1f23" stroke-width="1"/>
 
-  <text x="270" y="516" class="text-mono" fill="#10b981">VERIFY_RESOURCE</text>
-  <text x="430" y="516" class="text-secondary">Resource #14 approved &amp; marked verified (+2.0 ranking bonus)</text>
-  <text x="880" y="516" class="text-mono">Prof. Sharma (Admin)</text>
-  <text x="1040" y="516" class="text-mono">Today, 11:20 AM</text>
+          <!-- Return to Student View -->
+          <g transform="translate(0, 196)">
+            <text x="12" y="18" class="txt-sans" font-size="12" fill="#71717a">← Student View</text>
+          </g>
+        </g>
+      </g>
 
-  <line x1="250" y1="535" x2="1150" y2="535" stroke="#1f1f1f" stroke-width="1"/>
+      <!-- Right Main Moderation Pane (990px wide) -->
+      <g transform="translate(230, 16)">
+        <!-- Top Metrics Overview Bar (4 Cards) -->
+        <g>
+          <!-- Metric 1: Open Reports -->
+          <g transform="translate(0, 0)">
+            <rect width="230" height="74" rx="6" fill="url(#adminCardGrad)" stroke="rgba(244, 63, 94, 0.3)" stroke-width="1"/>
+            <g transform="translate(16, 16)">
+              <text x="0" y="10" class="txt-mono" font-size="10" font-weight="700" fill="#71717a">OPEN REPORTS</text>
+              <text x="0" y="38" class="txt-sans" font-size="26" font-weight="700" fill="#f43f5e">2</text>
+              <text x="24" y="36" class="txt-mono" font-size="11" fill="#a1a1aa">pending triage</text>
+            </g>
+          </g>
 
-  <text x="270" y="566" class="text-mono" fill="#f43f5e">SOFT_DELETE_RESOURCE</text>
-  <text x="430" y="566" class="text-secondary">Resource #8 removed from public catalog (Governed 404 unlinked)</text>
-  <text x="880" y="566" class="text-mono">Prof. Sharma (Admin)</text>
-  <text x="1040" y="566" class="text-mono">Yesterday, 4:15 PM</text>
+          <!-- Metric 2: Governed Study Assets -->
+          <g transform="translate(244, 0)">
+            <rect width="230" height="74" rx="6" fill="url(#adminCardGrad)" stroke="#27272a" stroke-width="1"/>
+            <g transform="translate(16, 16)">
+              <text x="0" y="10" class="txt-mono" font-size="10" font-weight="700" fill="#71717a">GOVERNED ASSETS</text>
+              <text x="0" y="38" class="txt-sans" font-size="26" font-weight="700" fill="#ffffff">22</text>
+              <text x="38" y="36" class="txt-mono" font-size="11" fill="#a1a1aa">active in catalog</text>
+            </g>
+          </g>
 
-  <line x1="250" y1="585" x2="1150" y2="585" stroke="#1f1f1f" stroke-width="1"/>
+          <!-- Metric 3: Faculty Verified -->
+          <g transform="translate(488, 0)">
+            <rect width="230" height="74" rx="6" fill="url(#adminCardGrad)" stroke="#27272a" stroke-width="1"/>
+            <g transform="translate(16, 16)">
+              <text x="0" y="10" class="txt-mono" font-size="10" font-weight="700" fill="#71717a">VERIFIED NOTES</text>
+              <text x="0" y="38" class="txt-sans" font-size="26" font-weight="700" fill="#10b981">18</text>
+              <text x="38" y="36" class="txt-mono" font-size="11" fill="#a1a1aa">82% syllabus coverage</text>
+            </g>
+          </g>
 
-  <text x="270" y="616" class="text-mono" fill="#f59e0b">USER_WARNING</text>
-  <text x="430" y="616" class="text-secondary">Issued formal academic curriculum warning to user #7</text>
-  <text x="880" y="616" class="text-mono">Prof. Sharma (Admin)</text>
-  <text x="1040" y="616" class="text-mono">Oct 17, 2026</text>
+          <!-- Metric 4: Registered Students -->
+          <g transform="translate(732, 0)">
+            <rect width="230" height="74" rx="6" fill="url(#adminCardGrad)" stroke="#27272a" stroke-width="1"/>
+            <g transform="translate(16, 16)">
+              <text x="0" y="10" class="txt-mono" font-size="10" font-weight="700" fill="#71717a">CAMPUS STUDENTS</text>
+              <text x="0" y="38" class="txt-sans" font-size="26" font-weight="700" fill="#38bdf8">4</text>
+              <text x="24" y="36" class="txt-mono" font-size="11" fill="#a1a1aa">0 banned accounts</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- Moderation Queue Table Card -->
+        <g transform="translate(0, 92)">
+          <rect width="962" height="282" rx="6" fill="url(#adminCardGrad)" stroke="#27272a" stroke-width="1"/>
+
+          <!-- Table Header Bar -->
+          <rect width="962" height="38" rx="6" fill="#141417" stroke="#27272a" stroke-width="0.8"/>
+          <text x="20" y="24" class="txt-mono" font-size="10.5" font-weight="700" fill="#a1a1aa">FLAGGED RESOURCE</text>
+          <text x="360" y="24" class="txt-mono" font-size="10.5" font-weight="700" fill="#a1a1aa">REPORT REASON &amp; CONTEXT</text>
+          <text x="630" y="24" class="txt-mono" font-size="10.5" font-weight="700" fill="#a1a1aa">FLAGGED BY</text>
+          <text x="770" y="24" class="txt-mono" font-size="10.5" font-weight="700" fill="#a1a1aa">MODERATOR ACTIONS</text>
+
+          <!-- Queue Row 1 -->
+          <g transform="translate(20, 52)">
+            <!-- Column 1: Resource -->
+            <text x="0" y="16" class="txt-sans" font-size="13" font-weight="600" fill="#ffffff">CS201 Unit 2 Syllabus Question Bank</text>
+            <text x="0" y="32" class="txt-mono" font-size="10.5" fill="#71717a">ID #9 • Uploaded by Dev Kumar • CS201 Unit 2</text>
+
+            <!-- Column 2: Reason -->
+            <rect x="340" y="2" width="240" height="38" rx="4" fill="rgba(244, 63, 94, 0.08)" stroke="rgba(244, 63, 94, 0.2)"/>
+            <text x="350" y="16" class="txt-sans" font-size="11" fill="#f43f5e font-weight:600">OUTDATED CURRICULUM</text>
+            <text x="350" y="30" class="txt-sans" font-size="10.5" fill="#a1a1aa">"Contains 2021 questions instead of 2024 syllabus."</text>
+
+            <!-- Column 3: Flagged By -->
+            <text x="610" y="16" class="txt-sans" font-size="12" fill="#ffffff">Sneha Rao</text>
+            <text x="610" y="30" class="txt-mono" font-size="10" fill="#71717a">Student (34 pts)</text>
+
+            <!-- Column 4: Action Buttons -->
+            <g transform="translate(750, 4)">
+              <!-- Verify Button -->
+              <rect width="60" height="28" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.4)"/>
+              <text x="12" y="18" class="txt-mono" font-size="10" font-weight="700" fill="#10b981">VERIFY</text>
+
+              <!-- Soft Delete Button -->
+              <g transform="translate(68, 0)">
+                <rect width="84" height="28" rx="4" fill="rgba(244, 63, 94, 0.15)" stroke="rgba(244, 63, 94, 0.4)"/>
+                <text x="8" y="18" class="txt-mono" font-size="10" font-weight="700" fill="#f43f5e">SOFT DELETE</text>
+              </g>
+
+              <!-- Dismiss Button -->
+              <g transform="translate(158, 0)">
+                <rect width="28" height="28" rx="4" fill="#18181b" stroke="#27272a"/>
+                <text x="8" y="18" class="txt-sans" font-size="12" fill="#71717a">✕</text>
+              </g>
+            </g>
+          </g>
+
+          <line x1="20" y1="126" x2="942" y2="126" stroke="#1f1f23" stroke-width="1"/>
+
+          <!-- Queue Row 2 -->
+          <g transform="translate(20, 142)">
+            <!-- Column 1: Resource -->
+            <text x="0" y="16" class="txt-sans" font-size="13" font-weight="600" fill="#ffffff">Calculus Formula Sheet [Page 4 Blurred]</text>
+            <text x="0" y="32" class="txt-mono" font-size="10.5" fill="#71717a">ID #12 • Uploaded by Arvind Raman • MA101 Unit 3</text>
+
+            <!-- Column 2: Reason -->
+            <rect x="340" y="2" width="240" height="38" rx="4" fill="rgba(245, 158, 11, 0.08)" stroke="rgba(245, 158, 11, 0.2)"/>
+            <text x="350" y="16" class="txt-sans" font-size="11" fill="#f59e0b">LOW SCAN QUALITY</text>
+            <text x="350" y="30" class="txt-sans" font-size="10.5" fill="#a1a1aa">"Page 4 has severe blur on integral proofs."</text>
+
+            <!-- Column 3: Flagged By -->
+            <text x="610" y="16" class="txt-sans" font-size="12" fill="#ffffff">Arvind Raman</text>
+            <text x="610" y="30" class="txt-mono" font-size="10" fill="#71717a">Self-flag (New Rev)</text>
+
+            <!-- Column 4: Action Buttons -->
+            <g transform="translate(750, 4)">
+              <rect width="60" height="28" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.4)"/>
+              <text x="12" y="18" class="txt-mono" font-size="10" font-weight="700" fill="#10b981">VERIFY</text>
+
+              <g transform="translate(68, 0)">
+                <rect width="84" height="28" rx="4" fill="#18181b" stroke="#27272a"/>
+                <text x="12" y="18" class="txt-mono" font-size="10" font-weight="600" fill="#a1a1aa">RE-UPLOAD</text>
+              </g>
+
+              <g transform="translate(158, 0)">
+                <rect width="28" height="28" rx="4" fill="#18181b" stroke="#27272a"/>
+                <text x="8" y="18" class="txt-sans" font-size="12" fill="#71717a">✕</text>
+              </g>
+            </g>
+          </g>
+
+          <line x1="20" y1="216" x2="942" y2="216" stroke="#1f1f23" stroke-width="1"/>
+
+          <!-- Queue Footer Status -->
+          <g transform="translate(20, 240)">
+            <circle cx="6" cy="6" r="3.5" fill="#10b981"/>
+            <text x="18" y="9" class="txt-mono" font-size="10.5" fill="#a1a1aa">
+              All moderator decisions are cryptographically recorded in the append-only audit trail below.
+            </text>
+          </g>
+        </g>
+
+        <!-- Immutable Audit Log Trail Card -->
+        <g transform="translate(0, 390)">
+          <rect width="962" height="250" rx="6" fill="url(#adminCardGrad)" stroke="#27272a" stroke-width="1"/>
+
+          <!-- Table Header Bar -->
+          <rect width="962" height="38" rx="6" fill="#141417" stroke="#27272a" stroke-width="0.8"/>
+          <text x="20" y="24" class="txt-mono" font-size="10.5" font-weight="700" fill="#a1a1aa">IMMUTABLE MODERATION EVENT LOG</text>
+          <text x="810" y="24" class="txt-mono" font-size="10" fill="#71717a">APPEND-ONLY AUDIT</text>
+
+          <!-- Audit Row 1 -->
+          <g transform="translate(20, 50)">
+            <rect width="136" height="22" rx="3" fill="rgba(16, 185, 129, 0.12)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="0.8"/>
+            <text x="8" y="15" class="txt-mono" font-size="10" font-weight="700" fill="#10b981">VERIFY_RESOURCE</text>
+            <text x="156" y="15" class="txt-sans" font-size="12" fill="#ffffff">
+              Resource #14 "AVL Rotations" approved by faculty (+2.0 ranking bonus).
+            </text>
+            <text x="680" y="15" class="txt-mono" font-size="11" fill="#a1a1aa">Prof. Sharma (Admin)</text>
+            <text x="840" y="15" class="txt-mono" font-size="10.5" fill="#71717a">Today, 11:20 AM</text>
+          </g>
+
+          <line x1="20" y1="88" x2="942" y2="88" stroke="#1f1f23" stroke-width="1"/>
+
+          <!-- Audit Row 2 -->
+          <g transform="translate(20, 104)">
+            <rect width="148" height="22" rx="3" fill="rgba(244, 63, 94, 0.12)" stroke="rgba(244, 63, 94, 0.3)" stroke-width="0.8"/>
+            <text x="8" y="15" class="txt-mono" font-size="10" font-weight="700" fill="#f43f5e">SOFT_DELETE_RESOURCE</text>
+            <text x="168" y="15" class="txt-sans" font-size="12" fill="#ffffff">
+              Resource #8 "Midterm PYQs 2019" removed from public catalog (HTTP 404 unlinked).
+            </text>
+            <text x="680" y="15" class="txt-mono" font-size="11" fill="#a1a1aa">Prof. Sharma (Admin)</text>
+            <text x="840" y="15" class="txt-mono" font-size="10.5" fill="#71717a">Yesterday, 4:15 PM</text>
+          </g>
+
+          <line x1="20" y1="142" x2="942" y2="142" stroke="#1f1f23" stroke-width="1"/>
+
+          <!-- Audit Row 3 -->
+          <g transform="translate(20, 158)">
+            <rect width="136" height="22" rx="3" fill="rgba(56, 189, 248, 0.12)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="0.8"/>
+            <text x="8" y="15" class="txt-mono" font-size="10" font-weight="700" fill="#38bdf8">ROLE_PROMOTED</text>
+            <text x="156" y="15" class="txt-sans" font-size="12" fill="#ffffff">
+              Student "Arvind Raman" promoted to Verified Contributor status (Reputation &gt; 50).
+            </text>
+            <text x="680" y="15" class="txt-mono" font-size="11" fill="#a1a1aa">Auto-Governance Engine</text>
+            <text x="840" y="15" class="txt-mono" font-size="10.5" fill="#71717a">Oct 17, 2026</text>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
 </svg>

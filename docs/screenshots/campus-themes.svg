@@ -1,103 +1,249 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="100%" height="100%">
   <defs>
+    <filter id="themeShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
     <style>
-      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; font-weight: 700; }
-      .text-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; }
-      .text-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+      .txt-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .txt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .txt-bold { font-weight: 700; }
     </style>
   </defs>
 
-  <rect width="1200" height="680" fill="#050505"/>
+  <!-- Ambient Backdrop Canvas -->
+  <rect width="1280" height="820" fill="#030303"/>
+  <circle cx="640" cy="100" r="450" fill="#27272a" opacity="0.14" filter="blur(90px)"/>
 
-  <!-- Top Title -->
-  <text x="40" y="44" fill="#ffffff" font-family="-apple-system, sans-serif" font-size="20" font-weight="700">Adaptive Campus Modes &amp; Architectural Themes</text>
-  <text x="40" y="66" fill="#888888" font-family="-apple-system, sans-serif" font-size="12">Designed for university libraries, late-night cram sessions, and slow hostel Wi-Fi connections.</text>
+  <!-- Top App Navigation Chrome -->
+  <g transform="translate(60, 40)">
+    <text x="0" y="24" class="txt-sans txt-bold" font-size="24" fill="#ffffff">Adaptive Campus Modes &amp; Architectural Themes</text>
+    <text x="0" y="48" class="txt-sans" font-size="13" fill="#a1a1aa">
+      Engineered for university lecture halls, late-night hostel cramming, and unreliable campus Wi-Fi.
+    </text>
 
-  <!-- Panel 1: High-Contrast Dark Mode -->
-  <g transform="translate(40, 90)">
-    <rect width="360" height="540" rx="8" fill="#000000" stroke="#222" stroke-width="1.5"/>
-    <rect width="360" height="38" rx="8" fill="#0a0a0a"/>
-    <circle cx="20" cy="19" r="4" fill="#ef4444"/>
-    <circle cx="34" cy="19" r="4" fill="#f59e0b"/>
-    <circle cx="48" cy="19" r="4" fill="#10b981"/>
-    <text x="70" y="24" fill="#ffffff" class="text-mono">DARK MODE (PITCH BLACK)</text>
+    <!-- 3 Campus Mode Cards -->
+    <g transform="translate(0, 76)">
+      <!-- Panel 1: Pitch Black OLED Mode (364px wide) -->
+      <g filter="url(#themeShadow)">
+        <rect width="364" height="570" rx="10" fill="#000000" stroke="#27272a" stroke-width="1.2"/>
 
-    <text x="24" y="70" fill="#ffffff" class="text-title">CS201 Data Structures</text>
-    <text x="24" y="90" fill="#888888" class="text-body">#000000 true black background optimizes OLED battery and eliminates eye fatigue during night study.</text>
+        <!-- Window Header -->
+        <path d="M 0 10 Q 0 0 10 0 L 354 0 Q 364 0 364 10 L 364 42 L 0 42 Z" fill="#0a0a0c" stroke="#27272a" stroke-width="0.8"/>
+        <circle cx="20" cy="21" r="5" fill="#ef4444"/>
+        <circle cx="36" cy="21" r="5" fill="#f59e0b"/>
+        <circle cx="52" cy="21" r="5" fill="#10b981"/>
+        <text x="74" y="25" class="txt-mono" font-size="11" font-weight="700" fill="#ffffff">OLED PITCH BLACK (DEFAULT)</text>
 
-    <rect x="20" y="115" width="320" height="110" rx="4" fill="#0a0a0a" stroke="#262626" stroke-width="1"/>
-    <rect x="32" y="130" width="80" height="18" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
-    <text x="38" y="142" fill="#10b981" class="text-mono" font-weight="700">VERIFIED NOTE</text>
-    <text x="32" y="170" fill="#ffffff" class="text-title" font-size="13">Unit 2 AVL Rotations</text>
-    <text x="32" y="190" fill="#888888" class="text-body">Handwritten derivations • 14 pages</text>
-    <text x="32" y="210" fill="#f59e0b" class="text-mono">★ 4.9 (22) • ▲ 48 upvotes</text>
+        <!-- Panel Body -->
+        <g transform="translate(20, 60)">
+          <text x="0" y="16" class="txt-sans txt-bold" font-size="16" fill="#ffffff">CS201 Data Structures</text>
+          <text x="0" y="34" class="txt-sans" font-size="12" fill="#71717a">
+            True #000000 black preserves battery and minimizes eye fatigue during late night revision.
+          </text>
 
-    <rect x="20" y="240" width="320" height="110" rx="4" fill="#0a0a0a" stroke="#262626" stroke-width="1"/>
-    <rect x="32" y="255" width="80" height="18" rx="2" fill="rgba(245, 158, 11, 0.15)"/>
-    <text x="38" y="267" fill="#f59e0b" class="text-mono" font-weight="700">PAST PAPER</text>
-    <text x="32" y="295" fill="#ffffff" class="text-title" font-size="13">2024 Midterm Exam Solutions</text>
-    <text x="32" y="315" fill="#888888" class="text-body">Solved questions 1-6 • 8 pages</text>
-    <text x="32" y="335" fill="#f59e0b" class="text-mono">★ 4.8 (17) • ▲ 34 upvotes</text>
+          <!-- Resource Card 1 in Dark Mode -->
+          <g transform="translate(0, 52)">
+            <rect width="324" height="136" rx="6" fill="#09090b" stroke="#27272a" stroke-width="1"/>
+            <g transform="translate(14, 14)">
+              <!-- Tags -->
+              <rect width="52" height="18" rx="3" fill="#1e1b4b" stroke="#4338ca" stroke-width="0.8"/>
+              <text x="6" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#818cf8">NOTES</text>
 
-    <!-- Key Stats Pill -->
-    <rect x="20" y="480" width="320" height="38" rx="4" fill="#141414" stroke="#333"/>
-    <text x="32" y="503" fill="#ffffff" class="text-mono">Contrast Ratio: 21:1 (AAA Max)</text>
-  </g>
+              <g transform="translate(58, 0)">
+                <rect width="118" height="18" rx="3" fill="rgba(16, 185, 129, 0.12)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="0.8"/>
+                <circle cx="8" cy="9" r="3" fill="#10b981"/>
+                <text x="16" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#10b981">FACULTY VERIFIED</text>
+              </g>
 
-  <!-- Panel 2: Light Paper Mode -->
-  <g transform="translate(420, 90)">
-    <rect width="360" height="540" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
-    <rect width="360" height="38" rx="8" fill="#edf2f7"/>
-    <circle cx="20" cy="19" r="4" fill="#cbd5e1"/>
-    <circle cx="34" cy="19" r="4" fill="#cbd5e1"/>
-    <circle cx="48" cy="19" r="4" fill="#cbd5e1"/>
-    <text x="70" y="24" fill="#09090b" class="text-mono">LIGHT PAPER MODE</text>
+              <!-- Title -->
+              <text x="0" y="44" class="txt-sans txt-bold" font-size="14" fill="#ffffff">Unit 2 AVL Rotations &amp; Proofs</text>
+              <text x="0" y="62" class="txt-sans" font-size="11.5" fill="#a1a1aa">Handwritten derivations • 14 pages PDF</text>
 
-    <text x="24" y="70" fill="#09090b" class="text-title">CS201 Data Structures</text>
-    <text x="24" y="90" fill="#64748b" class="text-body">Warm terracotta/slate paper palette designed for high ambient daylight reading and lecture halls.</text>
+              <line x1="0" y1="78" x2="296" y2="78" stroke="#1f1f23" stroke-width="1"/>
 
-    <rect x="20" y="115" width="320" height="110" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="32" y="130" width="80" height="18" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
-    <text x="38" y="142" fill="#059669" class="text-mono" font-weight="700">VERIFIED NOTE</text>
-    <text x="32" y="170" fill="#09090b" class="text-title" font-size="13">Unit 2 AVL Rotations</text>
-    <text x="32" y="190" fill="#64748b" class="text-body">Handwritten derivations • 14 pages</text>
-    <text x="32" y="210" fill="#d97706" class="text-mono">★ 4.9 (22) • ▲ 48 upvotes</text>
+              <!-- Metrics -->
+              <text x="0" y="98" fill="#f59e0b" font-size="12">★★★★★</text>
+              <text x="62" y="98" class="txt-mono" font-size="11" fill="#ffffff">4.9</text>
+              <text x="86" y="98" class="txt-mono" font-size="11" fill="#71717a">(22)</text>
+              <text x="210" y="98" class="txt-mono" font-size="11" fill="#10b981">▲ 48 upvotes</text>
+            </g>
+          </g>
 
-    <rect x="20" y="240" width="320" height="110" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-    <rect x="32" y="255" width="80" height="18" rx="2" fill="rgba(245, 158, 11, 0.15)"/>
-    <text x="38" y="267" fill="#d97706" class="text-mono" font-weight="700">PAST PAPER</text>
-    <text x="32" y="295" fill="#09090b" class="text-title" font-size="13">2024 Midterm Exam Solutions</text>
-    <text x="32" y="315" fill="#64748b" class="text-body">Solved questions 1-6 • 8 pages</text>
-    <text x="32" y="335" fill="#d97706" class="text-mono">★ 4.8 (17) • ▲ 34 upvotes</text>
+          <!-- Resource Card 2 in Dark Mode -->
+          <g transform="translate(0, 204)">
+            <rect width="324" height="136" rx="6" fill="#09090b" stroke="#27272a" stroke-width="1"/>
+            <g transform="translate(14, 14)">
+              <rect width="44" height="18" rx="3" fill="#312e81" stroke="#4f46e5" stroke-width="0.8"/>
+              <text x="6" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#a5b4fc">PYQ</text>
 
-    <rect x="20" y="480" width="320" height="38" rx="4" fill="#e2e8f0"/>
-    <text x="32" y="503" fill="#0f172a" class="text-mono">Zero Glare: Matte Paper (#F8FAFC)</text>
-  </g>
+              <g transform="translate(50, 0)">
+                <rect width="84" height="18" rx="3" fill="#18181b" stroke="#27272a" stroke-width="0.8"/>
+                <text x="8" y="13" class="txt-mono" font-size="9.5" fill="#a1a1aa">MIDTERM 2024</text>
+              </g>
 
-  <!-- Panel 3: Low-Bandwidth Campus Lite Mode -->
-  <g transform="translate(800, 90)">
-    <rect width="360" height="540" rx="8" fill="#0a0a0a" stroke="#2b2b2b" stroke-width="1.5"/>
-    <rect width="360" height="38" rx="8" fill="#141414"/>
-    <circle cx="20" cy="19" r="4" fill="#10b981"/>
-    <text x="36" y="24" fill="#10b981" class="text-mono" font-weight="700">LOW-BANDWIDTH LITE MODE</text>
+              <text x="0" y="44" class="txt-sans txt-bold" font-size="14" fill="#ffffff">2024 Midterm Solved Paper</text>
+              <text x="0" y="62" class="txt-sans" font-size="11.5" fill="#a1a1aa">All 6 questions with stepwise marking</text>
 
-    <text x="24" y="70" fill="#ffffff" class="text-title">Hostel Wi-Fi Optimization</text>
-    <text x="24" y="90" fill="#888888" class="text-body">Strips blurs, transitions, and CSS animations. Caches full curriculum taxonomy and bookmarks for offline resilience.</text>
+              <line x1="0" y1="78" x2="296" y2="78" stroke="#1f1f23" stroke-width="1"/>
 
-    <!-- Wireframe minimalist layout -->
-    <rect x="20" y="120" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
-    <text x="32" y="145" fill="#ffffff" class="text-mono" font-size="12">1. CS201 Unit 2 AVL Notes [PDF 2.4MB]</text>
-    <text x="32" y="165" fill="#10b981" class="text-mono">CACHED IN OFFLINE STORAGE (AVAILABLE)</text>
+              <text x="0" y="98" fill="#f59e0b" font-size="12">★★★★★</text>
+              <text x="62" y="98" class="txt-mono" font-size="11" fill="#ffffff">4.8</text>
+              <text x="86" y="98" class="txt-mono" font-size="11" fill="#71717a">(17)</text>
+              <text x="210" y="98" class="txt-mono" font-size="11" fill="#10b981">▲ 34 upvotes</text>
+            </g>
+          </g>
 
-    <rect x="20" y="190" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
-    <text x="32" y="215" fill="#ffffff" class="text-mono">2. CS201 Midterm Solutions [PDF 1.1MB]</text>
-    <text x="32" y="235" fill="#aaaaaa" class="text-mono">SAVED TO BOOKMARKS</text>
+          <!-- Feature Badge -->
+          <g transform="translate(0, 360)">
+            <rect width="324" height="42" rx="6" fill="#0c0c0e" stroke="#27272a"/>
+            <text x="14" y="26" class="txt-mono" font-size="11" font-weight="700" fill="#10b981">Contrast Ratio: 21:1 (WCAG AAA Max)</text>
+          </g>
+        </g>
+      </g>
 
-    <rect x="20" y="260" width="320" height="60" fill="#111111" stroke="#333" stroke-width="1"/>
-    <text x="32" y="285" fill="#ffffff" class="text-mono">3. CS201 Lab 4 C++ Source [45KB]</text>
-    <text x="32" y="305" fill="#aaaaaa" class="text-mono">OFFLINE BOOKMARK READY</text>
+      <!-- Panel 2: Daylight Paper Mode (364px wide) -->
+      <g transform="translate(398, 0)" filter="url(#themeShadow)">
+        <rect width="364" height="570" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
 
-    <rect x="20" y="480" width="320" height="38" rx="4" fill="#171717" stroke="#333"/>
-    <text x="32" y="503" fill="#10b981" class="text-mono">Payload: 0 kB Remote Calls / Offline Ready</text>
+        <!-- Window Header -->
+        <path d="M 0 10 Q 0 0 10 0 L 354 0 Q 364 0 364 10 L 364 42 L 0 42 Z" fill="#edf2f7" stroke="#cbd5e1" stroke-width="0.8"/>
+        <circle cx="20" cy="21" r="5" fill="#cbd5e1"/>
+        <circle cx="36" cy="21" r="5" fill="#cbd5e1"/>
+        <circle cx="52" cy="21" r="5" fill="#cbd5e1"/>
+        <text x="74" y="25" class="txt-mono" font-size="11" font-weight="700" fill="#0f172a">DAYLIGHT PAPER MODE</text>
+
+        <!-- Panel Body -->
+        <g transform="translate(20, 60)">
+          <text x="0" y="16" class="txt-sans txt-bold" font-size="16" fill="#0f172a">CS201 Data Structures</text>
+          <text x="0" y="34" class="txt-sans" font-size="12" fill="#64748b">
+            Crisp matte paper palette calibrated for brightly lit campus reading rooms and lecture halls.
+          </text>
+
+          <!-- Resource Card 1 in Light Mode -->
+          <g transform="translate(0, 52)">
+            <rect width="324" height="136" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <g transform="translate(14, 14)">
+              <rect width="52" height="18" rx="3" fill="#e0e7ff" stroke="#c7d2fe" stroke-width="0.8"/>
+              <text x="6" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#4338ca">NOTES</text>
+
+              <g transform="translate(58, 0)">
+                <rect width="118" height="18" rx="3" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="0.8"/>
+                <circle cx="8" cy="9" r="3" fill="#059669"/>
+                <text x="16" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#065f46">FACULTY VERIFIED</text>
+              </g>
+
+              <text x="0" y="44" class="txt-sans txt-bold" font-size="14" fill="#0f172a">Unit 2 AVL Rotations &amp; Proofs</text>
+              <text x="0" y="62" class="txt-sans" font-size="11.5" fill="#64748b">Handwritten derivations • 14 pages PDF</text>
+
+              <line x1="0" y1="78" x2="296" y2="78" stroke="#f1f5f9" stroke-width="1"/>
+
+              <text x="0" y="98" fill="#d97706" font-size="12">★★★★★</text>
+              <text x="62" y="98" class="txt-mono" font-size="11" fill="#0f172a">4.9</text>
+              <text x="86" y="98" class="txt-mono" font-size="11" fill="#64748b">(22)</text>
+              <text x="210" y="98" class="txt-mono" font-size="11" fill="#059669">▲ 48 upvotes</text>
+            </g>
+          </g>
+
+          <!-- Resource Card 2 in Light Mode -->
+          <g transform="translate(0, 204)">
+            <rect width="324" height="136" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <g transform="translate(14, 14)">
+              <rect width="44" height="18" rx="3" fill="#fef3c7" stroke="#fde68a" stroke-width="0.8"/>
+              <text x="6" y="13" class="txt-mono" font-size="9.5" font-weight="700" fill="#b45309">PYQ</text>
+
+              <g transform="translate(50, 0)">
+                <rect width="84" height="18" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>
+                <text x="8" y="13" class="txt-mono" font-size="9.5" fill="#64748b">MIDTERM 2024</text>
+              </g>
+
+              <text x="0" y="44" class="txt-sans txt-bold" font-size="14" fill="#0f172a">2024 Midterm Solved Paper</text>
+              <text x="0" y="62" class="txt-sans" font-size="11.5" fill="#64748b">All 6 questions with stepwise marking</text>
+
+              <line x1="0" y1="78" x2="296" y2="78" stroke="#f1f5f9" stroke-width="1"/>
+
+              <text x="0" y="98" fill="#d97706" font-size="12">★★★★★</text>
+              <text x="62" y="98" class="txt-mono" font-size="11" fill="#0f172a">4.8</text>
+              <text x="86" y="98" class="txt-mono" font-size="11" fill="#64748b">(17)</text>
+              <text x="210" y="98" class="txt-mono" font-size="11" fill="#059669">▲ 34 upvotes</text>
+            </g>
+          </g>
+
+          <!-- Feature Badge -->
+          <g transform="translate(0, 360)">
+            <rect width="324" height="42" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+            <text x="14" y="26" class="txt-mono" font-size="11" font-weight="700" fill="#0f172a">Anti-Glare: Slate Paper (#F8FAFC)</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Panel 3: Low-Bandwidth Campus Lite Mode (364px wide) -->
+      <g transform="translate(796, 0)" filter="url(#themeShadow)">
+        <rect width="364" height="570" rx="10" fill="#09090b" stroke="#27272a" stroke-width="1.2"/>
+
+        <!-- Window Header -->
+        <path d="M 0 10 Q 0 0 10 0 L 354 0 Q 364 0 364 10 L 364 42 L 0 42 Z" fill="#141417" stroke="#27272a" stroke-width="0.8"/>
+        <circle cx="20" cy="21" r="5" fill="#10b981"/>
+        <text x="36" y="25" class="txt-mono" font-size="11" font-weight="700" fill="#10b981">CAMPUS LITE (OFFLINE READY)</text>
+
+        <!-- Panel Body -->
+        <g transform="translate(20, 60)">
+          <text x="0" y="16" class="txt-sans txt-bold" font-size="16" fill="#ffffff">Hostel Wi-Fi Resilient</text>
+          <text x="0" y="34" class="txt-sans" font-size="12" fill="#71717a">
+            Disables heavy animations and backdrop filters; uses IndexedDB offline caching for instantaneous local lookup.
+          </text>
+
+          <!-- Offline Cached Items List -->
+          <g transform="translate(0, 52)">
+            <!-- Item 1 -->
+            <rect width="324" height="56" rx="4" fill="#101014" stroke="#27272a" stroke-width="1"/>
+            <text x="12" y="24" class="txt-sans" font-size="12" font-weight="600" fill="#ffffff">1. CS201 Unit 2 AVL Notes [2.4 MB]</text>
+            <rect x="12" y="32" width="132" height="16" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
+            <text x="18" y="44" class="txt-mono" font-size="9" font-weight="700" fill="#10b981">CACHED IN OFFLINE DB</text>
+
+            <!-- Item 2 -->
+            <g transform="translate(0, 66)">
+              <rect width="324" height="56" rx="4" fill="#101014" stroke="#27272a" stroke-width="1"/>
+              <text x="12" y="24" class="txt-sans" font-size="12" font-weight="600" fill="#ffffff">2. CS201 Midterm Solutions [1.1 MB]</text>
+              <rect x="12" y="32" width="132" height="16" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
+              <text x="18" y="44" class="txt-mono" font-size="9" font-weight="700" fill="#10b981">CACHED IN OFFLINE DB</text>
+            </g>
+
+            <!-- Item 3 -->
+            <g transform="translate(0, 132)">
+              <rect width="324" height="56" rx="4" fill="#101014" stroke="#27272a" stroke-width="1"/>
+              <text x="12" y="24" class="txt-sans" font-size="12" font-weight="600" fill="#ffffff">3. CS201 Lab 4 Balanced Tree Code</text>
+              <rect x="12" y="32" width="110" height="16" rx="2" fill="#18181b"/>
+              <text x="18" y="44" class="txt-mono" font-size="9" fill="#a1a1aa">BOOKMARKED LOCALLY</text>
+            </g>
+
+            <!-- Item 4 -->
+            <g transform="translate(0, 198)">
+              <rect width="324" height="56" rx="4" fill="#101014" stroke="#27272a" stroke-width="1"/>
+              <text x="12" y="24" class="txt-sans" font-size="12" font-weight="600" fill="#ffffff">4. Full Curriculum Syllabus Hierarchy</text>
+              <rect x="12" y="32" width="132" height="16" rx="2" fill="rgba(16, 185, 129, 0.15)"/>
+              <text x="18" y="44" class="txt-mono" font-size="9" font-weight="700" fill="#10b981">ZERO NETWORK PAYLOAD</text>
+            </g>
+          </g>
+
+          <!-- Feature Badge -->
+          <g transform="translate(0, 360)">
+            <rect width="324" height="42" rx="6" fill="#141417" stroke="#27272a"/>
+            <text x="14" y="26" class="txt-mono" font-size="11" font-weight="700" fill="#38bdf8">Payload Transfer: 0 KB (IndexedDB)</text>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- Bottom Telemetry Summary Matrix Bar -->
+    <g transform="translate(0, 670)">
+      <rect width="1160" height="44" rx="6" fill="#0d0d10" stroke="#1f1f23" stroke-width="1"/>
+      <g transform="translate(24, 27)">
+        <text x="0" y="0" class="txt-mono" font-size="11" fill="#10b981">✓ WCAG 2.1 AA Certified</text>
+        <text x="210" y="0" class="txt-mono" font-size="11" fill="#ffffff">• 21:1 OLED Max Contrast</text>
+        <text x="440" y="0" class="txt-mono" font-size="11" fill="#ffffff">• Cumulative Layout Shift (CLS) &lt; 0.02</text>
+        <text x="760" y="0" class="txt-mono" font-size="11" fill="#ffffff">• 100% Keyboard Navigable</text>
+        <text x="980" y="0" class="txt-mono" font-size="11" fill="#38bdf8">• 0ms Offline Cache</text>
+      </g>
+    </g>
   </g>
 </svg>

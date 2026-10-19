@@ -1,78 +1,195 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="100%" height="100%">
   <defs>
+    <filter id="winShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141417"/>
+      <stop offset="100%" stop-color="#0b0b0e"/>
+    </linearGradient>
     <style>
-      .bg { fill: #000000; }
-      .surface { fill: #0a0a0a; stroke: #262626; stroke-width: 1; }
-      .surface-warning { fill: rgba(245, 158, 11, 0.08); stroke: rgba(245, 158, 11, 0.3); stroke-width: 1; }
-      .dropzone { fill: #0d0d0d; stroke: #404040; stroke-width: 1.5; stroke-dasharray: 6 6; rx: 8; }
-      .text-primary { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; }
-      .text-secondary { fill: #a3a3a3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
-      .text-mono { fill: #737373; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
-      .btn-primary { fill: #ffffff; rx: 4; }
-      .btn-primary-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
-      .btn-accent { fill: #f59e0b; rx: 4; }
-      .btn-accent-text { fill: #000000; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; }
+      .txt-fnt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .txt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .txt-bold { font-weight: 700; fill: #ffffff; }
+      .txt-reg { fill: #a1a1aa; font-size: 13px; }
+      .txt-dim { fill: #71717a; font-size: 11px; }
     </style>
   </defs>
 
-  <rect width="1200" height="680" class="bg"/>
+  <!-- Ambient Backdrop -->
+  <rect width="1280" height="820" fill="#030303"/>
+  <circle cx="640" cy="80" r="400" fill="#27272a" opacity="0.18" filter="blur(80px)"/>
 
-  <!-- Top App Navigation Bar -->
-  <rect x="0" y="0" width="1200" height="56" fill="#080808" stroke="#222" stroke-width="1"/>
-  <text x="32" y="34" class="text-primary" font-size="16" letter-spacing="1.5">STUDYSHARE</text>
-  <text x="145" y="34" class="text-mono">/ UPLOAD CURRICULUM ASSET</text>
+  <!-- Desktop App Window Frame -->
+  <g filter="url(#winShadow)">
+    <rect x="30" y="25" width="1220" height="770" rx="12" fill="#09090b" stroke="#27272a" stroke-width="1.2"/>
 
-  <!-- Left Sidebar Rail -->
-  <rect x="0" y="56" width="220" height="624" fill="#050505" stroke="#222" stroke-width="1"/>
-  <text x="24" y="90" class="text-mono" font-size="10" letter-spacing="1">ACADEMIC CATALOG</text>
-  <text x="32" y="124" class="text-secondary">Find Resources</text>
-  <rect x="16" y="140" width="188" height="32" rx="3" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="32" y="160" class="text-primary" font-size="12">Upload Notes</text>
-  <text x="32" y="196" class="text-secondary">My Bookmarks</text>
+    <!-- Window Title Bar -->
+    <path d="M 30 37 Q 30 25 42 25 L 1238 25 Q 1250 25 1250 37 L 1250 68 L 30 68 Z" fill="#121215" stroke="#27272a" stroke-width="0.8"/>
+    <circle cx="56" cy="46" r="6" fill="#ef4444"/>
+    <circle cx="76" cy="46" r="6" fill="#f59e0b"/>
+    <circle cx="96" cy="46" r="6" fill="#10b981"/>
 
-  <!-- Main Container -->
-  <text x="260" y="96" class="text-primary" font-size="22">Share Course Study Material</text>
-  <text x="260" y="120" class="text-secondary">Drop your document to automatically detect course codes, units, and resource types.</text>
+    <rect x="360" y="34" width="560" height="26" rx="6" fill="#09090b" stroke="#27272a"/>
+    <circle cx="378" cy="47" r="3.5" fill="none" stroke="#71717a" stroke-width="1.2"/>
+    <path d="M 378 41 L 378 44" stroke="#71717a" stroke-width="1.2"/>
+    <text x="394" y="51" class="txt-fnt txt-mono" font-size="11" fill="#a1a1aa">https://studyshare.edu/upload?subject_id=2</text>
 
-  <!-- Drag-and-Drop Dropzone -->
-  <rect x="260" y="140" width="900" height="150" class="dropzone"/>
-  <circle cx="710" cy="195" r="24" fill="#171717" stroke="#333" stroke-width="1"/>
-  <path d="M710 185 L710 205 M702 193 L710 185 L718 193" stroke="#ffffff" stroke-width="2" fill="none"/>
-  <text x="710" y="235" text-anchor="middle" class="text-primary" font-size="14">Selected: CS201_Unit2_AVL_Trees_Notes.pdf</text>
-  <text x="710" y="255" text-anchor="middle" class="text-mono">2.4 MB • Magic-byte verified PDF • Streaming SHA-256 integrity check active</text>
+    <!-- Header Navigation -->
+    <g transform="translate(30, 68)">
+      <rect width="1220" height="52" fill="#0d0d10" stroke="#1f1f23" stroke-width="1"/>
+      <text x="24" y="32" class="txt-fnt txt-bold" font-size="16" letter-spacing="2">STUDYSHARE</text>
+      <text x="148" y="32" class="txt-mono" font-size="11" fill="#71717a">/ UPLOAD STUDY MATERIAL</text>
 
-  <!-- Duplicate Detection Warning Banner -->
-  <rect x="260" y="306" width="900" height="90" rx="6" class="surface-warning"/>
-  <text x="284" y="332" fill="#f59e0b" font-family="-apple-system, sans-serif" font-weight="700" font-size="13">⚠ Similar study material already exists in this course!</text>
-  <text x="284" y="354" fill="#e5e5e5" font-family="-apple-system, sans-serif" font-size="12">"CS201 Unit 2: Balanced Trees &amp; AVL Rotations" by Arvind Raman is currently published for Unit 2.</text>
-  <text x="284" y="378" fill="#a3a3a3" font-family="-apple-system, sans-serif" font-size="11">To prevent curriculum clutter, you can publish this upload as an updated Revision (v2) with changelogs.</text>
-  <rect x="990" y="332" width="145" height="34" class="btn-accent"/>
-  <text x="1010" y="353" class="btn-accent-text">+ Publish as v2</text>
+      <text x="1080" y="32" class="txt-fnt" font-size="12" fill="#a1a1aa">Draft Autosaved ✓</text>
+    </g>
 
-  <!-- Metadata Form Columns -->
-  <rect x="260" y="412" width="435" height="190" rx="6" class="surface"/>
-  <text x="280" y="438" class="text-primary" font-size="13">1. Curriculum Taxonomy</text>
-  <text x="280" y="468" class="text-mono">COURSE / SUBJECT</text>
-  <rect x="280" y="476" width="395" height="32" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="295" y="497" class="text-primary" font-size="12">CS201 - Data Structures &amp; Algorithms</text>
+    <!-- Upload Form Stage (Centered 900px) -->
+    <g transform="translate(190, 140)">
+      <!-- Step Progression Bar -->
+      <g transform="translate(0, 0)">
+        <rect width="900" height="48" rx="8" fill="#121215" stroke="#27272a"/>
+        <g transform="translate(24, 16)">
+          <!-- Step 1 -->
+          <circle cx="10" cy="8" r="8" fill="#10b981"/>
+          <text x="7" y="11" class="txt-mono" font-size="9" font-weight="700" fill="#000000">✓</text>
+          <text x="26" y="12" class="txt-fnt" font-size="12" font-weight="600" fill="#ffffff">1. Curriculum Placement</text>
+          <text x="175" y="12" class="txt-mono" font-size="11" fill="#10b981">CS204 · Unit 3</text>
 
-  <text x="280" y="534" class="text-mono">UNIT / MODULE</text>
-  <rect x="280" y="542" width="395" height="32" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="295" y="563" class="text-primary" font-size="12">Unit 2: Tree Structures &amp; Balanced AVL Trees</text>
+          <line x1="280" y1="8" x2="330" y2="8" stroke="#3f3f46" stroke-width="1.5"/>
 
-  <rect x="725" y="412" width="435" height="190" rx="6" class="surface"/>
-  <text x="745" y="438" class="text-primary" font-size="13">2. Resource Type &amp; Academic Details</text>
-  <text x="745" y="468" class="text-mono">CATEGORY</text>
+          <!-- Step 2 -->
+          <circle cx="350" cy="8" r="8" fill="#ffffff"/>
+          <text x="347" y="11" class="txt-mono" font-size="9" font-weight="700" fill="#000000">2</text>
+          <text x="366" y="12" class="txt-fnt" font-size="12" font-weight="600" fill="#ffffff">2. Material Type &amp; Details</text>
 
-  <rect x="745" y="476" width="125" height="36" rx="4" fill="#ffffff"/>
-  <text x="758" y="498" class="btn-primary-text">✓ Lecture Notes</text>
+          <line x1="535" y1="8" x2="585" y2="8" stroke="#27272a" stroke-width="1.5"/>
 
-  <rect x="880" y="476" width="125" height="36" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="898" y="498" class="text-secondary" font-size="12">Past Papers</text>
+          <!-- Step 3 -->
+          <circle cx="605" cy="8" r="8" fill="#27272a"/>
+          <text x="602" y="11" class="txt-mono" font-size="9" fill="#71717a">3</text>
+          <text x="622" y="12" class="txt-fnt" font-size="12" fill="#71717a">3. Verification &amp; Publish</text>
+        </g>
+      </g>
 
-  <rect x="1015" y="476" width="125" height="36" rx="4" fill="#141414" stroke="#333" stroke-width="1"/>
-  <text x="1035" y="498" class="text-secondary" font-size="12">Lab Manual</text>
+      <!-- Pre-Upload Duplicate Detection Warning Banner -->
+      <g transform="translate(0, 64)">
+        <rect width="900" height="74" rx="8" fill="#f59e0b" fill-opacity="0.10" stroke="#f59e0b" stroke-width="1.2"/>
+        <circle cx="36" cy="37" r="14" fill="#f59e0b" fill-opacity="0.2"/>
+        <text x="32" y="42" class="txt-bold" font-size="14" fill="#f59e0b">⚠️</text>
 
-  <rect x="745" y="535" width="395" height="38" rx="4" class="btn-primary"/>
-  <text x="900" y="559" class="btn-primary-text" font-size="13">Confirm &amp; Upload Document</text>
+        <text x="64" y="30" class="txt-fnt txt-bold" font-size="13" fill="#f59e0b">DUPLICATE RESOURCE DETECTED IN THIS TOPIC</text>
+        <text x="64" y="50" class="txt-fnt txt-reg" fill="#d4d4d8">"Banker's Algorithm: Resource Request Safety Test" already exists in Unit 3 (v1 by Arvind Raman).</text>
+
+        <g transform="translate(620, 24)">
+          <rect width="145" height="28" rx="4" fill="#f59e0b"/>
+          <text x="14" y="18" class="txt-fnt" font-size="11" font-weight="700" fill="#000000">Publish as Version 2</text>
+
+          <rect x="155" y="0" width="115" height="28" rx="4" fill="#18181b" stroke="#f59e0b"/>
+          <text x="168" y="18" class="txt-fnt" font-size="11" font-weight="600" fill="#f59e0b">Upload Distinct</text>
+        </g>
+      </g>
+
+      <!-- Form Columns: Left Details (480px), Right Drag & Drop (400px) -->
+      <g transform="translate(0, 154)">
+        <!-- Left Column: Resource Form Fields -->
+        <rect width="480" height="460" rx="8" fill="url(#cardBg)" stroke="#27272a" stroke-width="1.2"/>
+        <g transform="translate(24, 24)">
+          <text x="0" y="14" class="txt-fnt txt-bold" font-size="14">RESOURCE DETAILS</text>
+
+          <!-- Title Field -->
+          <text x="0" y="44" class="txt-mono" font-size="11" fill="#71717a">RESOURCE TITLE *</text>
+          <rect x="0" y="52" width="432" height="36" rx="6" fill="#18181b" stroke="#3f3f46"/>
+          <text x="12" y="75" class="txt-fnt" font-size="13" fill="#ffffff">Banker's Algorithm Safety Problems &amp; Exam Solutions</text>
+
+          <!-- Type Selectors -->
+          <text x="0" y="112" class="txt-mono" font-size="11" fill="#71717a">ACADEMIC CATEGORY *</text>
+          <g transform="translate(0, 120)">
+            <rect width="95" height="32" rx="4" fill="#ffffff"/>
+            <text x="14" y="20" class="txt-fnt" font-size="11.5" font-weight="700" fill="#000000">📄 Notes</text>
+
+            <rect x="105" y="0" width="95" height="32" rx="4" fill="#18181b" stroke="#27272a"/>
+            <text x="118" y="20" class="txt-fnt" font-size="11.5" fill="#d4d4d8">📝 PYQ</text>
+
+            <rect x="210" y="0" width="105" height="32" rx="4" fill="#18181b" stroke="#27272a"/>
+            <text x="222" y="20" class="txt-fnt" font-size="11.5" fill="#d4d4d8">🔬 Lab Code</text>
+
+            <rect x="325" y="0" width="105" height="32" rx="4" fill="#18181b" stroke="#27272a"/>
+            <text x="338" y="20" class="txt-fnt" font-size="11.5" fill="#d4d4d8">📚 Handout</text>
+          </g>
+
+          <!-- Description Field -->
+          <text x="0" y="180" class="txt-mono" font-size="11" fill="#71717a">DESCRIPTION &amp; SYLLABUS RELEVANCE</text>
+          <rect x="0" y="188" width="432" height="70" rx="6" fill="#18181b" stroke="#27272a"/>
+          <text x="12" y="210" class="txt-fnt txt-reg">Midterm solved numericals with safety algorithm proofs</text>
+          <text x="12" y="230" class="txt-fnt txt-reg">covering Allocation, Max, and Need matrices.</text>
+
+          <!-- Version Changelog Field -->
+          <text x="0" y="284" class="txt-mono" font-size="11" fill="#71717a">REVISION CHANGELOG (OPTIONAL)</text>
+          <rect x="0" y="292" width="432" height="36" rx="6" fill="#18181b" stroke="#27272a"/>
+          <text x="12" y="315" class="txt-fnt" font-size="12" fill="#71717a">e.g. Added 4 extra solved university midterm problems</text>
+
+          <!-- Publish Action Button -->
+          <g transform="translate(0, 350)">
+            <rect width="432" height="44" rx="6" fill="#ffffff"/>
+            <text x="135" y="27" class="txt-fnt" font-size="13" font-weight="700" fill="#000000">Publish Study Material (+15 Rep)</text>
+          </g>
+        </g>
+
+        <!-- Right Column: Drag & Drop Zone (400px) -->
+        <g transform="translate(500, 0)">
+          <rect width="400" height="460" rx="8" fill="url(#cardBg)" stroke="#27272a" stroke-width="1.2"/>
+
+          <!-- Dashed Drag Drop Zone -->
+          <g transform="translate(24, 24)">
+            <rect width="352" height="240" rx="8" fill="#141416" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,6"/>
+            <circle cx="176" cy="70" r="24" fill="#3b82f6" fill-opacity="0.15"/>
+            <text x="166" y="78" font-size="22" fill="#3b82f6">☁️</text>
+
+            <text x="176" y="120" text-anchor="middle" class="txt-fnt txt-bold" font-size="15">bankers_algorithm_v2.pdf</text>
+            <text x="176" y="140" text-anchor="middle" class="txt-mono" font-size="12" fill="#10b981">FILE ATTACHED · 3.1 MB · MAGIC BYTES OK ✓</text>
+            <text x="176" y="165" text-anchor="middle" class="txt-fnt txt-dim">Drag replacement file or click to browse</text>
+
+            <rect x="126" y="185" width="100" height="26" rx="4" fill="#27272a"/>
+            <text x="142" y="202" class="txt-fnt" font-size="11" font-weight="600" fill="#ffffff">Replace File</text>
+          </g>
+
+          <!-- Allowed Academic Formats Info -->
+          <g transform="translate(24, 285)">
+            <text x="0" y="16" class="txt-mono" font-size="10.5" fill="#71717a">SUPPORTED FORMATS (FRONTEND &amp; BACKEND HARDENED)</text>
+            <g transform="translate(0, 26)">
+              <rect width="40" height="20" rx="3" fill="#27272a"/>
+              <text x="8" y="14" class="txt-mono" font-size="10" fill="#f59e0b">PDF</text>
+
+              <rect x="46" y="0" width="50" height="20" rx="3" fill="#27272a"/>
+              <text x="54" y="14" class="txt-mono" font-size="10" fill="#3b82f6">DOCX</text>
+
+              <rect x="102" y="0" width="48" height="20" rx="3" fill="#27272a"/>
+              <text x="110" y="14" class="txt-mono" font-size="10" fill="#f59e0b">PPTX</text>
+
+              <rect x="156" y="0" width="40" height="20" rx="3" fill="#27272a"/>
+              <text x="166" y="14" class="txt-mono" font-size="10" fill="#a855f7">ZIP</text>
+
+              <rect x="202" y="0" width="38" height="20" rx="3" fill="#27272a"/>
+              <text x="211" y="14" class="txt-mono" font-size="10" fill="#3b82f6">PY</text>
+
+              <rect x="246" y="0" width="38" height="20" rx="3" fill="#27272a"/>
+              <text x="255" y="14" class="txt-mono" font-size="10" fill="#06b6d4">C++</text>
+
+              <rect x="290" y="0" width="44" height="20" rx="3" fill="#27272a"/>
+              <text x="298" y="14" class="txt-mono" font-size="10" fill="#ec4899">JAVA</text>
+            </g>
+
+            <!-- Security Assurance Note -->
+            <g transform="translate(0, 68)">
+              <rect width="352" height="64" rx="6" fill="#18181b"/>
+              <text x="14" y="24" class="txt-fnt" font-size="11.5" font-weight="700" fill="#10b981">🛡️ Anti-Malware &amp; Signature Validation</text>
+              <text x="14" y="44" class="txt-fnt txt-dim">Executable PE/ELF signatures and null bytes are rejected.</text>
+              <text x="14" y="56" class="txt-fnt txt-dim">Streaming chunk pipeline enforces 50 MB limits.</text>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
 </svg>
