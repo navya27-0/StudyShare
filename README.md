@@ -4,7 +4,7 @@
 [![Backend Tests](https://img.shields.io/badge/Pytest-56%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-8%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen?style=flat-square)](backend/tests/)
-[![A11y Compliance](https://img.shields.io/badge/A11y-WCAG%202.1%20AA%20(100%25)-purple?style=flat-square)](frontend/src/styles/accessibility.css)
+[![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
 [![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
 
 > **StudyShare is a high-speed, course-organized academic platform engineered for students and faculty to discover, verify, preview, and share syllabus-mapped study resources in under 10 seconds.**
@@ -64,8 +64,8 @@
 | **Token Expiration Model** | **30m / 7d** | 30-minute in-memory/`sessionStorage` access token + 7-day `HttpOnly` refresh cookie rotation |
 | **Curriculum Database** | **PostgreSQL 16 & SQLite** | Multi-dialect asynchronous SQLAlchemy 2.0 ORM with native `_AgeInDays` SQL compiler |
 | **Seeded Academic Baseline** | **13 Resources** | 4 subjects (`CS201`, `CS204`, `CS301`, `MA301`), 11 syllabus units, 14 topics, 5 user accounts |
-| **API Response Latency** | **&lt; 15 ms** | Sub-15ms local response time, sub-45ms containerized under Docker Compose |
-| **Accessibility Compliance** | **100% WCAG 2.1 AA** | High-contrast palettes, keyboard focus rings, semantic landmarks, screen-reader status |
+| **API Response Profile** | **Sub-50ms (Typical)** | Lightweight async request pipeline measured with structured process timing headers (`X-Process-Time-Ms`) |
+| **Accessibility Posture** | **WCAG 2.1 AA-Oriented** | High-contrast palettes (21:1 OLED / 14:1 Paper), visible focus rings, semantic landmarks, aria-live status, and reduced-motion support |
 
 ---
 
@@ -263,7 +263,7 @@ app/schemas/auth.py              21      0   100%
 app/schemas/interactions.py      28      1    96%
 app/schemas/resource.py          64      0   100%
 -------------------------------------------------
-TOTAL                          1758    200    82%
+TOTAL                          1758    200    89%
 ```
 
 ---
@@ -424,7 +424,7 @@ cd backend
 .\.venv\Scripts\ruff.exe check .
 .\.venv\Scripts\ruff.exe format --check .
 
-# 2. Backend Pytest with Coverage (50 Tests)
+# 2. Backend Pytest with Coverage (56 Tests)
 $env:DATABASE_URL="sqlite+aiosqlite:///./studyshare.db"
 .\.venv\Scripts\pytest.exe --cov=app tests/ -v
 
