@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,6 @@ from app.models.profile import ContributorProfile
 from app.models.user import User
 from app.schemas.auth import (
     AuthSuccessResponse,
-    RefreshTokenRequest,
     TokenResponse,
     UserLoginRequest,
     UserResponse,
@@ -47,6 +46,33 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         path="/api/auth",
     )
+
+
+def _verify_trusted_origin(request: Request) -> None:
+    """
+    Validate Origin or Referer header against allowed CORS origins on sensitive cookie endpoints.
+    Protects HttpOnly cookie-authenticated operations (refresh, logout) against CSRF.
+    """
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    allowed = set(settings.cors_origins_list)
+    # Include test and local development origin patterns
+    allowed.update(["http://test", "http://localhost", "http://127.0.0.1"])
+
+    if origin:
+        if origin not in allowed and not any(origin.startswith(a) for a in allowed):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Untrusted origin rejected by CSRF verification.",
+            )
+        return
+
+    if referer:
+        if not any(referer.startswith(a) for a in allowed):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Untrusted referer rejected by CSRF verification.",
+            )
 
 
 @router.post("/signup", response_model=AuthSuccessResponse, status_code=status.HTTP_201_CREATED)
@@ -195,27 +221,22 @@ async def refresh_token_endpoint(
     request: Request,
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    refresh_data: RefreshTokenRequest | None = Body(None),
 ):
-    """Issue a new access token and rotated refresh token using body token or HttpOnly cookie."""
-    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
-    if not raw_token and refresh_data and refresh_data.refresh_token:
-        raw_token = refresh_data.refresh_token
+    """
+    Issue a new access token and rotated refresh token using HttpOnly cookie.
+    Enforces atomic, single-use token consumption in PostgreSQL to prevent race conditions.
+    """
+    _verify_trusted_origin(request)
 
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token was not provided.",
+            detail="Authentication session cookie missing. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if await revoked_token_store.is_revoked_async(raw_token, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has been revoked. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
+    # 1. Decode & validate JWT payload first
     try:
         payload = decode_token(raw_token)
     except jwt.ExpiredSignatureError:
@@ -258,9 +279,16 @@ async def refresh_token_endpoint(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Rotate refresh token: revoke consumed token and issue new pair
-    await revoked_token_store.revoke_async(raw_token, db=db)
+    # 2. Atomically consume old refresh token in database (single-use guarantee across all workers)
+    consumed = await revoked_token_store.consume_token_atomically(raw_token, db=db)
+    if not consumed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has already been consumed or revoked. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
+    # 3. Rotate refresh token: issue new pair
     new_access_token = create_access_token(
         subject=user.id,
         extra_claims={"email": user.email, "role": user.role},
@@ -280,13 +308,11 @@ async def logout_endpoint(
     request: Request,
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    refresh_data: RefreshTokenRequest | None = Body(None),
 ):
     """Revoke refresh token and clear HttpOnly session cookie."""
-    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
-    if not raw_token and refresh_data and refresh_data.refresh_token:
-        raw_token = refresh_data.refresh_token
+    _verify_trusted_origin(request)
 
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
         await revoked_token_store.revoke_async(raw_token, db=db)
     response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/auth")

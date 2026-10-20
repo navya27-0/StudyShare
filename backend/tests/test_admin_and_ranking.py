@@ -273,3 +273,26 @@ async def test_admin_user_directory_and_warn(
     assert log_res.status_code == 200
     actions = [item["action"] for item in log_res.json()["items"]]
     assert "user_warned" in actions
+
+
+@pytest.mark.asyncio
+async def test_admin_security_tables_cleanup(
+    client: AsyncClient, admin_auth_headers: dict, auth_headers: dict
+):
+    """Verify administrator maintenance endpoint prunes expired security records."""
+    # 1. Non-admin forbidden
+    forbid = await client.post(
+        "/api/admin/maintenance/cleanup-security-tables", headers=auth_headers
+    )
+    assert forbid.status_code == 403
+
+    # 2. Admin succeeds
+    res = await client.post(
+        "/api/admin/maintenance/cleanup-security-tables?login_retention_hours=12",
+        headers=admin_auth_headers,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert "pruned_tokens" in data["details"]
+    assert "pruned_attempts" in data["details"]

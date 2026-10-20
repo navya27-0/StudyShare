@@ -404,7 +404,7 @@ async def test_deep_archive_validation_zip_slip_and_docx_integrity():
             content_type="application/zip",
         )
     assert exc_slip.value.status_code == 415
-    assert "unsafe relative or absolute" in exc_slip.value.detail
+    assert "unsafe relative, absolute, or drive-letter" in exc_slip.value.detail
 
     # 2. Valid zip but missing Word document marker (.docx requires word/ or [Content_Types].xml)
     buf_fake_docx = io.BytesIO()
@@ -452,3 +452,98 @@ async def test_distributed_rate_limiter_and_revocation_async():
     # Reset clears attempts
     await limiter.reset_async(ip)
     await limiter.check_async(ip)
+
+
+@pytest.mark.asyncio
+async def test_windows_drive_letter_and_null_byte_archive_defense():
+    """Verify archive traversal defenses reject Windows drive letters, unusual separators, and null bytes."""
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+
+    # 1. Windows drive letter in member name
+    buf_drive = io.BytesIO()
+    with zipfile.ZipFile(buf_drive, "w") as zf:
+        zf.writestr("C:/Windows/System32/calc.exe", b"fake binary")
+
+    with pytest.raises(HTTPException) as exc_drive:
+        await storage.save_file(
+            file_content=buf_drive.getvalue(),
+            filename="payload.zip",
+            content_type="application/zip",
+        )
+    assert exc_drive.value.status_code == 415
+    assert "unsafe relative, absolute, or drive-letter" in exc_drive.value.detail
+
+    # 2. Windows backslash drive letter
+    buf_win = io.BytesIO()
+    with zipfile.ZipFile(buf_win, "w") as zf:
+        zf.writestr("D:\\payload.txt", b"drive traversal")
+
+    with pytest.raises(HTTPException) as exc_win:
+        await storage.save_file(
+            file_content=buf_win.getvalue(),
+            filename="payload.zip",
+            content_type="application/zip",
+        )
+    assert exc_win.value.status_code == 415
+    assert "unsafe relative, absolute, or drive-letter" in exc_win.value.detail
+
+
+@pytest.mark.asyncio
+async def test_malformed_xml_docx_package_metadata_rejected():
+    """Verify docx/pptx archives with corrupted XML package metadata are rejected."""
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+
+    buf_corrupt_xml = io.BytesIO()
+    with zipfile.ZipFile(buf_corrupt_xml, "w") as zf:
+        zf.writestr("[Content_Types].xml", b"<malformed xml without closing tags <<??")
+        zf.writestr("word/document.xml", b"<w:document/>")
+
+    with pytest.raises(HTTPException) as exc_xml:
+        await storage.save_file(
+            file_content=buf_corrupt_xml.getvalue(),
+            filename="broken.docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    assert exc_xml.value.status_code == 415
+    assert "malformed [Content_Types].xml" in exc_xml.value.detail
+
+
+@pytest.mark.asyncio
+async def test_fail_closed_revocation_on_db_error():
+    """Verify security verification fails closed with HTTP 503 if database lookup raises an error."""
+    from unittest.mock import AsyncMock
+
+    from fastapi import HTTPException
+
+    from app.core.rate_limit import RevokedTokenStore
+
+    store = RevokedTokenStore()
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = Exception("Database connection failure")
+    mock_db.commit.side_effect = Exception("Database connection failure")
+
+    # 1. is_revoked_async fails closed on DB error
+    with pytest.raises(HTTPException) as exc_check:
+        await store.is_revoked_async("test_token_string", db=mock_db)
+    assert exc_check.value.status_code == 503
+    assert "unavailable" in exc_check.value.detail
+
+    # 2. consume_token_atomically fails closed on DB error
+    with pytest.raises(HTTPException) as exc_consume:
+        await store.consume_token_atomically("test_token_string", db=mock_db)
+    assert exc_consume.value.status_code == 503
+    assert "unavailable" in exc_consume.value.detail

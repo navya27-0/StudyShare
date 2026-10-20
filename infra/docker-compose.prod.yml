@@ -32,8 +32,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studyshare}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-studyshare_prod_db}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://studyshare.pages.dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required in production}
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - backend_prod_uploads:/app/uploads
     depends_on:
@@ -47,6 +47,8 @@ services:
       start_period: 10s
 
   frontend:
+    # Single public ingress point and reverse proxy for SPA, /api/, and /uploads/
+    # In production, edge TLS termination is handled upstream (e.g. Cloudflare, AWS ALB, Caddy)
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -54,7 +56,6 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
       backend:
         condition: service_healthy

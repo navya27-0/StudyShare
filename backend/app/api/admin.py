@@ -490,3 +490,23 @@ async def list_moderation_actions(
         page_size=page_size,
         items=items,
     )
+
+
+@router.post("/maintenance/cleanup-security-tables")
+async def cleanup_security_records_endpoint(
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    login_retention_hours: int = 24,
+):
+    """
+    Administrator maintenance endpoint to prune expired revoked token hashes
+    and stale login attempts, preventing unbounded table growth.
+    """
+    from app.core.rate_limit import cleanup_security_tables
+
+    result = await cleanup_security_tables(db, login_retention_hours=login_retention_hours)
+    return {
+        "status": "success",
+        "message": "Security tables cleaned successfully.",
+        "details": result,
+    }

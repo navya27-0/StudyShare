@@ -95,6 +95,7 @@ async def test_refresh_token_lifecycle(client: AsyncClient):
     # 2. Request token refresh via HttpOnly cookie
     refresh_res = await client.post(
         "/api/auth/refresh",
+        cookies={"studyshare_refresh_token": initial_cookie},
     )
     assert refresh_res.status_code == 200, refresh_res.text
     refreshed_data = refresh_res.json()
@@ -104,12 +105,71 @@ async def test_refresh_token_lifecycle(client: AsyncClient):
     assert rotated_cookie is not None
     assert rotated_cookie != initial_cookie
 
-    # 3. Invalid token signature returns 401
+    # 3. Replay attack: attempting to reuse the consumed token fails with 401
+    replay_res = await client.post(
+        "/api/auth/refresh",
+        cookies={"studyshare_refresh_token": initial_cookie},
+    )
+    assert replay_res.status_code == 401
+    assert "consumed or revoked" in replay_res.json()["detail"].lower()
+
+    # 4. Invalid token signature returns 401
     bad_res = await client.post(
         "/api/auth/refresh",
         cookies={"studyshare_refresh_token": "malformed.jwt.token"},
     )
     assert bad_res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_concurrent_refresh_rotation_single_use_atomicity(client: AsyncClient):
+    """
+    Test two concurrent refresh requests using the exact same refresh token.
+    Enforces atomic single-use rotation in PostgreSQL: exactly ONE request may succeed (200 OK);
+    the other MUST encounter a unique constraint conflict and return 401 Unauthorized.
+    """
+    import asyncio
+
+    # 1. Login to obtain a fresh token
+    login_res = await client.post(
+        "/api/auth/login",
+        json={"email": "sneha.rao@student.univ.edu", "password": "StudyShare2024!"},
+    )
+    assert login_res.status_code == 200
+    token = login_res.cookies.get("studyshare_refresh_token")
+    assert token is not None
+
+    # 2. Fire two concurrent refresh requests simultaneously
+    req1 = client.post("/api/auth/refresh", cookies={"studyshare_refresh_token": token})
+    req2 = client.post("/api/auth/refresh", cookies={"studyshare_refresh_token": token})
+
+    res1, res2 = await asyncio.gather(req1, req2)
+
+    statuses = [res1.status_code, res2.status_code]
+    assert 200 in statuses, f"Expected one 200 OK, got: {statuses}"
+    assert 401 in statuses, f"Expected one 401 Unauthorized, got: {statuses}"
+
+
+@pytest.mark.asyncio
+async def test_csrf_origin_rejection_on_cookie_endpoints(client: AsyncClient):
+    """Verify cross-site requests with untrusted Origin header are rejected with 403 Forbidden."""
+    # 1. Refresh with untrusted origin
+    res_refresh = await client.post(
+        "/api/auth/refresh",
+        headers={"Origin": "https://malicious-attacker.com"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_refresh.status_code == 403
+    assert "CSRF" in res_refresh.json()["detail"]
+
+    # 2. Logout with untrusted origin
+    res_logout = await client.post(
+        "/api/auth/logout",
+        headers={"Origin": "https://malicious-attacker.com"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_logout.status_code == 403
+    assert "CSRF" in res_logout.json()["detail"]
 
 
 @pytest.mark.asyncio

@@ -1,15 +1,18 @@
 import hashlib
+import logging
 import threading
 import time
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.security import LoginAttempt, RevokedToken
 
+logger = logging.getLogger("studyshare.security")
 settings = get_settings()
 
 
@@ -87,8 +90,13 @@ class LoginRateLimiter:
                     LoginAttempt.attempted_at > cutoff_dt,
                 )
                 db_count = (await db.execute(count_stmt)).scalar_one() or 0
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "Database failure while querying login attempts for '%s': %s. "
+                    "Enforcing local worker rate limit policy.",
+                    key,
+                    exc,
+                )
 
         total_attempts = max(len(mem_attempts), db_count)
         if total_attempts >= self.max_attempts:
@@ -118,7 +126,8 @@ class LoginRateLimiter:
                 attempt = LoginAttempt(key=key, attempted_at=datetime.now(UTC))
                 db.add(attempt)
                 await db.commit()
-            except Exception:
+            except Exception as exc:
+                logger.error("Failed to persist login failure record to database: %s", exc)
                 await db.rollback()
 
     def reset(self, key: str) -> None:
@@ -133,7 +142,8 @@ class LoginRateLimiter:
             try:
                 await db.execute(delete(LoginAttempt).where(LoginAttempt.key == key))
                 await db.commit()
-            except Exception:
+            except Exception as exc:
+                logger.error("Failed to clear login attempts from database: %s", exc)
                 await db.rollback()
 
     def clear(self) -> None:
@@ -211,8 +221,57 @@ class RevokedTokenStore:
                 rev_entry = RevokedToken(token_hash=thash, expires_at=exp_dt)
                 db.add(rev_entry)
                 await db.commit()
-            except Exception:
+            except IntegrityError:
                 await db.rollback()
+            except Exception as exc:
+                logger.error("Failed to persist token revocation to database: %s", exc)
+                await db.rollback()
+
+    async def consume_token_atomically(
+        self, token: str, db: AsyncSession, ttl_seconds: int | None = None
+    ) -> bool:
+        """
+        Enforce single-use refresh token rotation atomically via database unique constraint.
+        If concurrent requests attempt to consume the same refresh token, only one succeeds;
+        the other encounters a uniqueness conflict or memory lock rejection and returns False.
+        Fails closed on unhandled database errors.
+        """
+        # Fast path: check in-memory cache
+        if self.is_revoked(token):
+            return False
+
+        now = time.time()
+        ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
+        thash = hash_token(token)
+        exp_dt = datetime.now(UTC) + timedelta(seconds=ttl)
+
+        rev_entry = RevokedToken(token_hash=thash, expires_at=exp_dt)
+        db.add(rev_entry)
+        try:
+            await db.commit()
+        except IntegrityError:
+            # Token was already consumed by a concurrent request
+            await db.rollback()
+            with self._lock:
+                self._revoked[token] = now + ttl
+            return False
+        except Exception as exc:
+            # Database failure: fail closed to prevent token reuse during outages
+            await db.rollback()
+            logger.critical(
+                "Database error while atomically consuming refresh token: %s. Failing closed.",
+                exc,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Security verification service temporarily unavailable. Token cannot be safely consumed.",
+            ) from exc
+
+        # Success: record in local memory and return True
+        with self._lock:
+            self._prune_expired(now)
+            self._revoked[token] = now + ttl
+        return True
 
     def is_revoked(self, token: str) -> bool:
         now = time.time()
@@ -226,7 +285,10 @@ class RevokedTokenStore:
             return True
 
     async def is_revoked_async(self, token: str, db: AsyncSession | None = None) -> bool:
-        """Check if token is revoked in memory or in persistent database store."""
+        """
+        Check if token is revoked in memory or in persistent database store.
+        Fails closed on database exceptions to distinguish 'not revoked' from 'could not check'.
+        """
         if self.is_revoked(token):
             return True
 
@@ -244,14 +306,48 @@ class RevokedTokenStore:
                     with self._lock:
                         self._revoked[token] = time.time() + self.default_ttl_seconds
                     return True
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.error(
+                    "Database failure while querying token revocation status: %s. Failing closed.",
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Security verification service temporarily unavailable. Token status could not be verified.",
+                ) from exc
 
         return False
 
     def clear(self) -> None:
         with self._lock:
             self._revoked.clear()
+
+
+async def cleanup_security_tables(
+    db: AsyncSession, login_retention_hours: int = 24
+) -> dict[str, int]:
+    """
+    Prune expired revoked tokens and stale login attempts from PostgreSQL.
+    Prevents unbounded table growth in production.
+    """
+    now_dt = datetime.now(UTC)
+    cutoff_dt = now_dt - timedelta(hours=login_retention_hours)
+    try:
+        del_tokens_stmt = delete(RevokedToken).where(RevokedToken.expires_at <= now_dt)
+        res_tokens = await db.execute(del_tokens_stmt)
+
+        del_attempts_stmt = delete(LoginAttempt).where(LoginAttempt.attempted_at <= cutoff_dt)
+        res_attempts = await db.execute(del_attempts_stmt)
+
+        await db.commit()
+        return {
+            "pruned_tokens": res_tokens.rowcount or 0,
+            "pruned_attempts": res_attempts.rowcount or 0,
+        }
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Security table retention cleanup failed: %s", exc)
+        raise
 
 
 counter_deduplicator = CounterDeduplicator(window_seconds=60)

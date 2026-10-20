@@ -1,11 +1,5 @@
 import type { AuthSuccessResponse, User } from '../types';
-import {
-  API_BASE,
-  apiRequest,
-  clearStoredTokens,
-  getStoredRefreshToken,
-  storeTokens,
-} from './httpClient';
+import { API_BASE, apiRequest, clearStoredTokens, storeTokens } from './httpClient';
 import { logDiagnosticWarning } from './localStorage';
 
 export const authApi = {
@@ -47,13 +41,10 @@ export const authApi = {
   },
 
   logout: (): void => {
-    const refreshToken = getStoredRefreshToken();
     clearStoredTokens();
     fetch(`${API_BASE}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
     }).catch((err) => {
       logDiagnosticWarning('authApi.logout', err);
     });

@@ -1,7 +1,7 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-60%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![Backend Tests](https://img.shields.io/badge/Pytest-66%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
@@ -56,7 +56,7 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **69 Tests** | 60 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
+| **Automated Test Suite** | **75 Tests** | 66 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
 | **Backend Code Coverage** | **89% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
@@ -89,15 +89,15 @@ flowchart TD
 
     subgraph Backend ["Application Layer (FastAPI 0.115+)"]
         AuthRouter["Auth Router (/api/auth) - bcrypt + PyJWT"]
-        ResourceRouter["Resource Router (/api/resources) - Search & Uploads"]
-        TaxonomyRouter["Taxonomy Router (/api/taxonomy) - Course Tree"]
+        ResourceRouter["Resource & Taxonomy Router (/api/resources) - Catalog, Tree & Uploads"]
+        UsersRouter["Users Router (/api/users) - Profiles & Activity"]
         AdminRouter["Admin Router (/api/admin) - Moderation & Audit Trail"]
         RankingCompiler["SQL Ranking Compiler (_AgeInDays & Engagement)"]
         FileValidator["Storage Engine (Magic-Byte Verification & SHA-256)"]
 
         RateLimiter --> AuthRouter
         RateLimiter --> ResourceRouter
-        RateLimiter --> TaxonomyRouter
+        RateLimiter --> UsersRouter
         RateLimiter --> AdminRouter
 
         ResourceRouter --> RankingCompiler
@@ -113,7 +113,7 @@ flowchart TD
     SPA -.->|"HttpOnly SameSite=Lax Cookie"| AuthRouter
     AuthRouter --> DB
     ResourceRouter --> DB
-    TaxonomyRouter --> DB
+    UsersRouter --> DB
     AdminRouter --> DB
     FileValidator --> DiskStorage
 ```
@@ -220,21 +220,21 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (69 Passed Tests)
+## Test Suites Breakdown (75 Passed Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
-| **Admin & Ranking** | [`backend/tests/test_admin_and_ranking.py`](backend/tests/test_admin_and_ranking.py) | 5 | PASSED | Role gating, report triage, bans, warnings, ranking math |
-| **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 10 | PASSED | Registration, login, refresh rotation, inline unit/topic creation |
+| **Admin & Ranking** | [`backend/tests/test_admin_and_ranking.py`](backend/tests/test_admin_and_ranking.py) | 6 | PASSED | Role gating, report triage, bans, warnings, ranking math, security table retention cleanup |
+| **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 12 | PASSED | Registration, login, atomic single-use refresh rotation, concurrent rotation race tests, CSRF origin verification |
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
-| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 15 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, IP extraction, live probe, archive integrity |
+| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 18 | PASSED | Magic bytes, Windows paths, null-byte traversal, zip-bombs, malformed OpenXML, fail-closed revocation, rate limiting, S3 fallback |
 | **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
 | **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 3 | PASSED | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **69** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **75** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
@@ -424,7 +424,7 @@ cd backend
 .\.venv\Scripts\ruff.exe check .
 .\.venv\Scripts\ruff.exe format --check .
 
-# 2. Backend Pytest with Coverage (60 Tests)
+# 2. Backend Pytest with Coverage (66 Tests)
 $env:DATABASE_URL="sqlite+aiosqlite:///./studyshare.db"
 .\.venv\Scripts\pytest.exe --cov=app tests/ -v
 

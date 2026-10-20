@@ -143,43 +143,91 @@ def validate_file_structure(file_path: Path, ext: str) -> None:
                         detail=f"Corrupted archive entry detected: {bad_file}",
                     )
 
+                infolist = zf.infolist()
+                max_entries = 5000
+                if len(infolist) > max_entries:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Archive contains too many entries ({len(infolist)} > {max_entries}).",
+                    )
+
                 total_uncompressed = 0
                 max_uncompressed_limit = 200 * 1024 * 1024  # 200 MB
+                max_single_entry = 100 * 1024 * 1024  # 100 MB
+                has_content_types = False
                 has_docx_marker = False
                 has_pptx_marker = False
 
-                for member in zf.infolist():
+                for member in infolist:
                     name = member.filename
-                    if ".." in name or name.startswith(("/", "\\")):
+                    norm_name = name.replace("\\", "/")
+
+                    # Defend against path traversal, Windows drive letters, and null bytes
+                    if (
+                        "\x00" in name
+                        or norm_name.startswith("/")
+                        or (len(norm_name) > 1 and norm_name[1] == ":")
+                        or any(part == ".." for part in norm_name.split("/"))
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                            detail="Archive contains unsafe relative or absolute member path.",
+                            detail="Archive contains unsafe relative, absolute, or drive-letter member path.",
                         )
+
+                    # ZIP bomb & compression ratio defenses
+                    if member.file_size > max_single_entry:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="Individual archive entry exceeds safety size limit (100 MB).",
+                        )
+
                     total_uncompressed += member.file_size
                     if total_uncompressed > max_uncompressed_limit:
                         raise HTTPException(
                             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                             detail="Archive uncompressed payload exceeds safe size limits (zip-bomb defense).",
                         )
-                    if ext_lower == ".docx" and (
-                        name.startswith("word/") or name == "[Content_Types].xml"
+
+                    if (
+                        member.compress_size > 0
+                        and member.file_size > 10 * 1024 * 1024
+                        and (member.file_size / member.compress_size) > 100
                     ):
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="Suspicious archive compression ratio detected (potential zip-bomb).",
+                        )
+
+                    if norm_name == "[Content_Types].xml":
+                        has_content_types = True
+                    elif ext_lower == ".docx" and norm_name.startswith("word/"):
                         has_docx_marker = True
-                    elif ext_lower == ".pptx" and (
-                        name.startswith("ppt/") or name == "[Content_Types].xml"
-                    ):
+                    elif ext_lower == ".pptx" and norm_name.startswith("ppt/"):
                         has_pptx_marker = True
 
-                if ext_lower == ".docx" and not has_docx_marker:
+                if ext_lower == ".docx" and (not has_content_types or not has_docx_marker):
                     raise HTTPException(
                         status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                         detail="File has .docx extension but lacks valid Word document structure.",
                     )
-                if ext_lower == ".pptx" and not has_pptx_marker:
+                if ext_lower == ".pptx" and (not has_content_types or not has_pptx_marker):
                     raise HTTPException(
                         status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                         detail="File has .pptx extension but lacks valid PowerPoint presentation structure.",
                     )
+
+                # Validate OpenXML XML metadata integrity
+                if ext_lower in (".docx", ".pptx") and has_content_types:
+                    try:
+                        import xml.etree.ElementTree as ET
+
+                        with zf.open("[Content_Types].xml") as ct_file:
+                            ET.fromstring(ct_file.read(512 * 1024))
+                    except Exception as exc:
+                        raise HTTPException(
+                            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                            detail="Archive contains malformed [Content_Types].xml package metadata.",
+                        ) from exc
         except HTTPException:
             raise
         except Exception as exc:

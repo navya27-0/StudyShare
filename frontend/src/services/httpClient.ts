@@ -8,12 +8,11 @@ const LEGACY_REFRESH_TOKEN_KEY = 'studyshare_refresh_token';
 
 /**
  * Security Hardening:
- * - Access tokens live primarily in memory and tab-scoped `sessionStorage` (for reload continuity).
- * - Refresh tokens are managed via the backend `HttpOnly` cookie (`studyshare_refresh_token`)
- *   and transient in-memory state — never persisted to `localStorage` where XSS could exfiltrate long-lived credentials.
+ * - Access tokens live in memory and tab-scoped `sessionStorage` (for reload continuity).
+ * - Refresh tokens are delivered and rotated exclusively via backend `HttpOnly, Secure, SameSite=Lax` cookies
+ *   (`studyshare_refresh_token`) — completely isolated from browser JavaScript to eliminate XSS token theft.
  */
 let inMemoryAccessToken: string | null = null;
-let inMemoryRefreshToken: string | null = null;
 
 export const getStoredAccessToken = (): string | null => {
   if (inMemoryAccessToken) return inMemoryAccessToken;
@@ -30,16 +29,11 @@ export const getStoredAccessToken = (): string | null => {
   }
 };
 
-export const getStoredRefreshToken = (): string | null => {
-  return inMemoryRefreshToken;
-};
-
 export const storeTokens = (tokens: AuthTokens): void => {
   inMemoryAccessToken = tokens.access_token;
-  inMemoryRefreshToken = tokens.refresh_token || null;
   try {
     sessionStorage.setItem(ACCESS_TOKEN_SESSION_KEY, tokens.access_token);
-    // Proactively purge any legacy long-lived tokens from Web Storage
+    // Proactively purge any legacy tokens from Web Storage
     sessionStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
     localStorage.removeItem(ACCESS_TOKEN_SESSION_KEY);
     localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
@@ -50,7 +44,6 @@ export const storeTokens = (tokens: AuthTokens): void => {
 
 export const clearStoredTokens = (): void => {
   inMemoryAccessToken = null;
-  inMemoryRefreshToken = null;
   try {
     sessionStorage.removeItem(ACCESS_TOKEN_SESSION_KEY);
     sessionStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
@@ -111,15 +104,12 @@ export async function apiRequest<T>(
     );
   }
 
-  // Handle token expiration & automatic refresh via HttpOnly cookie + optional in-memory fallback
+  // Handle token expiration & automatic refresh exclusively via HttpOnly session cookie
   if (response.status === 401 && retry) {
-    const refreshToken = getStoredRefreshToken();
     try {
       const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
       });
 
       if (refreshRes.ok) {
