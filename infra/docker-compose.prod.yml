@@ -48,7 +48,9 @@ services:
 
   frontend:
     # Single public ingress point and reverse proxy for SPA, /api/, and /uploads/
-    # In production, edge TLS termination is handled upstream (e.g. Cloudflare, AWS ALB, Caddy)
+    # In production, edge TLS termination is handled upstream (e.g. Cloudflare, AWS ALB, Caddy, Traefik).
+    # Nginx automatically inspects X-Forwarded-Proto and issues 301 redirects to HTTPS for unencrypted traffic.
+    # Neither backend (8000) nor postgres (5432) publish host ports; all service traffic is internal to Docker.
     build:
       context: ../frontend
       dockerfile: Dockerfile

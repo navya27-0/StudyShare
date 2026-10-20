@@ -90,13 +90,18 @@ class LoginRateLimiter:
                     LoginAttempt.attempted_at > cutoff_dt,
                 )
                 db_count = (await db.execute(count_stmt)).scalar_one() or 0
+            except HTTPException:
+                raise
             except Exception as exc:
-                logger.warning(
-                    "Database failure while querying login attempts for '%s': %s. "
-                    "Enforcing local worker rate limit policy.",
+                logger.critical(
+                    "Database failure while querying login attempts for '%s': %s. Failing closed.",
                     key,
                     exc,
                 )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily unavailable; login rate limit state could not be verified.",
+                ) from exc
 
         total_attempts = max(len(mem_attempts), db_count)
         if total_attempts >= self.max_attempts:
@@ -126,9 +131,19 @@ class LoginRateLimiter:
                 attempt = LoginAttempt(key=key, attempted_at=datetime.now(UTC))
                 db.add(attempt)
                 await db.commit()
-            except Exception as exc:
-                logger.error("Failed to persist login failure record to database: %s", exc)
+            except HTTPException:
                 await db.rollback()
+                raise
+            except Exception as exc:
+                await db.rollback()
+                logger.critical(
+                    "Failed to persist login failure record to database: %s. Failing closed.",
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily unavailable; login failure state could not be recorded.",
+                ) from exc
 
     def reset(self, key: str) -> None:
         """Clear failed attempts upon a successful login."""
@@ -211,7 +226,10 @@ class RevokedTokenStore:
     async def revoke_async(
         self, token: str, db: AsyncSession | None = None, ttl_seconds: int | None = None
     ) -> None:
-        """Revoke token in memory and persist SHA-256 hash in database for cross-worker invalidation."""
+        """
+        Revoke token in memory and persist SHA-256 hash in database for cross-worker invalidation.
+        Fails closed with HTTP 503 if persistent database revocation fails, preventing false logout success.
+        """
         self.revoke(token, ttl_seconds)
         if db is not None:
             thash = hash_token(token)
@@ -222,10 +240,21 @@ class RevokedTokenStore:
                 db.add(rev_entry)
                 await db.commit()
             except IntegrityError:
+                # Token already revoked in database; duplicate insert rollback is safe
                 await db.rollback()
+            except HTTPException:
+                await db.rollback()
+                raise
             except Exception as exc:
-                logger.error("Failed to persist token revocation to database: %s", exc)
                 await db.rollback()
+                logger.critical(
+                    "Database error while persistently revoking token: %s. Failing closed.",
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily unavailable; persistent token revocation failed.",
+                ) from exc
 
     async def consume_token_atomically(
         self, token: str, db: AsyncSession, ttl_seconds: int | None = None

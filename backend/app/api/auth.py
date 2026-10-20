@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import urlsplit
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -48,31 +49,81 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     )
 
 
+def _canonical_origin(url_or_origin: str | None) -> str | None:
+    """
+    Parse and extract canonical origin 'scheme://netloc' (lowercased) from a URL or Origin string.
+    Ensures exact matching of scheme, hostname, and port without prefix/suffix bypasses.
+    """
+    if not url_or_origin or not isinstance(url_or_origin, str):
+        return None
+    trimmed = url_or_origin.strip()
+    if not trimmed:
+        return None
+    parsed = urlsplit(trimmed)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    scheme = parsed.scheme.lower()
+    hostname = parsed.hostname.lower() if parsed.hostname else ""
+    port = parsed.port
+    if not hostname:
+        return None
+    # Normalize standard ports (omit :80 for http and :443 for https)
+    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        netloc = hostname
+    elif port:
+        netloc = f"{hostname}:{port}"
+    else:
+        netloc = hostname
+    return f"{scheme}://{netloc}"
+
+
+def _get_allowed_origins() -> set[str]:
+    """Retrieve canonical set of allowed origins from configuration, test, and dev defaults."""
+    allowed = set()
+    for o in settings.cors_origins_list:
+        canon = _canonical_origin(o)
+        if canon:
+            allowed.add(canon)
+    # Include test ASGI transport origin
+    allowed.add("http://test")
+    return allowed
+
+
 def _verify_trusted_origin(request: Request) -> None:
     """
-    Validate Origin or Referer header against allowed CORS origins on sensitive cookie endpoints.
-    Protects HttpOnly cookie-authenticated operations (refresh, logout) against CSRF.
+    Strictly validate Origin or Referer header against exact allowed CORS origins on cookie-authenticated endpoints.
+    Protects HttpOnly cookie operations (/refresh, /logout) against CSRF.
+    Rejects requests lacking both headers, with deceptive domain suffixes, or with unexpected ports.
     """
-    origin = request.headers.get("origin")
-    referer = request.headers.get("referer")
-    allowed = set(settings.cors_origins_list)
-    # Include test and local development origin patterns
-    allowed.update(["http://test", "http://localhost", "http://127.0.0.1"])
+    raw_origin = request.headers.get("origin")
+    raw_referer = request.headers.get("referer")
 
-    if origin:
-        if origin not in allowed and not any(origin.startswith(a) for a in allowed):
+    # Reject requests with neither Origin nor Referer header
+    if not raw_origin and not raw_referer:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing Origin or Referer header on cookie-authenticated endpoint.",
+        )
+
+    allowed_origins = _get_allowed_origins()
+
+    if raw_origin:
+        canon_origin = _canonical_origin(raw_origin)
+        if not canon_origin or canon_origin not in allowed_origins:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Untrusted origin rejected by CSRF verification.",
             )
         return
 
-    if referer:
-        if not any(referer.startswith(a) for a in allowed):
+    if raw_referer:
+        canon_referer = _canonical_origin(raw_referer)
+        if not canon_referer or canon_referer not in allowed_origins:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Untrusted referer rejected by CSRF verification.",
             )
+        return
 
 
 @router.post("/signup", response_model=AuthSuccessResponse, status_code=status.HTTP_201_CREATED)

@@ -547,3 +547,139 @@ async def test_fail_closed_revocation_on_db_error():
         await store.consume_token_atomically("test_token_string", db=mock_db)
     assert exc_consume.value.status_code == 503
     assert "unavailable" in exc_consume.value.detail
+
+
+@pytest.mark.asyncio
+async def test_logout_and_login_limiter_db_outage_fails_closed():
+    """
+    Verify fail-closed policy across auth and rate limiting during persistent database outages:
+    1. revoke_async fails closed with HTTP 503 if DB commit fails.
+    2. login_rate_limiter.check_async fails closed with HTTP 503 if DB execute fails.
+    3. login_rate_limiter.record_failure_async fails closed with HTTP 503 if DB commit fails.
+    """
+    from unittest.mock import AsyncMock
+
+    from fastapi import HTTPException
+
+    from app.core.rate_limit import LoginRateLimiter, RevokedTokenStore
+
+    # 1. Logout persistent revocation DB failure
+    store = RevokedTokenStore()
+    mock_db = AsyncMock()
+    mock_db.commit.side_effect = Exception("PostgreSQL down during logout commit")
+    with pytest.raises(HTTPException) as exc_revoke:
+        await store.revoke_async("test_token_logout", db=mock_db)
+    assert exc_revoke.value.status_code == 503
+    assert "persistent token revocation failed" in exc_revoke.value.detail
+
+    # 2. Login check DB failure
+    limiter = LoginRateLimiter(max_attempts=3, window_seconds=60)
+    mock_db_check = AsyncMock()
+    mock_db_check.execute.side_effect = Exception("PostgreSQL down during check_async")
+    with pytest.raises(HTTPException) as exc_check:
+        await limiter.check_async("127.0.0.1:test@example.com", db=mock_db_check)
+    assert exc_check.value.status_code == 503
+    assert "rate limit state could not be verified" in exc_check.value.detail
+
+    # 3. Login record failure DB failure
+    mock_db_rec = AsyncMock()
+    mock_db_rec.commit.side_effect = Exception("PostgreSQL down during record_failure_async")
+    with pytest.raises(HTTPException) as exc_rec:
+        await limiter.record_failure_async("127.0.0.1:test@example.com", db=mock_db_rec)
+    assert exc_rec.value.status_code == 503
+    assert "login failure state could not be recorded" in exc_rec.value.detail
+
+
+@pytest.mark.asyncio
+async def test_multi_worker_login_rate_limiting_shared_state():
+    """
+    Verify multi-worker login rate-limiting resilience:
+    Independent worker instances without shared memory synchronize failure thresholds
+    via the database backing store, locking out subsequent attempts across workers.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import HTTPException
+
+    from app.core.rate_limit import LoginRateLimiter
+
+    worker1 = LoginRateLimiter(max_attempts=2, window_seconds=60)
+    worker2 = LoginRateLimiter(max_attempts=2, window_seconds=60)
+
+    key = "192.0.2.55:attacker@test.com"
+
+    # Worker 1 records failures in DB
+    mock_db1 = AsyncMock()
+    await worker1.record_failure_async(key, db=mock_db1)
+    await worker1.record_failure_async(key, db=mock_db1)
+
+    # Worker 2 has empty local memory for this key
+    assert key not in worker2._failures
+
+    # Worker 2 queries DB and finds 2 recorded failures (>= max_attempts 2)
+    mock_db2 = AsyncMock()
+    mock_scalar = MagicMock()
+    mock_scalar.scalar_one.return_value = 2
+    mock_db2.execute.return_value = mock_scalar
+
+    with pytest.raises(HTTPException) as exc_w2:
+        await worker2.check_async(key, db=mock_db2)
+    assert exc_w2.value.status_code == 429
+    assert "Account temporarily locked" in exc_w2.value.detail
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_entry_count_limit_exceeded():
+    """Verify archive upload fails with 413 if entry count exceeds 5,000 files."""
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i in range(5001):
+            zf.writestr(f"file_{i}.txt", b"x")
+
+    with pytest.raises(HTTPException) as exc:
+        await storage.save_file(
+            file_content=buf.getvalue(),
+            filename="massive.zip",
+            content_type="application/zip",
+        )
+    assert exc.value.status_code == 413
+    assert "too many entries" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_single_entry_size_limit_exceeded():
+    """Verify archive upload fails with 413 if an entry's uncompressed header size exceeds 100 MB."""
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("test.txt", b"placeholder")
+
+    data = bytearray(buf.getvalue())
+    cd_idx = data.find(b"PK\x01\x02")
+    assert cd_idx != -1
+    # Patch central directory header uncompressed size (offset 24) to 105 MB
+    data[cd_idx + 24 : cd_idx + 28] = (105 * 1024 * 1024).to_bytes(4, "little")
+
+    with pytest.raises(HTTPException) as exc:
+        await storage.save_file(
+            file_content=bytes(data),
+            filename="large.zip",
+            content_type="application/zip",
+        )
+    assert exc.value.status_code == 413
+    assert "exceeds safety size limit" in exc.value.detail
