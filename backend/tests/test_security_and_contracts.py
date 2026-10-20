@@ -557,7 +557,7 @@ async def test_logout_and_login_limiter_db_outage_fails_closed():
     2. login_rate_limiter.check_async fails closed with HTTP 503 if DB execute fails.
     3. login_rate_limiter.record_failure_async fails closed with HTTP 503 if DB commit fails.
     """
-    from unittest.mock import AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
 
     from fastapi import HTTPException
 
@@ -566,6 +566,7 @@ async def test_logout_and_login_limiter_db_outage_fails_closed():
     # 1. Logout persistent revocation DB failure
     store = RevokedTokenStore()
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     mock_db.commit.side_effect = Exception("PostgreSQL down during logout commit")
     with pytest.raises(HTTPException) as exc_revoke:
         await store.revoke_async("test_token_logout", db=mock_db)
@@ -583,11 +584,22 @@ async def test_logout_and_login_limiter_db_outage_fails_closed():
 
     # 3. Login record failure DB failure
     mock_db_rec = AsyncMock()
+    mock_db_rec.add = MagicMock()
     mock_db_rec.commit.side_effect = Exception("PostgreSQL down during record_failure_async")
     with pytest.raises(HTTPException) as exc_rec:
         await limiter.record_failure_async("127.0.0.1:test@example.com", db=mock_db_rec)
     assert exc_rec.value.status_code == 503
     assert "login failure state could not be recorded" in exc_rec.value.detail
+
+    # 4. Login reset DB failure fails closed & increments telemetry metric
+    mock_db_reset = AsyncMock()
+    mock_db_reset.commit.side_effect = Exception("PostgreSQL down during reset_async")
+    assert limiter.reset_failure_count == 0
+    with pytest.raises(HTTPException) as exc_reset:
+        await limiter.reset_async("127.0.0.1:test@example.com", db=mock_db_reset)
+    assert exc_reset.value.status_code == 503
+    assert "login rate-limit state could not be cleared" in exc_reset.value.detail
+    assert limiter.reset_failure_count == 1
 
 
 @pytest.mark.asyncio

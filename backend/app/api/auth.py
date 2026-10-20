@@ -88,8 +88,9 @@ def _get_allowed_origins() -> set[str]:
         canon = _canonical_origin(o)
         if canon:
             allowed.add(canon)
-    # Include test ASGI transport origin
-    allowed.add("http://test")
+    # Only allow synthetic test ASGI transport origin in non-production environments
+    if settings.ENVIRONMENT.lower() != "production":
+        allowed.add("http://test")
     return allowed
 
 

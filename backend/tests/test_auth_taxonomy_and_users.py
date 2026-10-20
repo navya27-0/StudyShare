@@ -298,6 +298,32 @@ async def test_auth_logout_db_outage_fails_closed(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_production_environment_rejects_test_origin(client: AsyncClient):
+    """
+    Verify that in production environments (ENVIRONMENT='production'),
+    synthetic test origin 'http://test' is strictly excluded from trusted origins
+    and rejected with HTTP 403 Forbidden.
+    """
+    from app.config import get_settings
+
+    settings = get_settings()
+    original_env = settings.ENVIRONMENT
+    try:
+        settings.ENVIRONMENT = "production"
+        res = await client.post(
+            "/api/auth/refresh",
+            headers={
+                "Origin": "http://test",
+                "Cookie": "studyshare_refresh_token=any.token.value",
+            },
+        )
+        assert res.status_code == 403
+        assert "Untrusted origin" in res.json()["detail"]
+    finally:
+        settings.ENVIRONMENT = original_env
+
+
+@pytest.mark.asyncio
 async def test_get_me_authenticated(client: AsyncClient, auth_headers: dict):
     """Test GET /api/auth/me returns current authenticated user and profile."""
     res = await client.get("/api/auth/me", headers=auth_headers)

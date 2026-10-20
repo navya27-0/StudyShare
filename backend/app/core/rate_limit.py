@@ -33,6 +33,7 @@ class LoginRateLimiter:
         self.window_seconds = window_seconds
         self._failures: dict[str, list[float]] = {}
         self._lock = threading.Lock()
+        self.reset_failure_count: int = 0
 
     def _cleanup_old_attempts(self, key: str, now: float) -> list[float]:
         cutoff = now - self.window_seconds
@@ -151,20 +152,39 @@ class LoginRateLimiter:
             self._failures.pop(key, None)
 
     async def reset_async(self, key: str, db: AsyncSession | None = None) -> None:
-        """Clear failed attempts upon a successful login across all workers."""
+        """
+        Clear failed attempts upon a successful login across all workers.
+        Fails closed with HTTP 503 if persistent database deletion fails, preventing
+        stale failure records in PostgreSQL that could lock out the user on other workers.
+        Increments telemetry metric reset_failure_count on failure.
+        """
         self.reset(key)
         if db is not None:
             try:
                 await db.execute(delete(LoginAttempt).where(LoginAttempt.key == key))
                 await db.commit()
-            except Exception as exc:
-                logger.error("Failed to clear login attempts from database: %s", exc)
+            except HTTPException:
                 await db.rollback()
+                raise
+            except Exception as exc:
+                await db.rollback()
+                with self._lock:
+                    self.reset_failure_count += 1
+                logger.critical(
+                    "Database failure while clearing login attempts for '%s': %s. Failing closed to prevent cross-worker stale lockout.",
+                    key,
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily unavailable; login rate-limit state could not be cleared.",
+                ) from exc
 
     def clear(self) -> None:
         """Clear all rate limiting failure state across all keys (useful for test isolation)."""
         with self._lock:
             self._failures.clear()
+            self.reset_failure_count = 0
         counter_deduplicator.clear()
         revoked_token_store.clear()
 
