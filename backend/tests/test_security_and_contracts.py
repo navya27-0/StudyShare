@@ -374,7 +374,10 @@ async def test_health_live_endpoint(client: AsyncClient):
     """Verify minimal /api/health/live liveness probe returns HTTP 200 without DB dependency."""
     res = await client.get("/api/health/live")
     assert res.status_code == 200
-    assert res.json() == {"status": "alive"}
+    data = res.json()
+    assert data["status"] == "alive"
+    assert data["service"] == "StudyShare API"
+    assert "timestamp" in data
 
 
 @pytest.mark.asyncio
