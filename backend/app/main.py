@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import uuid
@@ -41,12 +42,44 @@ SEED_DEMO_PDF_BYTES = (
 )
 
 
+async def _periodic_security_cleanup_loop():
+    """Background task to periodically prune expired security table records in production."""
+    from app.core.rate_limit import cleanup_security_tables
+    from app.database import async_session_maker
+
+    interval = max(60, settings.SECURITY_CLEANUP_INTERVAL_SECONDS)
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            async with async_session_maker() as session:
+                await cleanup_security_tables(
+                    session, login_retention_hours=settings.LOGIN_ATTEMPT_RETENTION_HOURS
+                )
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.warning("Periodic background security table cleanup failed: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
     upload_path = Path(settings.UPLOAD_DIR).resolve()
     upload_path.mkdir(parents=True, exist_ok=True)
-    yield
+
+    cleanup_task = None
+    if settings.SCHEDULED_CLEANUP_ENABLED:
+        cleanup_task = asyncio.create_task(_periodic_security_cleanup_loop())
+
+    try:
+        yield
+    finally:
+        if cleanup_task:
+            cleanup_task.cancel()
+            try:
+                await cleanup_task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(

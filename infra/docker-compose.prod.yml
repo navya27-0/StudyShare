@@ -32,6 +32,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studyshare}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-studyshare_prod_db}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://studyshare.pages.dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required in production}
+      SCHEDULED_CLEANUP_ENABLED: "True"
+      SECURITY_CLEANUP_INTERVAL_SECONDS: 21600
+      LOGIN_ATTEMPT_RETENTION_HOURS: 24
     expose:
       - "8000"
     volumes:

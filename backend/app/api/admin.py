@@ -496,11 +496,19 @@ async def list_moderation_actions(
 async def cleanup_security_records_endpoint(
     current_admin: Annotated[User, Depends(get_current_admin)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    login_retention_hours: int = 24,
+    login_retention_hours: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=8760,
+            description="Retention window for login attempts in hours (1 to 8760, i.e. 1 hour to 1 year). Must be positive.",
+        ),
+    ] = 24,
 ):
     """
     Administrator maintenance endpoint to prune expired revoked token hashes
     and stale login attempts, preventing unbounded table growth.
+    Enforces a strict positive lower bound (>= 1) to prevent moving the cutoff into the future.
     """
     from app.core.rate_limit import cleanup_security_tables
 
@@ -509,4 +517,5 @@ async def cleanup_security_records_endpoint(
         "status": "success",
         "message": "Security tables cleaned successfully.",
         "details": result,
+        "retention_hours_applied": login_retention_hours,
     }

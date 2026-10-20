@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Reverse Proxy & Security Settings
     TRUSTED_PROXIES: str = "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     ALLOW_PRODUCTION_SEED: bool = False
+    SCHEDULED_CLEANUP_ENABLED: bool = False
+    SECURITY_CLEANUP_INTERVAL_SECONDS: int = 21600  # 6 hours
+    LOGIN_ATTEMPT_RETENTION_HOURS: int = 24
 
     # Storage Settings
     STORAGE_BACKEND: str = "local"  # "local" | "s3"

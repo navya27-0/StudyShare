@@ -286,7 +286,7 @@ async def test_admin_security_tables_cleanup(
     )
     assert forbid.status_code == 403
 
-    # 2. Admin succeeds
+    # 2. Admin succeeds with valid positive retention
     res = await client.post(
         "/api/admin/maintenance/cleanup-security-tables?login_retention_hours=12",
         headers=admin_auth_headers,
@@ -296,3 +296,33 @@ async def test_admin_security_tables_cleanup(
     assert data["status"] == "success"
     assert "pruned_tokens" in data["details"]
     assert "pruned_attempts" in data["details"]
+    assert data.get("retention_hours_applied") == 12
+
+    # 3. Validation: zero or negative retention hours rejected with 422 Unprocessable Entity
+    res_zero = await client.post(
+        "/api/admin/maintenance/cleanup-security-tables?login_retention_hours=0",
+        headers=admin_auth_headers,
+    )
+    assert res_zero.status_code == 422
+
+    res_neg = await client.post(
+        "/api/admin/maintenance/cleanup-security-tables?login_retention_hours=-5",
+        headers=admin_auth_headers,
+    )
+    assert res_neg.status_code == 422
+
+    # 4. Validation: out-of-range excessive retention hours rejected with 422
+    res_excess = await client.post(
+        "/api/admin/maintenance/cleanup-security-tables?login_retention_hours=99999",
+        headers=admin_auth_headers,
+    )
+    assert res_excess.status_code == 422
+
+    # 5. Direct core function raises ValueError if invoked with non-positive retention
+    from unittest.mock import AsyncMock
+
+    from app.core.rate_limit import cleanup_security_tables
+
+    mock_db = AsyncMock()
+    with pytest.raises(ValueError, match="must be a positive integer"):
+        await cleanup_security_tables(mock_db, login_retention_hours=-1)

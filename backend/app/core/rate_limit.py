@@ -358,7 +358,10 @@ async def cleanup_security_tables(
     """
     Prune expired revoked tokens and stale login attempts from PostgreSQL.
     Prevents unbounded table growth in production.
+    Enforces that login_retention_hours >= 1 to prevent moving the cutoff into the future.
     """
+    if login_retention_hours < 1:
+        raise ValueError("login_retention_hours must be a positive integer (>= 1).")
     now_dt = datetime.now(UTC)
     cutoff_dt = now_dt - timedelta(hours=login_retention_hours)
     try:
@@ -379,6 +382,18 @@ async def cleanup_security_tables(
         raise
 
 
+async def run_standalone_cleanup(retention_hours: int = 24) -> dict[str, int]:
+    """
+    Execute security table retention cleanup as a standalone command (for cron or scheduled container tasks).
+    """
+    from app.database import async_session_maker
+
+    async with async_session_maker() as session:
+        result = await cleanup_security_tables(session, login_retention_hours=retention_hours)
+        logger.info("Security table cleanup complete: %s", result)
+        return result
+
+
 counter_deduplicator = CounterDeduplicator(window_seconds=60)
 revoked_token_store = RevokedTokenStore()
 
@@ -386,3 +401,8 @@ login_rate_limiter = LoginRateLimiter(
     max_attempts=settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
     window_seconds=settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
 )
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(run_standalone_cleanup())

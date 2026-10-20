@@ -53,28 +53,32 @@ def _canonical_origin(url_or_origin: str | None) -> str | None:
     """
     Parse and extract canonical origin 'scheme://netloc' (lowercased) from a URL or Origin string.
     Ensures exact matching of scheme, hostname, and port without prefix/suffix bypasses.
+    Safely catches ValueError for malformed, non-numeric, or out-of-range ports and returns None.
     """
     if not url_or_origin or not isinstance(url_or_origin, str):
         return None
     trimmed = url_or_origin.strip()
     if not trimmed:
         return None
-    parsed = urlsplit(trimmed)
-    if not parsed.scheme or not parsed.netloc:
+    try:
+        parsed = urlsplit(trimmed)
+        if not parsed.scheme or not parsed.netloc:
+            return None
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname.lower() if parsed.hostname else ""
+        port = parsed.port
+        if not hostname:
+            return None
+        # Normalize standard ports (omit :80 for http and :443 for https)
+        if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+            netloc = hostname
+        elif port:
+            netloc = f"{hostname}:{port}"
+        else:
+            netloc = hostname
+        return f"{scheme}://{netloc}"
+    except (ValueError, Exception):
         return None
-    scheme = parsed.scheme.lower()
-    hostname = parsed.hostname.lower() if parsed.hostname else ""
-    port = parsed.port
-    if not hostname:
-        return None
-    # Normalize standard ports (omit :80 for http and :443 for https)
-    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
-        netloc = hostname
-    elif port:
-        netloc = f"{hostname}:{port}"
-    else:
-        netloc = hostname
-    return f"{scheme}://{netloc}"
 
 
 def _get_allowed_origins() -> set[str]:

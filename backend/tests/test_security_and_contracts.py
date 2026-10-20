@@ -683,3 +683,28 @@ async def test_upload_archive_single_entry_size_limit_exceeded():
         )
     assert exc.value.status_code == 413
     assert "exceeds safety size limit" in exc.value.detail
+
+
+def test_canonical_origin_malformed_ports_handled_safely():
+    """Verify _canonical_origin safely returns None without raising unhandled ValueError on malformed ports."""
+    from app.api.auth import _canonical_origin
+
+    # Non-numeric port
+    assert _canonical_origin("http://example.com:notaport") is None
+    assert _canonical_origin("http://example.com:abc") is None
+    assert _canonical_origin("http://example.com:80a") is None
+
+    # Out-of-range port (> 65535 or negative)
+    assert _canonical_origin("http://example.com:99999999") is None
+    assert _canonical_origin("http://example.com:-80") is None
+
+    # Malformed URL / empty / non-string
+    assert _canonical_origin("") is None
+    assert _canonical_origin("not-a-valid-url") is None
+    assert _canonical_origin(None) is None
+
+    # Valid origins
+    assert _canonical_origin("http://localhost:5173") == "http://localhost:5173"
+    assert _canonical_origin("http://localhost:80") == "http://localhost"
+    assert _canonical_origin("https://studyshare.pages.dev:443") == "https://studyshare.pages.dev"
+    assert _canonical_origin("https://studyshare.pages.dev") == "https://studyshare.pages.dev"

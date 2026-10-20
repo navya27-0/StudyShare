@@ -193,6 +193,24 @@ async def test_csrf_origin_rejection_on_cookie_endpoints(client: AsyncClient):
     assert res_port.status_code == 403
     assert "Untrusted origin" in res_port.json()["detail"]
 
+    # 3b. Malformed non-numeric port in Origin (must return clean 403 rather than 500 ValueError)
+    res_nonnum_port = await client.post(
+        "/api/auth/refresh",
+        headers={"Origin": "http://localhost:invalidport"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_nonnum_port.status_code == 403
+    assert "Untrusted origin" in res_nonnum_port.json()["detail"]
+
+    # 3c. Malformed out-of-range port in Origin (> 65535, must return clean 403 rather than 500)
+    res_range_port = await client.post(
+        "/api/auth/refresh",
+        headers={"Origin": "http://localhost:99999999"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_range_port.status_code == 403
+    assert "Untrusted origin" in res_range_port.json()["detail"]
+
     # 4. Absent Origin and absent Referer
     async with BareAsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -212,6 +230,24 @@ async def test_csrf_origin_rejection_on_cookie_endpoints(client: AsyncClient):
     )
     assert res_bad_ref.status_code == 403
     assert "Untrusted referer" in res_bad_ref.json()["detail"]
+
+    # 5b. Malformed non-numeric port in Referer
+    res_bad_ref_nonnum = await client.post(
+        "/api/auth/refresh",
+        headers={"Origin": "", "Referer": "http://localhost:invalidport/evil"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_bad_ref_nonnum.status_code == 403
+    assert "Untrusted referer" in res_bad_ref_nonnum.json()["detail"]
+
+    # 5c. Malformed out-of-range port in Referer
+    res_bad_ref_range = await client.post(
+        "/api/auth/refresh",
+        headers={"Origin": "", "Referer": "http://localhost:99999999/evil"},
+        cookies={"studyshare_refresh_token": "any.token.value"},
+    )
+    assert res_bad_ref_range.status_code == 403
+    assert "Untrusted referer" in res_bad_ref_range.json()["detail"]
 
     # 6. Valid Referer without Origin succeeds CSRF validation (fails at token decoding if invalid token)
     res_good_ref = await client.post(
