@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic (max 32 chars).
-revision: str = "0005_revoked_tokens_and_login_attempts"
+revision: str = "0005_tokens_and_attempts"
 down_revision: str | None = "0004_soft_delete_moderation"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
