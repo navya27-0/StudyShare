@@ -1,16 +1,28 @@
+import hashlib
 import threading
 import time
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.models.security import LoginAttempt, RevokedToken
 
 settings = get_settings()
 
 
+def hash_token(token: str) -> str:
+    """Compute SHA-256 hex digest of a token string to avoid persisting raw credentials."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 class LoginRateLimiter:
     """
-    Thread-safe sliding-window rate limiter for login attempts with automatic TTL pruning.
+    Hybrid sliding-window rate limiter for login attempts.
+    Maintains an in-memory sliding window for thread-safe local speed,
+    while optionally synchronizing failure counters with PostgreSQL for multi-worker/replica safety.
     """
 
     def __init__(self, max_attempts: int, window_seconds: int):
@@ -42,7 +54,7 @@ class LoginRateLimiter:
         return valid_attempts
 
     def check(self, key: str) -> None:
-        """Verify whether the key has exceeded the allowed failure attempts."""
+        """Verify whether the key has exceeded the allowed failure attempts (in-memory fast path)."""
         now = time.time()
         with self._lock:
             attempts = self._cleanup_old_attempts(key, now)
@@ -58,18 +70,71 @@ class LoginRateLimiter:
                     headers={"Retry-After": str(retry_after)},
                 )
 
+    async def check_async(self, key: str, db: AsyncSession | None = None) -> None:
+        """Verify whether the key has exceeded allowed failures across all workers."""
+        now = time.time()
+        with self._lock:
+            mem_attempts = self._cleanup_old_attempts(key, now)
+
+        db_count = 0
+        oldest_ts = mem_attempts[0] if mem_attempts else now
+        if db is not None:
+            now_dt = datetime.now(UTC)
+            cutoff_dt = now_dt - timedelta(seconds=self.window_seconds)
+            try:
+                count_stmt = select(func.count(LoginAttempt.id)).where(
+                    LoginAttempt.key == key,
+                    LoginAttempt.attempted_at > cutoff_dt,
+                )
+                db_count = (await db.execute(count_stmt)).scalar_one() or 0
+            except Exception:
+                pass
+
+        total_attempts = max(len(mem_attempts), db_count)
+        if total_attempts >= self.max_attempts:
+            retry_after = max(1, int(self.window_seconds - (now - oldest_ts)))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    f"Too many failed login attempts. Account temporarily locked for security. "
+                    f"Please retry in {retry_after} seconds."
+                ),
+                headers={"Retry-After": str(retry_after)},
+            )
+
     def record_failure(self, key: str) -> None:
-        """Record an invalid login attempt."""
+        """Record an invalid login attempt in memory."""
         now = time.time()
         with self._lock:
             valid = self._cleanup_old_attempts(key, now)
             valid.append(now)
             self._failures[key] = valid
 
+    async def record_failure_async(self, key: str, db: AsyncSession | None = None) -> None:
+        """Record an invalid login attempt and synchronize across workers."""
+        self.record_failure(key)
+        if db is not None:
+            try:
+                attempt = LoginAttempt(key=key, attempted_at=datetime.now(UTC))
+                db.add(attempt)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+
     def reset(self, key: str) -> None:
         """Clear failed attempts upon a successful login."""
         with self._lock:
             self._failures.pop(key, None)
+
+    async def reset_async(self, key: str, db: AsyncSession | None = None) -> None:
+        """Clear failed attempts upon a successful login across all workers."""
+        self.reset(key)
+        if db is not None:
+            try:
+                await db.execute(delete(LoginAttempt).where(LoginAttempt.key == key))
+                await db.commit()
+            except Exception:
+                await db.rollback()
 
     def clear(self) -> None:
         """Clear all rate limiting failure state across all keys (useful for test isolation)."""
@@ -111,8 +176,8 @@ class CounterDeduplicator:
 
 class RevokedTokenStore:
     """
-    Thread-safe TTL-bounded store of revoked refresh token digests for token rotation & logout.
-    Automatically expires revoked entries once their natural refresh TTL has elapsed.
+    Hybrid TTL-bounded store of revoked refresh token digests for token rotation & logout.
+    Combines thread-safe in-memory cache with PostgreSQL persistence for multi-worker safety.
     """
 
     def __init__(self, default_ttl_seconds: int | None = None) -> None:
@@ -133,6 +198,22 @@ class RevokedTokenStore:
             self._prune_expired(now)
             self._revoked[token] = now + ttl
 
+    async def revoke_async(
+        self, token: str, db: AsyncSession | None = None, ttl_seconds: int | None = None
+    ) -> None:
+        """Revoke token in memory and persist SHA-256 hash in database for cross-worker invalidation."""
+        self.revoke(token, ttl_seconds)
+        if db is not None:
+            thash = hash_token(token)
+            ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
+            exp_dt = datetime.now(UTC) + timedelta(seconds=ttl)
+            try:
+                rev_entry = RevokedToken(token_hash=thash, expires_at=exp_dt)
+                db.add(rev_entry)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+
     def is_revoked(self, token: str) -> bool:
         now = time.time()
         with self._lock:
@@ -143,6 +224,30 @@ class RevokedTokenStore:
                 self._revoked.pop(token, None)
                 return False
             return True
+
+    async def is_revoked_async(self, token: str, db: AsyncSession | None = None) -> bool:
+        """Check if token is revoked in memory or in persistent database store."""
+        if self.is_revoked(token):
+            return True
+
+        if db is not None:
+            thash = hash_token(token)
+            now_dt = datetime.now(UTC)
+            try:
+                stmt = select(RevokedToken.id).where(
+                    RevokedToken.token_hash == thash,
+                    RevokedToken.expires_at > now_dt,
+                )
+                res = await db.execute(stmt)
+                if res.scalar_one_or_none() is not None:
+                    # Cache in local memory for future checks in this worker
+                    with self._lock:
+                        self._revoked[token] = time.time() + self.default_ttl_seconds
+                    return True
+            except Exception:
+                pass
+
+        return False
 
     def clear(self) -> None:
         with self._lock:

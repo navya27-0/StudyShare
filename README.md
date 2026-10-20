@@ -1,8 +1,8 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-56%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
-[![Frontend Tests](https://img.shields.io/badge/Vitest-8%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
+[![Backend Tests](https://img.shields.io/badge/Pytest-60%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
 [![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
@@ -56,7 +56,7 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **64 Tests** | 56 backend async Pytests + 8 frontend Vitest component tests (100% passing) |
+| **Automated Test Suite** | **69 Tests** | 60 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
 | **Backend Code Coverage** | **89% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
@@ -220,7 +220,7 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (64 Passed Tests)
+## Test Suites Breakdown (69 Passed Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
@@ -228,13 +228,13 @@ erDiagram
 | **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 10 | PASSED | Registration, login, refresh rotation, inline unit/topic creation |
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
-| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 11 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, secrets |
+| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 15 | PASSED | Magic bytes, .cpp/.java code, S3 fallback, JSON logging, rate limiting, IP extraction, live probe, archive integrity |
 | **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
-| **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 2 | PASSED | In-memory token isolation, sessionStorage sync, session clearing |
+| **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 3 | PASSED | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **64** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **69** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
@@ -424,11 +424,11 @@ cd backend
 .\.venv\Scripts\ruff.exe check .
 .\.venv\Scripts\ruff.exe format --check .
 
-# 2. Backend Pytest with Coverage (56 Tests)
+# 2. Backend Pytest with Coverage (60 Tests)
 $env:DATABASE_URL="sqlite+aiosqlite:///./studyshare.db"
 .\.venv\Scripts\pytest.exe --cov=app tests/ -v
 
-# 3. Frontend Lint, Vitest & Typechecked Build (8 Tests)
+# 3. Frontend Lint, Vitest & Typechecked Build (9 Tests)
 cd ../frontend
 npm run lint
 npm run test

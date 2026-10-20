@@ -118,7 +118,6 @@ async def signup(
 
     tokens = TokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -142,7 +141,7 @@ async def login(
     rate_limit_key = f"{client_ip}:{email_clean}"
 
     # 1. Check rate limit
-    login_rate_limiter.check(rate_limit_key)
+    await login_rate_limiter.check_async(rate_limit_key, db=db)
 
     # 2. Query user by email
     query = (
@@ -155,7 +154,7 @@ async def login(
 
     # 3. Validate credentials
     if not user or not verify_password(login_data.password, user.hashed_password):
-        login_rate_limiter.record_failure(rate_limit_key)
+        await login_rate_limiter.record_failure_async(rate_limit_key, db=db)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password credentials.",
@@ -169,7 +168,7 @@ async def login(
         )
 
     # 4. Successful login: clear failure counter
-    login_rate_limiter.reset(rate_limit_key)
+    await login_rate_limiter.reset_async(rate_limit_key, db=db)
 
     # 5. Generate tokens
     access_token = create_access_token(
@@ -181,7 +180,6 @@ async def login(
 
     tokens = TokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -200,11 +198,10 @@ async def refresh_token_endpoint(
     refresh_data: RefreshTokenRequest | None = Body(None),
 ):
     """Issue a new access token and rotated refresh token using body token or HttpOnly cookie."""
-    raw_token = (
-        refresh_data.refresh_token
-        if refresh_data and refresh_data.refresh_token
-        else request.cookies.get(REFRESH_COOKIE_NAME)
-    )
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not raw_token and refresh_data and refresh_data.refresh_token:
+        raw_token = refresh_data.refresh_token
+
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -212,7 +209,7 @@ async def refresh_token_endpoint(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if revoked_token_store.is_revoked(raw_token):
+    if await revoked_token_store.is_revoked_async(raw_token, db=db):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has been revoked. Please log in again.",
@@ -262,7 +259,7 @@ async def refresh_token_endpoint(
         )
 
     # Rotate refresh token: revoke consumed token and issue new pair
-    revoked_token_store.revoke(raw_token)
+    await revoked_token_store.revoke_async(raw_token, db=db)
 
     new_access_token = create_access_token(
         subject=user.id,
@@ -273,7 +270,6 @@ async def refresh_token_endpoint(
 
     return TokenResponse(
         access_token=new_access_token,
-        refresh_token=new_refresh_token,
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -283,16 +279,16 @@ async def refresh_token_endpoint(
 async def logout_endpoint(
     request: Request,
     response: Response,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     refresh_data: RefreshTokenRequest | None = Body(None),
 ):
     """Revoke refresh token and clear HttpOnly session cookie."""
-    raw_token = (
-        refresh_data.refresh_token
-        if refresh_data and refresh_data.refresh_token
-        else request.cookies.get(REFRESH_COOKIE_NAME)
-    )
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not raw_token and refresh_data and refresh_data.refresh_token:
+        raw_token = refresh_data.refresh_token
+
     if raw_token:
-        revoked_token_store.revoke(raw_token)
+        await revoked_token_store.revoke_async(raw_token, db=db)
     response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/auth")
     return {"message": "Signed out and session token revoked."}
 

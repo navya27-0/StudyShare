@@ -346,3 +346,106 @@ def test_structured_logging_formatter():
     assert parsed["message"] == "Structured logging verification"
     assert parsed["request_id"] == "req-12345"
     assert "timestamp" in parsed
+
+
+def test_client_ip_extraction_and_proxy_spoofing_defense():
+    """Verify X-Forwarded-For is only trusted when coming from a configured reverse proxy."""
+    from unittest.mock import MagicMock
+
+    from starlette.datastructures import Address
+
+    from app.api.deps import get_client_ip
+
+    # 1. Trusted proxy (localhost 127.0.0.1) -> trusts X-Forwarded-For
+    req_trusted = MagicMock()
+    req_trusted.client = Address("127.0.0.1", 50000)
+    req_trusted.headers = {"X-Forwarded-For": "203.0.113.195, 10.0.0.1"}
+    assert get_client_ip(req_trusted) == "203.0.113.195"
+
+    # 2. Untrusted proxy (public client 198.51.100.22) -> rejects spoofed X-Forwarded-For
+    req_untrusted = MagicMock()
+    req_untrusted.client = Address("198.51.100.22", 50000)
+    req_untrusted.headers = {"X-Forwarded-For": "203.0.113.195"}
+    assert get_client_ip(req_untrusted) == "198.51.100.22"
+
+
+@pytest.mark.asyncio
+async def test_health_live_endpoint(client: AsyncClient):
+    """Verify minimal /api/health/live liveness probe returns HTTP 200 without DB dependency."""
+    res = await client.get("/api/health/live")
+    assert res.status_code == 200
+    assert res.json() == {"status": "alive"}
+
+
+@pytest.mark.asyncio
+async def test_deep_archive_validation_zip_slip_and_docx_integrity():
+    """Verify deep structural archive validation defends against zip-slip and invalid docx."""
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+
+    # 1. Zip slip attempt with '..' path member
+    buf_slip = io.BytesIO()
+    with zipfile.ZipFile(buf_slip, "w") as zf:
+        zf.writestr("../malicious_traversal.txt", b"evil payload")
+
+    with pytest.raises(HTTPException) as exc_slip:
+        await storage.save_file(
+            file_content=buf_slip.getvalue(),
+            filename="archive.zip",
+            content_type="application/zip",
+        )
+    assert exc_slip.value.status_code == 415
+    assert "unsafe relative or absolute" in exc_slip.value.detail
+
+    # 2. Valid zip but missing Word document marker (.docx requires word/ or [Content_Types].xml)
+    buf_fake_docx = io.BytesIO()
+    with zipfile.ZipFile(buf_fake_docx, "w") as zf:
+        zf.writestr("random.txt", b"not a docx")
+
+    with pytest.raises(HTTPException) as exc_docx:
+        await storage.save_file(
+            file_content=buf_fake_docx.getvalue(),
+            filename="document.docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    assert exc_docx.value.status_code == 415
+    assert "lacks valid Word document structure" in exc_docx.value.detail
+
+
+@pytest.mark.asyncio
+async def test_distributed_rate_limiter_and_revocation_async():
+    """Verify RevokedTokenStore and LoginRateLimiter async methods."""
+
+    from app.core.rate_limit import LoginRateLimiter, RevokedTokenStore
+
+    store = RevokedTokenStore()
+    token = "test_raw_jwt_token_for_revocation"
+
+    assert not await store.is_revoked_async(token)
+    await store.revoke_async(token, ttl_seconds=900)
+    assert await store.is_revoked_async(token)
+
+    limiter = LoginRateLimiter(max_attempts=2, window_seconds=60)
+    ip = "192.0.2.1"
+    # Check passes without exception when under limit
+    await limiter.check_async(ip)
+
+    # Record failures to hit the limit
+    await limiter.record_failure_async(ip)
+    await limiter.record_failure_async(ip)
+
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_limit:
+        await limiter.check_async(ip)
+    assert exc_limit.value.status_code == 429
+
+    # Reset clears attempts
+    await limiter.reset_async(ip)
+    await limiter.check_async(ip)

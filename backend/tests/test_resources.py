@@ -1,5 +1,16 @@
+import io
+import zipfile
+
 import pytest
 from httpx import AsyncClient
+
+
+def _make_zip_payload(files: dict[str, bytes]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
 
 
 @pytest.mark.asyncio
@@ -206,8 +217,10 @@ async def test_taxonomy_hierarchy(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_upload_and_download_docx_resource(client: AsyncClient, auth_headers: dict):
-    """Verify uploading a .docx document with valid PK zip header."""
-    docx_bytes = b"PK\x03\x04\x14\x00\x06\x00word/document.xml sample docx content"
+    """Verify uploading a .docx document with valid PK zip header and internal structure."""
+    docx_bytes = _make_zip_payload(
+        {"[Content_Types].xml": b"<Types/>", "word/document.xml": b"<w:document/>"}
+    )
     form_data = {
         "topic_id": "1",
         "type": "notes",
@@ -228,8 +241,10 @@ async def test_upload_and_download_docx_resource(client: AsyncClient, auth_heade
 
 @pytest.mark.asyncio
 async def test_upload_and_download_pptx_resource(client: AsyncClient, auth_headers: dict):
-    """Verify uploading a .pptx slide deck with valid PK header."""
-    pptx_bytes = b"PK\x03\x04\x14\x00\x06\x00ppt/presentation.xml slide deck content"
+    """Verify uploading a .pptx slide deck with valid PK header and presentation structure."""
+    pptx_bytes = _make_zip_payload(
+        {"[Content_Types].xml": b"<Types/>", "ppt/presentation.xml": b"<p:presentation/>"}
+    )
     form_data = {
         "topic_id": "1",
         "type": "pdf",
@@ -251,7 +266,7 @@ async def test_upload_and_download_pptx_resource(client: AsyncClient, auth_heade
 @pytest.mark.asyncio
 async def test_upload_and_download_zip_archive(client: AsyncClient, auth_headers: dict):
     """Verify uploading a .zip source code bundle."""
-    zip_bytes = b"PK\x03\x04\x0a\x00\x00\x00lab4_code.zip content archive"
+    zip_bytes = _make_zip_payload({"lab4_code.py": b"# Lab 4 code\nprint('Running lab 4')\n"})
     form_data = {
         "topic_id": "1",
         "type": "lab_record",

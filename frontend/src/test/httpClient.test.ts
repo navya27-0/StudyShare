@@ -41,4 +41,16 @@ describe('httpClient token security storage model', () => {
     expect(getStoredRefreshToken()).toBeNull();
     expect(sessionStorage.getItem('studyshare_access_token')).toBeNull();
   });
+
+  it('handles tokens when refresh token is delivered via HttpOnly cookie (omitted from body)', () => {
+    storeTokens({
+      access_token: 'cookie-backed-access-token',
+      token_type: 'bearer',
+      expires_in: 1800,
+    });
+
+    expect(getStoredAccessToken()).toBe('cookie-backed-access-token');
+    expect(getStoredRefreshToken()).toBeNull();
+    expect(localStorage.getItem('studyshare_refresh_token')).toBeNull();
+  });
 });

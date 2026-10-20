@@ -117,6 +117,88 @@ def validate_file_signature(header_bytes: bytes, ext: str) -> None:
         )
 
 
+def validate_file_structure(file_path: Path, ext: str) -> None:
+    """
+    Perform deep structural validation on persisted file content:
+    - ZIP / DOCX / PPTX: Verify container integrity via zipfile, check for path traversal (zip slip),
+      and enforce zip-bomb decompression size limits.
+    - Text / Code: Verify strict UTF-8 decodability.
+    """
+    ext_lower = ext.lower()
+
+    if ext_lower in (".zip", ".docx", ".pptx"):
+        import zipfile
+
+        if not zipfile.is_zipfile(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"Malformed archive: file does not match valid '{ext}' container format.",
+            )
+        try:
+            with zipfile.ZipFile(file_path, "r") as zf:
+                bad_file = zf.testzip()
+                if bad_file:
+                    raise HTTPException(
+                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        detail=f"Corrupted archive entry detected: {bad_file}",
+                    )
+
+                total_uncompressed = 0
+                max_uncompressed_limit = 200 * 1024 * 1024  # 200 MB
+                has_docx_marker = False
+                has_pptx_marker = False
+
+                for member in zf.infolist():
+                    name = member.filename
+                    if ".." in name or name.startswith(("/", "\\")):
+                        raise HTTPException(
+                            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                            detail="Archive contains unsafe relative or absolute member path.",
+                        )
+                    total_uncompressed += member.file_size
+                    if total_uncompressed > max_uncompressed_limit:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="Archive uncompressed payload exceeds safe size limits (zip-bomb defense).",
+                        )
+                    if ext_lower == ".docx" and (
+                        name.startswith("word/") or name == "[Content_Types].xml"
+                    ):
+                        has_docx_marker = True
+                    elif ext_lower == ".pptx" and (
+                        name.startswith("ppt/") or name == "[Content_Types].xml"
+                    ):
+                        has_pptx_marker = True
+
+                if ext_lower == ".docx" and not has_docx_marker:
+                    raise HTTPException(
+                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        detail="File has .docx extension but lacks valid Word document structure.",
+                    )
+                if ext_lower == ".pptx" and not has_pptx_marker:
+                    raise HTTPException(
+                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        detail="File has .pptx extension but lacks valid PowerPoint presentation structure.",
+                    )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"Invalid or corrupted '{ext}' archive file.",
+            ) from exc
+
+    elif ext_lower in TEXT_CODE_EXTENSIONS:
+        try:
+            content = file_path.read_bytes()
+            content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"File declared as '{ext}' contains non-UTF-8 or binary encoding.",
+            ) from exc
+
+
 class StorageResult:
     """Result object returned after storing a file."""
 
@@ -217,6 +299,13 @@ class LocalFileStorage(StorageProvider):
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         file_path.write_bytes(file_content)
+        try:
+            validate_file_structure(file_path, ext)
+        except Exception:
+            if file_path.exists():
+                file_path.unlink(missing_ok=True)
+            raise
+
         digest = hashlib.sha256(file_content).hexdigest()
         file_url = f"/uploads/{storage_key}"
 
@@ -271,6 +360,8 @@ class LocalFileStorage(StorageProvider):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Uploaded file is empty.",
                 )
+
+            validate_file_structure(file_path, ext)
         except Exception:
             if file_path.exists():
                 file_path.unlink(missing_ok=True)
@@ -379,7 +470,14 @@ class S3StorageProvider(StorageProvider):
         storage_key = f"{safe_subfolder}/{unique_name}"
         digest = hashlib.sha256(file_content).hexdigest()
 
+        temp_dir = Path(settings.UPLOAD_DIR) / "_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file_path = temp_dir / f"tmp_{uuid.uuid4().hex}{ext}"
+
         try:
+            temp_file_path.write_bytes(file_content)
+            validate_file_structure(temp_file_path, ext)
+
             client = self._get_client()
             await asyncio.to_thread(
                 client.put_object,
@@ -388,6 +486,8 @@ class S3StorageProvider(StorageProvider):
                 Body=file_content,
                 ContentType=content_type,
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(
                 "Failed to upload file to S3 bucket %s key %s: %s",
@@ -399,6 +499,9 @@ class S3StorageProvider(StorageProvider):
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Object storage service error: failed to persist file.",
             ) from exc
+        finally:
+            if temp_file_path.exists():
+                temp_file_path.unlink(missing_ok=True)
 
         return StorageResult(
             file_url=self._compute_url(storage_key),
@@ -465,6 +568,8 @@ class S3StorageProvider(StorageProvider):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Uploaded file is empty.",
                 )
+
+            validate_file_structure(temp_file_path, ext)
 
             client = self._get_client()
             with open(temp_file_path, "rb") as body_stream:

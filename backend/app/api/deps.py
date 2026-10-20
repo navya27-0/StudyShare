@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Annotated
 
 import jwt
@@ -7,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import get_settings
 from app.core.security import decode_token
 from app.database import get_db_session
 from app.models.enums import UserRole
@@ -112,9 +114,40 @@ async def get_current_admin(
     return current_user
 
 
+def _is_trusted_proxy(ip_str: str, trusted_list: list[str]) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        for trusted in trusted_list:
+            if "/" in trusted:
+                if ip in ipaddress.ip_network(trusted, strict=False):
+                    return True
+            else:
+                if ip == ipaddress.ip_address(trusted):
+                    return True
+    except ValueError:
+        return False
+    return False
+
+
 def get_client_ip(request: Request) -> str:
-    """Extract client IP handling reverse proxy headers."""
+    """
+    Safely extract client IP address.
+    Only honours X-Forwarded-For if the direct socket connection originates from a trusted reverse proxy.
+    Otherwise, returns the socket peer address to prevent IP spoofing attacks against rate limits.
+    """
+    settings = get_settings()
+    peer_ip = request.client.host if request.client else "127.0.0.1"
+
+    trusted_proxies = [p.strip() for p in settings.TRUSTED_PROXIES.split(",") if p.strip()]
+
+    # If the direct peer is NOT a trusted proxy, ignore X-Forwarded-For to prevent spoofing
+    if not _is_trusted_proxy(peer_ip, trusted_proxies):
+        return peer_ip
+
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+        hops = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if hops:
+            return hops[0]
+
+    return peer_ip

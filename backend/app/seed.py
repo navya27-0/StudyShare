@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.security import hash_password
 from app.database import Base, async_session_maker, engine
 from app.models.enums import ReportStatus, ResourceType, UserRole, VoteType
@@ -15,6 +16,16 @@ from app.models.user import User
 
 
 async def seed_data(session: AsyncSession) -> None:
+    settings = get_settings()
+    if (
+        settings.ENVIRONMENT.lower() in ("production", "prod")
+        and not settings.ALLOW_PRODUCTION_SEED
+    ):
+        raise RuntimeError(
+            "CRITICAL: Database seeding with default demonstration accounts is strictly disabled in production. "
+            "Set ALLOW_PRODUCTION_SEED=true in environment variables if this is an intentional demo deployment."
+        )
+
     # Check if data already seeded
     existing_users = await session.execute(select(User).limit(1))
     if existing_users.scalar_one_or_none():

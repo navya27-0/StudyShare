@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300
 
+    # Reverse Proxy & Security Settings
+    TRUSTED_PROXIES: str = "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    ALLOW_PRODUCTION_SEED: bool = False
+
     # Storage Settings
     STORAGE_BACKEND: str = "local"  # "local" | "s3"
     UPLOAD_DIR: str = "uploads"

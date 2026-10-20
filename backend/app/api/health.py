@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import UTC, datetime
 
@@ -8,15 +9,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings, get_settings
 from app.database import get_db_session
 
+logger = logging.getLogger("studyshare.health")
 router = APIRouter(prefix="/api", tags=["Health"])
 
 
+@router.get("/health/live")
+async def liveness_probe(
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Lightweight Kubernetes/Render liveness probe.
+    Confirms the application process is running and accepting HTTP requests.
+    Does not touch backend databases to prevent cascade restarts during outages.
+    """
+    return {
+        "status": "alive",
+        "service": settings.APP_NAME,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+
+
 @router.get("/health")
+@router.get("/health/ready")
 async def health_check(
     response: Response,
     db: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
 ):
+    """
+    Readiness health probe verifying critical dependency connectivity (PostgreSQL).
+    Sanitizes internal database exception details to avoid leaking connection metadata.
+    """
     start_time = time.perf_counter()
     db_status = "connected"
     db_error = None
@@ -26,7 +49,8 @@ async def health_check(
         await db.execute(text("SELECT 1"))
     except Exception as exc:
         db_status = "disconnected"
-        db_error = str(exc)
+        db_error = "database_unavailable"
+        logger.error("Database health check ping failed: %s", exc, exc_info=True)
         # Mark response as Service Unavailable if database is unreachable
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 

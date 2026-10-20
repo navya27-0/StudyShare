@@ -42,8 +42,9 @@ async def test_signup_new_user_success_and_welcome_points(client: AsyncClient):
     # Tokens assertions
     tokens = data["tokens"]
     assert tokens["access_token"]
-    assert tokens["refresh_token"]
+    assert tokens.get("refresh_token") is None
     assert tokens["token_type"].lower() == "bearer"
+    assert res.cookies.get("studyshare_refresh_token") is not None
 
 
 @pytest.mark.asyncio
@@ -86,23 +87,27 @@ async def test_refresh_token_lifecycle(client: AsyncClient):
         json={"email": "arvind.raman@student.univ.edu", "password": "StudyShare2024!"},
     )
     assert login_res.status_code == 200
+    assert login_res.cookies.get("studyshare_refresh_token") is not None
     initial_tokens = login_res.json()["tokens"]
-    refresh_token = initial_tokens["refresh_token"]
+    assert initial_tokens.get("refresh_token") is None
+    initial_cookie = login_res.cookies.get("studyshare_refresh_token")
 
-    # 2. Request token refresh
+    # 2. Request token refresh via HttpOnly cookie
     refresh_res = await client.post(
         "/api/auth/refresh",
-        json={"refresh_token": refresh_token},
     )
     assert refresh_res.status_code == 200, refresh_res.text
     refreshed_data = refresh_res.json()
     assert refreshed_data["access_token"]
-    assert refreshed_data["refresh_token"]
+    assert refreshed_data.get("refresh_token") is None
+    rotated_cookie = refresh_res.cookies.get("studyshare_refresh_token")
+    assert rotated_cookie is not None
+    assert rotated_cookie != initial_cookie
 
     # 3. Invalid token signature returns 401
     bad_res = await client.post(
         "/api/auth/refresh",
-        json={"refresh_token": "malformed.jwt.token"},
+        cookies={"studyshare_refresh_token": "malformed.jwt.token"},
     )
     assert bad_res.status_code == 401
 
