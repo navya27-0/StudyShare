@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     S3_REGION_NAME: str = "us-east-1"
     S3_ACCESS_KEY_ID: str | None = None
     S3_SECRET_ACCESS_KEY: str | None = None
-    S3_PUBLIC_DOMAIN: str | None = None
+    S3_PUBLIC_DOMAIN: str | None = (
+        None  # Leave None in production to enforce governed presigned URL delivery and prevent moderation bypass
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

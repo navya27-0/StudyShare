@@ -177,7 +177,14 @@ async def serve_governed_upload(
     stmt = (
         select(Resource)
         .outerjoin(ResourceVersion, ResourceVersion.resource_id == Resource.id)
-        .where(or_(Resource.file_url == upload_url, ResourceVersion.file_url == upload_url))
+        .where(
+            or_(
+                Resource.file_url == upload_url,
+                Resource.file_url.like(f"%/{normalized_key}"),
+                ResourceVersion.file_url == upload_url,
+                ResourceVersion.file_url.like(f"%/{normalized_key}"),
+            )
+        )
     )
     matched_resources = (await db.execute(stmt)).scalars().all()
     if matched_resources and all(r.is_deleted for r in matched_resources):

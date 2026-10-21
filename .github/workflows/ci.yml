@@ -138,3 +138,6 @@ jobs:
       - name: Build Frontend Image
         run: |
           docker build -t studyshare-frontend:ci frontend/
+      - name: Build Backup Utility Image
+        run: |
+          docker build -t studyshare-backup:ci -f infra/Dockerfile.backup .

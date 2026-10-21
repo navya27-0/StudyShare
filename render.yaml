@@ -55,10 +55,10 @@ services:
   # 3. Scheduled Database Backup Cron Job (Offsite Durable Storage)
   - type: cron
     name: studyshare-backup-cron
-    runtime: python
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile.backup
     schedule: "0 2 * * *"  # Daily at 02:00 UTC
-    buildCommand: "pip install boto3"
-    startCommand: "bash infra/backup.sh '' /tmp/backups"
+    dockerCommand: "bash /workspace/infra/backup.sh '' /tmp/backups"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -101,9 +101,11 @@ services:
 
 databases:
   # Managed PostgreSQL 16
-  # NOTE: 'plan: free' is intended for development and portfolio review. Free tier databases on Render
-  # expire after 30 days and lack automatic automated snapshots. For persistent production reliability,
-  # upgrade to 'plan: starter' (or higher) to enable persistent storage and Render-managed point-in-time recovery.
+  # NOTE: 'plan: free' is intended for development, portfolio demonstrations, and CI evaluation.
+  # Free tier databases on Render automatically expire/spin down after 30 days and do not include
+  # point-in-time recovery (PITR) or automated host snapshots.
+  # For permanent production reliability, upgrade to 'plan: starter' (or higher) to ensure persistent
+  # storage and continuous database availability, while offsite S3 cron snapshots provide disaster recovery.
   - name: studyshare-postgres
     databaseName: studyshare_prod_db
     user: studyshare

@@ -141,13 +141,21 @@ def _serialize_resource_item(
         created_at=resource.created_at,
     )
     download_url = f"/api/resources/{resource.id}/file"
+    # Security & Moderation Enforcement:
+    # Direct remote object storage URLs (S3/R2/CDN) must never be returned for document assets
+    # as unauthenticated access would bypass moderation status, deletion flags, and view metrics.
+    # Non-link document resources route through the governed download_url.
+    sanitized_file_url = resource.file_url
+    if resource.type != ResourceType.LINK and resource.file_url.startswith(("http://", "https://")):
+        sanitized_file_url = download_url
+
     return ResourceListItemResponse(
         id=resource.id,
         topic_id=resource.topic_id,
         type=resource.type,
         title=resource.title,
         description=resource.description,
-        file_url=resource.file_url,
+        file_url=sanitized_file_url,
         download_url=download_url,
         file_size_bytes=resource.file_size_bytes,
         page_count=resource.page_count,
@@ -180,12 +188,22 @@ def _serialize_resource_detail(
     current_ver = None
     if resource.current_version:
         current_ver = ResourceVersionResponse.model_validate(resource.current_version)
-        current_ver.download_url = f"/api/resources/{resource.id}/versions/{current_ver.id}/file"
+        cur_download_url = f"/api/resources/{resource.id}/versions/{current_ver.id}/file"
+        current_ver.download_url = cur_download_url
+        if resource.type != ResourceType.LINK and current_ver.file_url.startswith(
+            ("http://", "https://")
+        ):
+            current_ver.file_url = cur_download_url
 
     versions_list = []
     for v in resource.versions or []:
         ver_resp = ResourceVersionResponse.model_validate(v)
-        ver_resp.download_url = f"/api/resources/{resource.id}/versions/{v.id}/file"
+        ver_download_url = f"/api/resources/{resource.id}/versions/{v.id}/file"
+        ver_resp.download_url = ver_download_url
+        if resource.type != ResourceType.LINK and ver_resp.file_url.startswith(
+            ("http://", "https://")
+        ):
+            ver_resp.file_url = ver_download_url
         versions_list.append(ver_resp)
 
     # Security & Moderation Enforcement:

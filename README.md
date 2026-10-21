@@ -477,3 +477,33 @@ To prevent unbounded table growth from expired refresh token hashes and stale lo
    curl -X POST "https://api.studyshare.univ.edu/api/admin/maintenance/cleanup-security-tables?login_retention_hours=24" \
      -H "Authorization: Bearer <ADMIN_ACCESS_TOKEN>"
    ```
+
+---
+
+### Disaster Recovery & Database Durability Architecture
+
+#### 1. Containerized Automated Backups (`infra/Dockerfile.backup`)
+Render's scheduled cron job executes an isolated container based on `postgres:16-alpine` equipped with:
+- Native PostgreSQL 16 client utilities (`pg_dump`, `psql`) matching the managed database version.
+- Python 3 with `boto3` (`infra/s3_transfer.py`) for streaming snapshots to AWS S3, Cloudflare R2, or MinIO.
+- Strict error halting (`psql -v ON_ERROR_STOP=1`) preventing false-positive restore reports.
+
+```bash
+# Manual snapshot creation & offsite S3 sync:
+bash infra/backup.sh "" /tmp/backups studyshare_prod_db
+
+# Disaster recovery restoration from durable S3 snapshot:
+bash infra/restore.sh s3://studyshare-academic-assets/database-backups/studyshare_prod_db_20261021_020000.sql.gz
+```
+
+#### 2. Production Database Tiering (Render Blueprint)
+- **Portfolio & Staging Review (`plan: free`)**: Zero-cost tier for evaluation. Note: Render free tier PostgreSQL instances automatically spin down after 30 days and omit automated disk snapshots.
+- **Persistent Production Deployment (`plan: starter`+)**: Upgrade the database tier in [`render.yaml`](render.yaml) (`plan: starter` or higher) to enable continuous persistence, dedicated RAM/CPU, automated point-in-time recovery (PITR), and SLA-backed uptime.
+
+#### 3. Governed Object Storage Access Control
+- All academic materials uploaded to S3/R2 buckets remain strictly private with public access blocked.
+- Material previews and downloads route exclusively through `/api/resources/{id}/file`, ensuring:
+  1. Instant moderation enforcement (soft-deleted resources return `404 Not Found` immediately).
+  2. Cryptographically signed, short-lived presigned URLs (1-hour expiration).
+  3. Deduplicated engagement metrics (views and downloads) without direct S3 URL leakage.
+

@@ -1,0 +1,21 @@
+# ==============================================================================
+# StudyShare Automated Database Backup & Disaster Recovery Container
+# Includes PostgreSQL 16 client tools (pg_dump, psql), Python 3 with boto3,
+# and shell utilities for offsite cloud backup archiving.
+# ==============================================================================
+FROM postgres:16-alpine
+
+# Install Python 3, venv, bash, curl, and gzip
+RUN apk add --no-cache python3 py3-pip bash curl gzip \
+    && python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir boto3
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /workspace
+
+# Copy backup infrastructure scripts
+COPY infra/ /workspace/infra/
+RUN chmod +x /workspace/infra/backup.sh /workspace/infra/restore.sh
+
+CMD ["bash", "/workspace/infra/backup.sh", "", "/tmp/backups"]

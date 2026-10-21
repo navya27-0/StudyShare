@@ -1,4 +1,5 @@
 import io
+from datetime import UTC
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -233,3 +234,112 @@ def test_local_storage_generate_presigned_url():
     assert (
         local.generate_presigned_url("/uploads/resources/demo.pdf") == "/uploads/resources/demo.pdf"
     )
+
+
+def test_s3_file_url_sanitization_prevents_moderation_bypass():
+    """
+    Verify that _serialize_resource_item and _serialize_resource_detail sanitize
+    direct remote S3/CDN object URLs to governed download endpoints for file-backed resources,
+    preventing direct unauthenticated S3 scraping and moderation bypass.
+    """
+    from datetime import datetime
+    from unittest.mock import MagicMock
+
+    from app.api.resources import _serialize_resource_detail, _serialize_resource_item
+    from app.models.enums import ResourceType, UserRole
+
+    # Mock uploader
+    uploader = MagicMock()
+    uploader.id = 10
+    uploader.display_name = "Academic Contributor"
+    uploader.avatar_url = None
+    uploader.role = UserRole.STUDENT.value
+
+    # Mock resource with remote S3 storage URL
+    s3_url = (
+        "https://studyshare-academic-assets.s3.us-east-1.amazonaws.com/topic_1/secret_notes.pdf"
+    )
+    now = datetime.now(UTC)
+
+    resource = MagicMock()
+    resource.id = 42
+    resource.topic_id = 1
+    resource.type = ResourceType.NOTES
+    resource.title = "Advanced Algorithms Notes"
+    resource.description = "Full semester notes"
+    resource.file_url = s3_url
+    resource.file_size_bytes = 1048576
+    resource.page_count = 24
+    resource.semester = 4
+    resource.current_version_id = 1
+    resource.upvotes_count = 5
+    resource.downvotes_count = 0
+    resource.rating_avg = 4.8
+    resource.rating_count = 10
+    resource.views_count = 100
+    resource.downloads_count = 25
+    resource.is_verified = True
+    resource.is_deleted = False
+    resource.created_at = now
+    resource.updated_at = now
+    resource.uploader = uploader
+    resource.topic = None
+
+    # Version mocks
+    ver1 = MagicMock()
+    ver1.id = 101
+    ver1.resource_id = 42
+    ver1.version_number = 1
+    ver1.file_url = s3_url
+    ver1.download_url = None
+    ver1.changelog = "Initial commit"
+    ver1.file_size_bytes = 1048576
+    ver1.page_count = 24
+    ver1.uploaded_by = 10
+    ver1.created_at = now
+
+    resource.current_version = ver1
+    resource.versions = [ver1]
+
+    # 1. Test item serialization: direct S3 URL must be replaced with governed download endpoint
+    item_serialized = _serialize_resource_item(resource)
+    assert item_serialized.file_url == "/api/resources/42/file"
+    assert item_serialized.download_url == "/api/resources/42/file"
+    assert "s3.us-east-1.amazonaws.com" not in item_serialized.file_url
+
+    # 2. Test detail serialization: versions must also be sanitized
+    detail_serialized = _serialize_resource_detail(resource)
+    assert detail_serialized.file_url == "/api/resources/42/file"
+    assert detail_serialized.current_version.file_url == "/api/resources/42/versions/101/file"
+    assert detail_serialized.current_version.download_url == "/api/resources/42/versions/101/file"
+    assert detail_serialized.versions[0].file_url == "/api/resources/42/versions/101/file"
+    assert "s3.us-east-1.amazonaws.com" not in detail_serialized.current_version.file_url
+
+    # 3. For ResourceType.LINK, external URLs must be preserved
+    link_resource = MagicMock()
+    link_resource.id = 99
+    link_resource.topic_id = 1
+    link_resource.type = ResourceType.LINK
+    link_resource.title = "Official Documentation"
+    link_resource.description = "External documentation link"
+    link_resource.file_url = "https://docs.python.org/3/"
+    link_resource.file_size_bytes = 0
+    link_resource.page_count = None
+    link_resource.semester = 1
+    link_resource.current_version_id = None
+    link_resource.upvotes_count = 1
+    link_resource.downvotes_count = 0
+    link_resource.rating_avg = 5.0
+    link_resource.rating_count = 1
+    link_resource.views_count = 10
+    link_resource.downloads_count = 2
+    link_resource.is_verified = False
+    link_resource.is_deleted = False
+    link_resource.created_at = now
+    link_resource.updated_at = now
+    link_resource.uploader = uploader
+    link_resource.topic = None
+
+    link_item = _serialize_resource_item(link_resource)
+    assert link_item.file_url == "https://docs.python.org/3/"
+    assert link_item.download_url == "/api/resources/99/file"
