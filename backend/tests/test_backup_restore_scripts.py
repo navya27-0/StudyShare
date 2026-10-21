@@ -156,7 +156,7 @@ exit 0
             [
                 "bash",
                 "-c",
-                f"PATH=\"./{rel_mock_bin}:$PATH\" DATABASE_URL=\"{db_url}\" bash infra/restore.sh {rel_bad} nonexistent-container mock_db",
+                f'PATH="./{rel_mock_bin}:$PATH" DATABASE_URL="{db_url}" bash infra/restore.sh {rel_bad} nonexistent-container mock_db',
             ],
             cwd=REPO_ROOT,
             capture_output=True,
@@ -174,7 +174,7 @@ exit 0
             [
                 "bash",
                 "-c",
-                f"PATH=\"./{rel_mock_bin}:$PATH\" DATABASE_URL=\"{db_url}\" bash infra/restore.sh {rel_good} nonexistent-container mock_db",
+                f'PATH="./{rel_mock_bin}:$PATH" DATABASE_URL="{db_url}" bash infra/restore.sh {rel_good} nonexistent-container mock_db',
             ],
             cwd=REPO_ROOT,
             capture_output=True,
@@ -258,4 +258,3 @@ def test_restore_script_live_database_failure_and_success():
         assert "Database restored successfully" in res_ok.stdout
     finally:
         shutil.rmtree(scratch_dir, ignore_errors=True)
-
