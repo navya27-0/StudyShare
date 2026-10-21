@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_COOKIE_SAMESITE: str = "lax"  # "lax" | "none" | "strict"
 
     # Rate Limiting Settings (Login Protection)
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 5
@@ -71,6 +72,10 @@ class Settings(BaseSettings):
                 )
             if self.DEBUG:
                 errors.append("DEBUG mode must be set to False in production.")
+            if self.REFRESH_COOKIE_SAMESITE.strip().lower() not in ("lax", "none", "strict"):
+                errors.append(
+                    "REFRESH_COOKIE_SAMESITE must be one of 'lax', 'none', or 'strict' in production."
+                )
 
             if errors:
                 raise ValueError("Production Startup Security Violation:\n- " + "\n- ".join(errors))

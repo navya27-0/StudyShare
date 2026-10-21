@@ -17,7 +17,9 @@ services:
           name: studyshare-postgres
           property: connectionString
       - key: CORS_ORIGINS
-        value: "https://studyshare.pages.dev,https://studyshare.onrender.com"
+        value: "https://studyshare.pages.dev,https://studyshare-frontend.onrender.com"
+      - key: REFRESH_COOKIE_SAMESITE
+        value: "none"
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: JWT_ALGORITHM

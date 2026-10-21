@@ -37,15 +37,39 @@ REFRESH_COOKIE_NAME = "studyshare_refresh_token"
 
 
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
-    """Attach HttpOnly, SameSite refresh token cookie for defense-in-depth token security."""
+    """
+    Attach HttpOnly, SameSite refresh token cookie for defense-in-depth token security.
+    Supports SameSite=lax (default / same-origin) and SameSite=none (cross-site deployments with Secure=True).
+    """
+    samesite_raw = settings.REFRESH_COOKIE_SAMESITE.strip().lower()
+    samesite_val = samesite_raw if samesite_raw in ("lax", "none", "strict") else "lax"
+    is_prod = settings.ENVIRONMENT.strip().lower() in ("production", "prod")
+    is_secure = is_prod or (samesite_val == "none")
+
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=settings.ENVIRONMENT.strip().lower() in ("production", "prod"),
-        samesite="lax",
+        secure=is_secure,
+        samesite=samesite_val,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         path="/api/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """Clear refresh token cookie matching creation security and domain attributes."""
+    samesite_raw = settings.REFRESH_COOKIE_SAMESITE.strip().lower()
+    samesite_val = samesite_raw if samesite_raw in ("lax", "none", "strict") else "lax"
+    is_prod = settings.ENVIRONMENT.strip().lower() in ("production", "prod")
+    is_secure = is_prod or (samesite_val == "none")
+
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path="/api/auth",
+        httponly=True,
+        secure=is_secure,
+        samesite=samesite_val,
     )
 
 
@@ -371,7 +395,7 @@ async def logout_endpoint(
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
         await revoked_token_store.revoke_async(raw_token, db=db)
-    response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/auth")
+    _clear_refresh_cookie(response)
     return {"message": "Signed out and session token revoked."}
 
 

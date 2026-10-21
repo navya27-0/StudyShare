@@ -327,25 +327,50 @@ async def test_production_environment_rejects_test_origin(client: AsyncClient):
 
 
 def test_refresh_cookie_secure_flag_in_production_and_prod():
-    """Verify refresh cookie has secure=True under both 'production' and 'prod' aliases."""
+    """Verify refresh cookie has secure=True under both 'production' and 'prod' aliases, and handles SameSite=none."""
     from fastapi import Response
 
-    from app.api.auth import _set_refresh_cookie
+    from app.api.auth import _clear_refresh_cookie, _set_refresh_cookie
     from app.config import get_settings
 
     settings = get_settings()
     original_env = settings.ENVIRONMENT
-    for prod_alias in ("production", "prod", "PROD", " Production "):
-        try:
+    original_samesite = settings.REFRESH_COOKIE_SAMESITE
+    try:
+        # 1. Default SameSite=lax in production receives Secure and HttpOnly
+        for prod_alias in ("production", "prod", "PROD", " Production "):
             settings.ENVIRONMENT = prod_alias
+            settings.REFRESH_COOKIE_SAMESITE = "lax"
             res = Response()
             _set_refresh_cookie(res, "sample_refresh_token")
             set_cookie_header = res.headers.get("set-cookie", "")
             assert "secure" in set_cookie_header.lower()
             assert "httponly" in set_cookie_header.lower()
             assert "samesite=lax" in set_cookie_header.lower()
-        finally:
-            settings.ENVIRONMENT = original_env
+
+        # 2. Cross-site SameSite=none receives Secure even in development
+        settings.ENVIRONMENT = "development"
+        settings.REFRESH_COOKIE_SAMESITE = "none"
+        res_none = Response()
+        _set_refresh_cookie(res_none, "sample_refresh_token")
+        none_header = res_none.headers.get("set-cookie", "")
+        assert "samesite=none" in none_header.lower()
+        assert "secure" in none_header.lower()
+        assert "httponly" in none_header.lower()
+
+        # 3. Clear cookie uses matching SameSite=none and Secure
+        res_clear = Response()
+        _clear_refresh_cookie(res_clear)
+        clear_header = res_clear.headers.get("set-cookie", "")
+        assert "samesite=none" in clear_header.lower()
+        assert "secure" in clear_header.lower()
+        assert (
+            "max-age=0" in clear_header.lower()
+            or "expires=thu, 01 jan 1970" in clear_header.lower()
+        )
+    finally:
+        settings.ENVIRONMENT = original_env
+        settings.REFRESH_COOKIE_SAMESITE = original_samesite
 
 
 @pytest.mark.asyncio

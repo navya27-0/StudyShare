@@ -21,3 +21,15 @@ def test_production_security_validation_normalizes_environment(environment: str)
         DEBUG=False,
     )
     assert settings.ENVIRONMENT == environment
+
+
+def test_production_security_validation_rejects_invalid_samesite() -> None:
+    """Production startup must reject invalid REFRESH_COOKIE_SAMESITE settings."""
+    with pytest.raises(ValueError, match="REFRESH_COOKIE_SAMESITE must be one of"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="cryptographically-strong-test-secret-123456789",
+            DATABASE_URL="postgresql+asyncpg://produser:prodpass@db.example.com/db",
+            DEBUG=False,
+            REFRESH_COOKIE_SAMESITE="invalid_value",
+        )
