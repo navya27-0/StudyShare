@@ -501,7 +501,7 @@ class S3StorageProvider(StorageProvider):
         ext = self._validate_extension(filename, content_type)
         validate_file_signature(file_content[:32], ext)
         if not (self.access_key_id and self.secret_access_key):
-            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+            if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
                     "S3 storage backend configured in production but S3 credentials are missing."
                 )
@@ -565,7 +565,7 @@ class S3StorageProvider(StorageProvider):
         max_size_bytes: int | None = None,
     ) -> StorageResult:
         if not (self.access_key_id and self.secret_access_key):
-            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+            if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
                     "S3 storage backend configured in production but S3 credentials are missing."
                 )
@@ -650,7 +650,7 @@ class S3StorageProvider(StorageProvider):
 
     async def delete_file(self, storage_key: str) -> bool:
         if not (self.access_key_id and self.secret_access_key):
-            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+            if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
                     "S3 storage backend configured in production but S3 credentials are missing."
                 )
@@ -676,7 +676,7 @@ class S3StorageProvider(StorageProvider):
     def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
         """Generate a secure, time-limited presigned GET URL for private buckets."""
         if not (self.access_key_id and self.secret_access_key):
-            if settings.ENVIRONMENT.lower() in ("production", "prod"):
+            if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
                     "S3 storage backend configured in production but S3 credentials are missing."
                 )

@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_security(self) -> "Settings":
         """Strictly fail application initialization if production runs with insecure dev defaults."""
-        if self.ENVIRONMENT.lower() in ("production", "prod"):
+        if self.ENVIRONMENT.strip().lower() in ("production", "prod"):
             errors: list[str] = []
             if (
                 self.JWT_SECRET_KEY == "studyshare_jwt_secret_dev_key_change_in_production_9e4f01a2"
