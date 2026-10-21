@@ -55,6 +55,17 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PublicUserProfileResponse(BaseModel):
+    id: int
+    display_name: str
+    avatar_url: str | None = None
+    role: str
+    created_at: datetime
+    contributor_profile: ContributorProfileResponse | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AuthSuccessResponse(BaseModel):
     user: UserResponse
     tokens: TokenResponse

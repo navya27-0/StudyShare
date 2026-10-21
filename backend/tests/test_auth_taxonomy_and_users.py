@@ -436,37 +436,76 @@ async def test_create_unit_and_topic_inline(client: AsyncClient, auth_headers: d
 
 
 @pytest.mark.asyncio
-async def test_user_profile_and_activity_feed(client: AsyncClient):
-    """Test retrieving user public profile and activity log feed."""
-    # 1. Lookup user by ID
+async def test_user_profile_and_activity_feed(
+    client: AsyncClient,
+    auth_headers: dict,
+    other_auth_headers: dict,
+):
+    """Test retrieving user public profile and activity log feed with privacy boundaries."""
+    # 1. Lookup user by ID - must be public profile without PII
     res = await client.get("/api/users/1")
     assert res.status_code == 200
     user = res.json()
     assert user["id"] == 1
     assert user["display_name"]
     assert "contributor_profile" in user
+    assert "email" not in user, "Public user profile must not leak email address"
+    assert "is_active" not in user, (
+        "Public user profile must not leak internal account active status"
+    )
 
     # 2. Non-existent user returns 404
     res_404 = await client.get("/api/users/999999")
     assert res_404.status_code == 404
 
-    # 3. Activity feed
+    # 3. Unauthenticated activity feed - returns public uploads only, omits bookmarks/ratings
     act_res = await client.get("/api/users/1/activity")
     assert act_res.status_code == 200
     act_data = act_res.json()
     assert "items" in act_data
     assert isinstance(act_data["items"], list)
-    if act_data["items"]:
-        item = act_data["items"][0]
-        assert "action" in item
-        assert "resource_id" in item
-        assert "timestamp" in item
+    for item in act_data["items"]:
+        assert item["action"] == "upload", (
+            "Anonymous activity feed must only display public uploads"
+        )
+
+    # 4. Third-party authenticated activity feed - also omits bookmarks/ratings
+    other_act_res = await client.get("/api/users/1/activity", headers=other_auth_headers)
+    assert other_act_res.status_code == 200
+    for item in other_act_res.json()["items"]:
+        assert item["action"] == "upload", (
+            "Third-party activity feed must only display public uploads"
+        )
+
+    # 5. Owner authenticated activity feed - includes activity feed
+    owner_act_res = await client.get("/api/users/1/activity", headers=auth_headers)
+    assert owner_act_res.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_user_bookmarks_list_endpoint(client: AsyncClient):
-    """Test GET /api/users/{id}/bookmarks pagination and response schema."""
-    res = await client.get("/api/users/1/bookmarks?page=1&page_size=10")
+async def test_user_bookmarks_list_endpoint(
+    client: AsyncClient,
+    auth_headers: dict,
+    other_auth_headers: dict,
+    admin_auth_headers: dict,
+):
+    """Test GET /api/users/{id}/bookmarks pagination, response schema, and access boundaries."""
+    # 1. Unauthenticated request must return 401 Unauthorized
+    unauth_res = await client.get("/api/users/1/bookmarks?page=1&page_size=10")
+    assert unauth_res.status_code == 401
+
+    # 2. Third-party authenticated user must return 403 Forbidden
+    forbidden_res = await client.get(
+        "/api/users/1/bookmarks?page=1&page_size=10",
+        headers=other_auth_headers,
+    )
+    assert forbidden_res.status_code == 403
+
+    # 3. Owner access succeeds with 200 OK
+    res = await client.get(
+        "/api/users/1/bookmarks?page=1&page_size=10",
+        headers=auth_headers,
+    )
     assert res.status_code == 200
     data = res.json()
     assert "total" in data
@@ -477,8 +516,15 @@ async def test_user_bookmarks_list_endpoint(client: AsyncClient):
         assert "id" in b["resource"]
         assert "breadcrumbs" in b["resource"]
 
-    # 404 on missing user
-    missing_res = await client.get("/api/users/999999/bookmarks")
+    # 4. Admin access also succeeds with 200 OK
+    admin_res = await client.get(
+        "/api/users/1/bookmarks?page=1&page_size=10",
+        headers=admin_auth_headers,
+    )
+    assert admin_res.status_code == 200
+
+    # 5. 404 on missing user with admin authorization
+    missing_res = await client.get("/api/users/999999/bookmarks", headers=admin_auth_headers)
     assert missing_res.status_code == 404
 
 

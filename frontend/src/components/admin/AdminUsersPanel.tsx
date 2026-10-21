@@ -99,7 +99,7 @@ export const AdminUsersPanel: React.FC<AdminUsersPanelProps> = ({
               </tr>
             ) : (
               users.map((u) => {
-                const initials = (u.display_name || u.email)
+                const initials = (u.display_name || u.email || 'U')
                   .split(' ')
                   .map((n) => n[0])
                   .join('')
@@ -115,7 +115,7 @@ export const AdminUsersPanel: React.FC<AdminUsersPanelProps> = ({
                           <p className="font-medium text-white text-xs truncate">
                             {u.display_name}
                           </p>
-                          <p className="text-[11px] text-white/40 truncate">{u.email}</p>
+                          <p className="text-[11px] text-white/40 truncate">{u.email ?? ''}</p>
                         </div>
                       </div>
                     </td>

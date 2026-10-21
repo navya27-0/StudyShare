@@ -5,25 +5,32 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.deps import get_current_user, get_optional_current_user
 from app.api.resources import _serialize_resource_item
 from app.database import get_db_session
+from app.models.enums import UserRole
 from app.models.interactions import Bookmark, Rating
 from app.models.resource import Resource
 from app.models.taxonomy import Topic, Unit
 from app.models.user import User
-from app.schemas.auth import UserActivityItem, UserActivityListResponse, UserResponse
+from app.schemas.auth import (
+    PublicUserProfileResponse,
+    UserActivityItem,
+    UserActivityListResponse,
+)
 from app.schemas.interactions import UserBookmarkItemResponse, UserBookmarksListResponse
 
 router = APIRouter(tags=["Users"])
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=PublicUserProfileResponse)
 async def get_user_profile(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
     """
     Retrieve public contributor profile and stats by user ID.
+    Omits sensitive personal data (e.g. email) and internal account flags.
     """
     stmt = select(User).where(User.id == user_id).options(selectinload(User.contributor_profile))
     result = await db.execute(stmt)
@@ -33,17 +40,20 @@ async def get_user_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} was not found.",
         )
-    return UserResponse.model_validate(user)
+    return PublicUserProfileResponse.model_validate(user)
 
 
 @router.get("/{user_id}/activity", response_model=UserActivityListResponse)
 async def get_user_activity(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
     limit: int = Query(20, ge=1, le=50),
 ):
     """
-    Retrieve unified activity feed for a user: uploads, ratings, and bookmarks.
+    Retrieve unified activity feed for a user:
+    - Public uploads are visible to all visitors.
+    - Personal library bookmarks and ratings are strictly private to the user themselves and administrators.
     """
     user = await db.get(User, user_id)
     if not user:
@@ -52,7 +62,11 @@ async def get_user_activity(
             detail=f"User with ID {user_id} was not found.",
         )
 
-    # 1. Recent uploads
+    is_owner_or_admin = bool(
+        current_user and (current_user.id == user_id or current_user.role == UserRole.ADMIN)
+    )
+
+    # 1. Recent public uploads (always visible)
     up_stmt = (
         select(Resource)
         .where(Resource.uploader_id == user_id, Resource.is_deleted.is_(False))
@@ -61,25 +75,28 @@ async def get_user_activity(
     )
     uploads = (await db.execute(up_stmt)).scalars().all()
 
-    # 2. Recent ratings
-    rate_stmt = (
-        select(Rating)
-        .where(Rating.user_id == user_id)
-        .options(selectinload(Rating.resource))
-        .order_by(Rating.created_at.desc())
-        .limit(limit)
-    )
-    ratings = (await db.execute(rate_stmt)).scalars().all()
+    # 2. Recent ratings and 3. Recent bookmarks (strictly private to owner and admin)
+    ratings: list[Rating] = []
+    bookmarks: list[Bookmark] = []
 
-    # 3. Recent bookmarks
-    bm_stmt = (
-        select(Bookmark)
-        .where(Bookmark.user_id == user_id)
-        .options(selectinload(Bookmark.resource))
-        .order_by(Bookmark.created_at.desc())
-        .limit(limit)
-    )
-    bookmarks = (await db.execute(bm_stmt)).scalars().all()
+    if is_owner_or_admin:
+        rate_stmt = (
+            select(Rating)
+            .where(Rating.user_id == user_id)
+            .options(selectinload(Rating.resource))
+            .order_by(Rating.created_at.desc())
+            .limit(limit)
+        )
+        ratings = list((await db.execute(rate_stmt)).scalars().all())
+
+        bm_stmt = (
+            select(Bookmark)
+            .where(Bookmark.user_id == user_id)
+            .options(selectinload(Bookmark.resource))
+            .order_by(Bookmark.created_at.desc())
+            .limit(limit)
+        )
+        bookmarks = list((await db.execute(bm_stmt)).scalars().all())
 
     # Merge activity
     activities: list[UserActivityItem] = []
@@ -138,13 +155,20 @@ async def get_user_activity(
 async def get_user_bookmarks(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
 ):
     """
     Retrieve all bookmarked resources for a specified user, ordered by most recently bookmarked.
-    Includes full resource metadata and taxonomy breadcrumbs.
+    Requires authentication. Access is strictly restricted to the user themselves and platform administrators.
     """
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view another user's saved library bookmarks.",
+        )
+
     # 1. Verify user exists
     user = await db.get(User, user_id)
     if not user:

@@ -244,8 +244,11 @@ async def test_bookmark_lifecycle_and_user_listing(client: AsyncClient, auth_hea
     assert bm_dup.status_code == 200
     assert bm_dup.json()["bookmarked"] is True
 
-    # 3. GET /users/:id/bookmarks
-    list_res = await client.get(f"/api/users/{user_id}/bookmarks")
+    # 3. GET /users/:id/bookmarks (requires auth & ownership)
+    unauth_check = await client.get(f"/api/users/{user_id}/bookmarks")
+    assert unauth_check.status_code == 401
+
+    list_res = await client.get(f"/api/users/{user_id}/bookmarks", headers=auth_headers)
     assert list_res.status_code == 200, list_res.text
     bookmarks_data = list_res.json()
     assert bookmarks_data["total"] >= 1
@@ -264,7 +267,7 @@ async def test_bookmark_lifecycle_and_user_listing(client: AsyncClient, auth_hea
     assert del_res.json()["bookmarked"] is False
 
     # 5. Verify no longer in bookmarks
-    list_after = await client.get(f"/api/users/{user_id}/bookmarks")
+    list_after = await client.get(f"/api/users/{user_id}/bookmarks", headers=auth_headers)
     assert resource_id not in [it["resource_id"] for it in list_after.json()["items"]]
 
 

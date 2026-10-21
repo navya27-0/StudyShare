@@ -60,7 +60,7 @@ async def health_check(
         "status": "healthy" if db_status == "connected" else "degraded",
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
-        "version": "0.1.0",
+        "version": settings.APP_VERSION,
         "database": {
             "status": db_status,
             "latency_ms": latency_ms,

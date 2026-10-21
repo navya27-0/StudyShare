@@ -744,3 +744,61 @@ async def test_production_seeding_disabled_by_default():
     finally:
         settings.ENVIRONMENT = original_env
         settings.ALLOW_PRODUCTION_SEED = original_allow
+
+
+@pytest.mark.asyncio
+async def test_upload_archive_decompression_order_rejects_before_testzip(monkeypatch):
+    """
+    Verify archive decompression order:
+    Metadata (entry limits, size bounds, compression ratios) must be validated
+    strictly BEFORE calling testzip() or extracting member content.
+    """
+    import io
+    import zipfile
+
+    from fastapi import HTTPException
+
+    from app.core.storage import LocalFileStorage
+
+    storage = LocalFileStorage()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("test.txt", b"placeholder")
+
+    data = bytearray(buf.getvalue())
+    cd_idx = data.find(b"PK\x01\x02")
+    assert cd_idx != -1
+    # Patch central directory header uncompressed size (offset 24) to 250 MB (exceeds 200MB limit)
+    data[cd_idx + 24 : cd_idx + 28] = (250 * 1024 * 1024).to_bytes(4, "little")
+
+    testzip_called = False
+    original_testzip = zipfile.ZipFile.testzip
+
+    def mock_testzip(self):
+        nonlocal testzip_called
+        testzip_called = True
+        return original_testzip(self)
+
+    monkeypatch.setattr(zipfile.ZipFile, "testzip", mock_testzip)
+
+    with pytest.raises(HTTPException) as exc:
+        await storage.save_file(
+            file_content=bytes(data),
+            filename="bomb.zip",
+            content_type="application/zip",
+        )
+    assert exc.value.status_code == 413
+    assert not testzip_called, "testzip() must NOT be called when metadata validation fails!"
+
+
+@pytest.mark.asyncio
+async def test_health_check_version_alignment(client: AsyncClient):
+    """Verify health endpoint reports the unified APP_VERSION metadata."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    res = await client.get("/api/health")
+    assert res.status_code in (200, 503)
+    data = res.json()
+    assert data["version"] == settings.APP_VERSION
+    assert data["version"] == "0.2.0"

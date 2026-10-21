@@ -14,11 +14,11 @@ export interface ContributorProfile {
 
 export interface User {
   id: number;
-  email: string;
+  email?: string;
   display_name: string;
   avatar_url: string | null;
   role: UserRole;
-  is_active: boolean;
+  is_active?: boolean;
   created_at: string;
   contributor_profile?: ContributorProfile | null;
 }

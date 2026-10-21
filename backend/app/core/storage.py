@@ -136,18 +136,15 @@ def validate_file_structure(file_path: Path, ext: str) -> None:
             )
         try:
             with zipfile.ZipFile(file_path, "r") as zf:
-                bad_file = zf.testzip()
-                if bad_file:
-                    raise HTTPException(
-                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                        detail=f"Corrupted archive entry detected: {bad_file}",
-                    )
-
+                # 1. Pre-decompression safety checks:
+                # Inspect archive metadata (entry count, file sizes, compression ratios, path traversal)
+                # strictly BEFORE decompressing or reading member payloads. This guarantees that zip-bombs
+                # and maliciously crafted archives are rejected without consuming CPU or memory in testzip().
                 infolist = zf.infolist()
                 max_entries = 5000
                 if len(infolist) > max_entries:
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail=f"Archive contains too many entries ({len(infolist)} > {max_entries}).",
                     )
 
@@ -177,14 +174,14 @@ def validate_file_structure(file_path: Path, ext: str) -> None:
                     # ZIP bomb & compression ratio defenses
                     if member.file_size > max_single_entry:
                         raise HTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             detail="Individual archive entry exceeds safety size limit (100 MB).",
                         )
 
                     total_uncompressed += member.file_size
                     if total_uncompressed > max_uncompressed_limit:
                         raise HTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             detail="Archive uncompressed payload exceeds safe size limits (zip-bomb defense).",
                         )
 
@@ -194,7 +191,7 @@ def validate_file_structure(file_path: Path, ext: str) -> None:
                         and (member.file_size / member.compress_size) > 100
                     ):
                         raise HTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             detail="Suspicious archive compression ratio detected (potential zip-bomb).",
                         )
 
@@ -216,7 +213,15 @@ def validate_file_structure(file_path: Path, ext: str) -> None:
                         detail="File has .pptx extension but lacks valid PowerPoint presentation structure.",
                     )
 
-                # Validate OpenXML XML metadata integrity
+                # 2. Only after all metadata bounds and path checks pass, verify archive CRC checksums
+                bad_file = zf.testzip()
+                if bad_file:
+                    raise HTTPException(
+                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        detail=f"Corrupted archive entry detected: {bad_file}",
+                    )
+
+                # 3. Validate OpenXML XML metadata integrity
                 if ext_lower in (".docx", ".pptx") and has_content_types:
                     try:
                         import xml.etree.ElementTree as ET
@@ -402,7 +407,7 @@ class LocalFileStorage(StorageProvider):
                     total_bytes += len(chunk)
                     if total_bytes > limit:
                         raise HTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             detail=f"File exceeds maximum allowed size of {limit // (1024 * 1024)} MB.",
                         )
                     hasher.update(chunk)
@@ -628,7 +633,7 @@ class S3StorageProvider(StorageProvider):
                     total_bytes += len(chunk)
                     if total_bytes > limit:
                         raise HTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             detail=f"File exceeds maximum allowed size of {limit // (1024 * 1024)} MB.",
                         )
                     hasher.update(chunk)
