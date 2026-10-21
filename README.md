@@ -2,7 +2,7 @@
 
 [![CI Status](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml)
 [![Backend Tests](https://img.shields.io/badge/Pytest-79%20Tests-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
-[![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
+[![Frontend Tests](https://img.shields.io/badge/Vitest-12%20Tests-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
 [![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
@@ -59,7 +59,7 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **88 Tests** | 79 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
+| **Automated Test Suite** | **91 Tests** | 79 backend async Pytests + 12 frontend Vitest tests (100% passing) |
 | **Backend Code Coverage** | **88% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
@@ -223,7 +223,7 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (88 Tests)
+## Test Suites Breakdown (91 Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
@@ -234,11 +234,11 @@ erDiagram
 | **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 24 | PASSED | Magic bytes, Windows paths, null-byte traversal, zip-bombs, entry limits, malformed OpenXML, fail-closed revocation & rate limiting, canonical port safety, production seed prevention, S3 fallback |
 | **Production Configuration Security** | [`backend/tests/test_config_security.py`](backend/tests/test_config_security.py) | 4 | CI PENDING | Ensures case/whitespace variants of production environment names cannot bypass startup security validation |
 | **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
-| **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 3 | PASSED | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync |
+| **Frontend Token Security & API Configuration** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 6 | CI PENDING | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync, API base URL normalization |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **88** | **CI PENDING** | **Previously reported 88% backend coverage; latest regression tests await CI confirmation** |
+| **TOTAL** | — | **91** | **CI PENDING** | **Previously reported 88% backend coverage; latest regression tests await CI confirmation** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
@@ -439,7 +439,7 @@ cd backend
 $env:DATABASE_URL="sqlite+aiosqlite:///./studyshare.db"
 .\.venv\Scripts\pytest.exe --cov=app tests/ -v
 
-# 3. Frontend Lint, Vitest & Typechecked Build (9 Tests)
+# 3. Frontend Lint, Vitest & Typechecked Build (12 Tests)
 cd ../frontend
 npm run lint
 npm run test
