@@ -297,16 +297,21 @@ TOTAL                          2293    280    88%
    The application refuses to start in `ENVIRONMENT=production` if `JWT_SECRET_KEY` is set to the default dev secret, has fewer than 32 characters, contains `dev_key`, or if `DATABASE_URL` contains `studyshare_dev`.
 3. **Structured Observability ([`backend/app/core/logging.py`](backend/app/core/logging.py))**:
    Requests receive a unique `X-Request-ID` and log in structured JSON format during production runs for easy ingest by Datadog, CloudWatch, or Grafana Loki.
-4. **Automated Database Backup & Disaster Recovery Strategy ([`infra/backup.sh`](infra/backup.sh), [`infra/restore.sh`](infra/restore.sh), [`render.yaml`](render.yaml))**:
-   - **Backup**: Production-aware bash script (`infra/backup.sh`) that auto-detects `studyshare-prod-postgres` (`studyshare_prod_db`) vs development `studyshare-postgres` (`studyshare_db`), applies a 14-day retention rotation, and optionally dispatches status notifications via `ALERT_WEBHOOK_URL`.
-   - **Render Cloud Automation**: Configured natively as a scheduled cron service in [`render.yaml`](render.yaml) (`studyshare-backup-cron` executing daily at 02:00 UTC) with database connection string binding.
+4. **Automated Database Backup & Disaster Recovery Strategy ([`infra/backup.sh`](infra/backup.sh), [`infra/restore.sh`](infra/restore.sh), [`infra/s3_transfer.py`](infra/s3_transfer.py), [`render.yaml`](render.yaml))**:
+   - **Backup**: Production-aware bash script (`infra/backup.sh`) that auto-detects `studyshare-prod-postgres` (`studyshare_prod_db`) vs development `studyshare-postgres` (`studyshare_db`), applies a 14-day retention rotation, and dispatches status notifications via `ALERT_WEBHOOK_URL`.
+   - **Durable Offsite Storage Upload**: When `S3_BACKUP_BUCKET` is configured, snapshots are automatically synchronized to AWS S3 / Cloudflare R2 object storage via [`infra/s3_transfer.py`](infra/s3_transfer.py) (`s3://<bucket>/database-backups/<file>.sql.gz`), ensuring disaster recovery is durable even when cron jobs run in ephemeral container environments.
+   - **Render Cloud Automation**: Configured natively as a scheduled cron service in [`render.yaml`](render.yaml) (`studyshare-backup-cron` executing daily at 02:00 UTC) with managed PostgreSQL and S3 environment variable bindings.
    - **Scheduling**: Automated via standard cron or Render cron:
      ```bash
      0 2 * * * cd /path/to/StudyShare && ./infra/backup.sh >> /var/log/studyshare-backup.log 2>&1
      ```
-   - **Restore**: Point-in-time recovery script (`infra/restore.sh`) validating gzip stream integrity with `-v ON_ERROR_STOP=1` before streaming into Docker or direct `DATABASE_URL`:
+   - **Restore**: Point-in-time recovery script (`infra/restore.sh`) supporting both local files and direct S3 URIs (`s3://...`), validating gzip stream integrity with `-v ON_ERROR_STOP=1` before streaming into Docker or direct `DATABASE_URL`:
      ```bash
+     # Local restore
      ./infra/restore.sh ./backups/studyshare_prod_db_YYYYMMDD_HHMMSS.sql.gz
+
+     # Direct S3 durable storage restore
+     ./infra/restore.sh s3://studyshare-academic-assets/database-backups/studyshare_prod_db_YYYYMMDD_HHMMSS.sql.gz
      ```
    - **Production Durability Note**: Render PostgreSQL defaults to `plan: free` for portfolio demonstration. For true production deployment, upgrading to `plan: starter` (or higher) is recommended to prevent 30-day inactivity expiration and enable automated cloud-managed point-in-time snapshots.
 

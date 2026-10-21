@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # StudyShare Database Restore Script
-# Usage: ./infra/restore.sh <backup_file.sql.gz> [container_name] [database_name]
+# Usage: ./infra/restore.sh <backup_file.sql.gz | s3://bucket/key.sql.gz> [container_name] [database_name]
 #
 # Environment Variables:
 #   POSTGRES_CONTAINER - Target Docker container (default: auto-detected)
 #   POSTGRES_DB        - Database name (default: auto-detected)
 #   POSTGRES_USER      - Database user (default: studyshare)
 #   DATABASE_URL       - Fallback direct connection URL if running outside Docker
+#   S3_ENDPOINT_URL    - Optional custom S3 / Cloudflare R2 endpoint
 #   ALERT_WEBHOOK_URL  - Optional Slack/Discord/HTTP webhook URL for status alerts
 # ==============================================================================
 set -euo pipefail
@@ -26,12 +27,44 @@ send_alert() {
 trap 'send_alert "FAILURE" "Restore script failed on line $LINENO."' ERR
 
 if [ -z "${1:-}" ]; then
-    echo "Usage: $0 <path_to_backup.sql.gz> [container_name] [database_name]"
+    echo "Usage: $0 <path_to_backup.sql.gz | s3://bucket/key.sql.gz> [container_name] [database_name]"
     echo "Example: $0 ./backups/studyshare_prod_db_20261021_120000.sql.gz"
+    echo "         $0 s3://studyshare-backups/database-backups/studyshare_prod_db_20261021_120000.sql.gz"
     exit 1
 fi
 
 BACKUP_FILE="$1"
+
+# 1. External S3 URI resolution
+if echo "$BACKUP_FILE" | grep -qE '^s3://'; then
+    echo "[INFO] External S3 URI detected: '${BACKUP_FILE}'. Fetching snapshot..."
+    TMP_RESTORE_DIR="${TMPDIR:-/tmp}/studyshare_restore_cache"
+    mkdir -p "${TMP_RESTORE_DIR}"
+
+    PYTHON_CMD=""
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON_CMD="python3"
+    elif command -v python >/dev/null 2>&1; then
+        PYTHON_CMD="python"
+    fi
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -n "$PYTHON_CMD" ] && [ -f "${SCRIPT_DIR}/s3_transfer.py" ]; then
+        ${PYTHON_CMD} "${SCRIPT_DIR}/s3_transfer.py" download "${BACKUP_FILE}" "${TMP_RESTORE_DIR}"
+        BACKUP_FILE="${TMP_RESTORE_DIR}/$(basename "${BACKUP_FILE}")"
+    elif command -v aws >/dev/null 2>&1; then
+        TARGET_FILE="${TMP_RESTORE_DIR}/$(basename "${BACKUP_FILE}")"
+        ENDPOINT_FLAG=""
+        if [ -n "${S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL:-}}" ]; then
+            ENDPOINT_FLAG="--endpoint-url ${S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL}}"
+        fi
+        aws s3 cp "${BACKUP_FILE}" "${TARGET_FILE}" ${ENDPOINT_FLAG}
+        BACKUP_FILE="${TARGET_FILE}"
+    else
+        echo "[ERROR] Cannot download '${BACKUP_FILE}': neither python (with boto3) nor aws-cli is installed."
+        exit 1
+    fi
+fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
     # Fallback: normalize Windows drive letters if running under MSYS/Git Bash (e.g. C:/path -> /c/path)

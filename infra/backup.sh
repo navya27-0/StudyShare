@@ -12,6 +12,8 @@
 #   DATABASE_URL       - Fallback direct connection URL if running outside Docker
 #   BACKUP_DIR         - Directory to store compressed backups (default: ./backups)
 #   RETENTION_DAYS     - Number of days to retain backup files (default: 14)
+#   S3_BACKUP_BUCKET   - Optional durable S3 / Cloudflare R2 bucket for offsite snapshots
+#   BACKUP_S3_PREFIX   - Prefix/folder inside S3 bucket (default: database-backups)
 #   ALERT_WEBHOOK_URL  - Optional Slack/Discord/HTTP webhook URL for status alerts
 # ==============================================================================
 set -euo pipefail
@@ -102,4 +104,40 @@ fi
 # 4. Rotate backups older than RETENTION_DAYS
 echo "[INFO] Rotating backups older than ${RETENTION_DAYS} days in ${BACKUP_DIR}..."
 find "${BACKUP_DIR}" -name "*.sql.gz" -type f -mtime +"${RETENTION_DAYS}" -exec rm -f {} + 2>/dev/null || true
+
+# 5. External durable object storage upload (AWS S3, Cloudflare R2, MinIO)
+TARGET_S3_BUCKET="${S3_BACKUP_BUCKET:-${BACKUP_S3_BUCKET:-}}"
+TARGET_S3_PREFIX="${BACKUP_S3_PREFIX:-database-backups}"
+
+if [ -n "$TARGET_S3_BUCKET" ]; then
+    echo "[INFO] Uploading ${BACKUP_FILE} to durable external object storage (Bucket: '${TARGET_S3_BUCKET}')..."
+    PYTHON_CMD=""
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON_CMD="python3"
+    elif command -v python >/dev/null 2>&1; then
+        PYTHON_CMD="python"
+    fi
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -n "$PYTHON_CMD" ] && [ -f "${SCRIPT_DIR}/s3_transfer.py" ]; then
+        ${PYTHON_CMD} "${SCRIPT_DIR}/s3_transfer.py" upload "${BACKUP_FILE}" "${TARGET_S3_BUCKET}" "${TARGET_S3_PREFIX}"
+        send_alert "SUCCESS" "Backup uploaded to s3://${TARGET_S3_BUCKET}/${TARGET_S3_PREFIX}/$(basename "${BACKUP_FILE}")"
+    elif command -v aws >/dev/null 2>&1; then
+        ENDPOINT_FLAG=""
+        if [ -n "${S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL:-}}" ]; then
+            ENDPOINT_FLAG="--endpoint-url ${S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL}}"
+        fi
+        aws s3 cp "${BACKUP_FILE}" "s3://${TARGET_S3_BUCKET}/${TARGET_S3_PREFIX}/$(basename "${BACKUP_FILE}")" ${ENDPOINT_FLAG}
+        echo "[SUCCESS] Uploaded ${BACKUP_FILE} via aws-cli to s3://${TARGET_S3_BUCKET}/${TARGET_S3_PREFIX}/"
+        send_alert "SUCCESS" "Backup uploaded to s3://${TARGET_S3_BUCKET}/${TARGET_S3_PREFIX}/$(basename "${BACKUP_FILE}")"
+    else
+        echo "[WARN] S3_BACKUP_BUCKET is set but neither python (with boto3) nor aws-cli is available. External upload skipped."
+        send_alert "WARNING" "Backup completed locally but external upload skipped: python/aws tools not found."
+    fi
+else
+    echo "[WARN] S3_BACKUP_BUCKET is not set. Backup is saved to local/ephemeral disk only: ${BACKUP_FILE}"
+    echo "[WARN] In ephemeral container runtimes (e.g. Render Cron), files in /tmp are wiped when the job ends."
+    echo "[WARN] Set S3_BACKUP_BUCKET with valid cloud storage credentials to enable durable, offsite disaster recovery."
+fi
+
 echo "[SUCCESS] Backup cycle completed successfully."
