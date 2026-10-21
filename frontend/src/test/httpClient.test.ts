@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { normalizeApiBase } from '../services/httpClient';
 import {
   getStoredAccessToken,
   storeTokens,
