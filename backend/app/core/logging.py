@@ -37,7 +37,7 @@ def setup_logging() -> None:
             root_logger.removeHandler(handler)
 
     handler = logging.StreamHandler(sys.stdout)
-    if settings.ENVIRONMENT.lower() in ("production", "prod"):
+    if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
         handler.setFormatter(JSONFormatter())
     else:
         handler.setFormatter(
