@@ -22,7 +22,7 @@ const LEGACY_REFRESH_TOKEN_KEY = 'studyshare_refresh_token';
  * Security Hardening:
  * - Access tokens live in memory and tab-scoped `sessionStorage` (for reload continuity).
  * - Refresh tokens are delivered and rotated exclusively via backend `HttpOnly, Secure, SameSite=Lax` cookies
- *   (`studyshare_refresh_token`) — completely isolated from browser JavaScript to eliminate XSS token theft.
+ *   (or `SameSite=None` for cross-site deployments) (`studyshare_refresh_token`) — completely isolated from browser JavaScript to eliminate XSS token theft.
  */
 let inMemoryAccessToken: string | null = null;
 

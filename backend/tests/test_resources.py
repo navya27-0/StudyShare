@@ -323,3 +323,104 @@ async def test_pre_upload_duplicate_detection_api(client: AsyncClient, auth_head
     data = res.json()
     assert "has_duplicates" in data
     assert isinstance(data["matches"], list)
+
+
+@pytest.mark.asyncio
+async def test_governed_download_endpoint_local_file_and_deduplication(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    """Verify governed /api/resources/{id}/file serves file and increments downloads."""
+    # Resource 1 is active seeded demo PDF
+    res = await client.get("/api/resources/1/file", headers=auth_headers)
+    assert res.status_code == 200
+    assert res.headers["x-content-type-options"] == "nosniff"
+    assert "attachment" in res.headers.get("content-disposition", "")
+    assert res.content.startswith(b"%PDF-")
+
+    # Check downloads count updated on detail
+    detail = (await client.get("/api/resources/1")).json()
+    initial_downloads = detail["downloads_count"]
+    assert initial_downloads >= 1
+    assert detail["download_url"] == "/api/resources/1/file"
+
+    # Immediate second download by same user should be deduplicated
+    res2 = await client.get("/api/resources/1/file", headers=auth_headers)
+    assert res2.status_code == 200
+    detail2 = (await client.get("/api/resources/1")).json()
+    assert detail2["downloads_count"] == initial_downloads
+
+
+@pytest.mark.asyncio
+async def test_governed_download_endpoint_s3_presigned_redirect(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    """Verify S3 storage backend produces HTTP 307 temporary redirect to presigned URL."""
+    from unittest.mock import patch
+
+    mock_presigned = (
+        "https://studyshare-s3.example.com/academic/resource.pdf?X-Amz-Signature=abc123xyz"
+    )
+
+    with (
+        patch("app.api.resources.settings.STORAGE_BACKEND", "s3"),
+        patch(
+            "app.core.storage.S3StorageProvider.generate_presigned_url",
+            return_value=mock_presigned,
+        ),
+    ):
+        res = await client.get(
+            "/api/resources/1/file",
+            headers=auth_headers,
+            follow_redirects=False,
+        )
+        assert res.status_code == 307
+        assert res.headers["location"] == mock_presigned
+
+
+@pytest.mark.asyncio
+async def test_governed_download_blocks_soft_deleted_resources(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    """Verify soft-deleted / moderated resources fail closed with 404."""
+    from app.database import async_session_maker
+    from app.models.resource import Resource
+
+    async with async_session_maker() as session:
+        r = await session.get(Resource, 1)
+        r.is_deleted = True
+        await session.commit()
+
+    try:
+        res = await client.get("/api/resources/1/file", headers=auth_headers)
+        assert res.status_code == 404
+        assert "not found" in res.json()["detail"].lower()
+    finally:
+        async with async_session_maker() as session:
+            r = await session.get(Resource, 1)
+            r.is_deleted = False
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_governed_download_versions_and_link_redirect(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    """Verify version file downloads and external link redirection."""
+    # Version download for resource 1
+    detail = (await client.get("/api/resources/1")).json()
+    if detail.get("versions"):
+        ver_id = detail["versions"][0]["id"]
+        res = await client.get(f"/api/resources/1/versions/{ver_id}/file", headers=auth_headers)
+        assert res.status_code == 200
+
+    # Non-existent version
+    res_bad = await client.get("/api/resources/1/versions/99999/file", headers=auth_headers)
+    assert res_bad.status_code == 404
+
+    # Non-existent resource
+    res_missing = await client.get("/api/resources/99999/file", headers=auth_headers)
+    assert res_missing.status_code == 404

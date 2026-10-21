@@ -113,7 +113,7 @@ flowchart TD
     end
 
     SPA -->|"HTTPS / REST (Short-lived Bearer)"| CORS
-    SPA -.->|"HttpOnly SameSite=Lax Cookie"| AuthRouter
+    SPA -.->|"HttpOnly SameSite=Lax/None Cookie"| AuthRouter
     AuthRouter --> DB
     ResourceRouter --> DB
     UsersRouter --> DB
@@ -286,7 +286,7 @@ TOTAL                          2293    280    88%
 | Storage Mechanism | Exfiltration Risk (XSS) | CSRF Vulnerability | Session Continuity | Architecture Decision |
 | :--- | :---: | :---: | :---: | :--- |
 | **`localStorage`** | ❌ **High** (Plaintext scripts read indefinitely) | None | Persists forever | **Rejected**: Any 3rd party script could steal long-lived tokens. |
-| **`HttpOnly` Cookie** |  **Zero** (JavaScript cannot read cookie) | ⚠️ Addressed by `SameSite=Lax` | Tab & window scoped | **Adopted for Refresh Token**: Rotated on every call, `jti` checked against revocation list. |
+| **`HttpOnly` Cookie** |  **Zero** (JavaScript cannot read cookie) | ⚠️ Addressed by `SameSite=Lax` (or `SameSite=None` + `Secure` in cross-site mode) | Tab & window scoped | **Adopted for Refresh Token**: Rotated on every call, `jti` checked against revocation list. |
 | **In-Memory + `sessionStorage`** |  **Protected** (Transient, closed on tab exit) | None (Passed as `Bearer`) | Retained on F5 reload | **Adopted for Access Token**: 30-minute lifespan, strictly tab-contained. |
 
 ### Defense-in-Depth Protections

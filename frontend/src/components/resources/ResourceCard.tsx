@@ -60,9 +60,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
-  const downloadUrl = resource.file_url.startsWith('http')
-    ? resource.file_url
-    : `${apiUrl}${resource.file_url}`;
+  const targetPath = resource.download_url || resource.file_url;
+  const downloadUrl = targetPath.startsWith('http')
+    ? targetPath
+    : `${apiUrl}${targetPath}`;
 
   // Format file size
   const formatFileSize = (bytes: number | null): string => {

@@ -129,6 +129,7 @@ export interface ResourceListItem {
   title: string;
   description: string | null;
   file_url: string;
+  download_url?: string;
   file_size_bytes: number | null;
   page_count: number | null;
   semester: number;
@@ -193,6 +194,7 @@ export interface ResourceVersion {
   resource_id: number;
   version_number: number;
   file_url: string;
+  download_url?: string;
   changelog: string | null;
   file_size_bytes: number | null;
   page_count: number | null;
@@ -203,6 +205,7 @@ export interface ResourceVersion {
 export interface ResourceDetail extends ResourceListItem {
   current_version: ResourceVersion | null;
   versions: ResourceVersion[];
+  presigned_url?: string | null;
 }
 
 export interface RatingResponse {

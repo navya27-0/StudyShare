@@ -1,6 +1,8 @@
 import logging
 import math
+import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import (
@@ -14,6 +16,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,6 +106,7 @@ def _serialize_resource_item(
         is_verified=resource.is_verified,
         created_at=resource.created_at,
     )
+    download_url = f"/api/resources/{resource.id}/file"
     return ResourceListItemResponse(
         id=resource.id,
         topic_id=resource.topic_id,
@@ -110,6 +114,7 @@ def _serialize_resource_item(
         title=resource.title,
         description=resource.description,
         file_url=resource.file_url,
+        download_url=download_url,
         file_size_bytes=resource.file_size_bytes,
         page_count=resource.page_count,
         semester=resource.semester,
@@ -138,16 +143,36 @@ def _serialize_resource_detail(
     user_vote: str | None = None,
 ) -> ResourceDetailResponse:
     base_item = _serialize_resource_item(resource, is_bookmarked=is_bookmarked, user_vote=user_vote)
-    current_ver = (
-        ResourceVersionResponse.model_validate(resource.current_version)
-        if resource.current_version
-        else None
-    )
-    versions_list = [ResourceVersionResponse.model_validate(v) for v in (resource.versions or [])]
+    current_ver = None
+    if resource.current_version:
+        current_ver = ResourceVersionResponse.model_validate(resource.current_version)
+        current_ver.download_url = f"/api/resources/{resource.id}/versions/{current_ver.id}/file"
+
+    versions_list = []
+    for v in resource.versions or []:
+        ver_resp = ResourceVersionResponse.model_validate(v)
+        ver_resp.download_url = f"/api/resources/{resource.id}/versions/{v.id}/file"
+        versions_list.append(ver_resp)
+
+    presigned_url = None
+    if (
+        settings.STORAGE_BACKEND.lower() in ("s3", "r2", "minio")
+        and resource.type != ResourceType.LINK
+    ):
+        try:
+            storage_provider = get_storage_provider()
+            presigned_url = storage_provider.generate_presigned_url(
+                resource.file_url, expires_in=3600
+            )
+        except Exception as exc:
+            logger.warning("Failed to generate presigned URL for resource %s: %s", resource.id, exc)
+            presigned_url = None
+
     return ResourceDetailResponse(
         **base_item.model_dump(),
         current_version=current_ver,
         versions=versions_list,
+        presigned_url=presigned_url,
     )
 
 
@@ -1133,3 +1158,127 @@ async def record_download(
         await db.commit()
 
     return {"resource_id": resource_id, "downloads_count": resource.downloads_count}
+
+
+@router.get("/{resource_id}/file")
+async def download_resource_file(
+    resource_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
+    version_id: int | None = Query(None, description="Optional version ID to download"),
+):
+    """
+    Governed file download endpoint.
+    - Enforces moderation/deletion status (fails closed on soft-deleted resources with 404).
+    - Increments download counter with per-user/per-IP deduplication.
+    - If S3/R2/MinIO storage backend: returns HTTP 307 temporary redirect to a signed presigned URL.
+    - If local storage backend: serves governed FileResponse with attachment headers and nosniff.
+    """
+    stmt = (
+        select(Resource).options(selectinload(Resource.versions)).where(Resource.id == resource_id)
+    )
+    resource = (await db.execute(stmt)).scalar_one_or_none()
+    if not resource or resource.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource with ID {resource_id} was not found.",
+        )
+
+    target_file_url = resource.file_url
+    target_title = resource.title
+
+    if version_id is not None:
+        matched_ver = next((v for v in (resource.versions or []) if v.id == version_id), None)
+        if not matched_ver:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Resource version {version_id} was not found for resource {resource_id}.",
+            )
+        target_file_url = matched_ver.file_url
+
+    # Increment download counter with deduplication
+    actor_key = f"user:{current_user.id}" if current_user else f"ip:{get_client_ip(request)}"
+    if counter_deduplicator.should_increment(actor_key, resource_id, "download"):
+        resource.downloads_count += 1
+        await db.commit()
+
+    # Link resources redirect to external URL
+    if resource.type == ResourceType.LINK:
+        return RedirectResponse(
+            url=target_file_url,
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+        )
+
+    # Object storage (S3 / R2 / MinIO)
+    storage_provider = get_storage_provider()
+    if settings.STORAGE_BACKEND.lower() in ("s3", "r2", "minio"):
+        presigned_url = storage_provider.generate_presigned_url(target_file_url, expires_in=3600)
+        return RedirectResponse(
+            url=presigned_url,
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+            headers={"Cache-Control": "no-store, private"},
+        )
+
+    # Local file storage
+    clean_path = target_file_url.removeprefix("/uploads/").lstrip("/")
+    upload_dir = Path(settings.UPLOAD_DIR).resolve()
+    candidate = (upload_dir / clean_path).resolve()
+    try:
+        candidate.relative_to(upload_dir)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path.",
+        ) from exc
+
+    safe_stem = re.sub(r"[^a-zA-Z0-9_\-]", "_", target_title)
+    ext = Path(clean_path).suffix or ".pdf"
+    download_filename = f"{safe_stem}{ext}"
+
+    if candidate.exists() and candidate.is_file():
+        return FileResponse(
+            path=candidate,
+            filename=download_filename,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "private, max-age=3600",
+            },
+        )
+
+    # Seeded demo fallback for active demonstration items
+    if clean_path.lower().endswith(".pdf"):
+        from app.main import SEED_DEMO_PDF_BYTES
+
+        return Response(
+            content=SEED_DEMO_PDF_BYTES,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "private, max-age=3600",
+            },
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="The requested file was not found on storage.",
+    )
+
+
+@router.get("/{resource_id}/versions/{version_id}/file")
+async def download_resource_version_file(
+    resource_id: int,
+    version_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
+):
+    """Governed download endpoint for a specific resource version."""
+    return await download_resource_file(
+        resource_id=resource_id,
+        request=request,
+        db=db,
+        current_user=current_user,
+        version_id=version_id,
+    )

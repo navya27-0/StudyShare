@@ -296,6 +296,11 @@ class StorageProvider(ABC):
         """Remove a file from storage if it exists."""
         pass
 
+    @abstractmethod
+    def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
+        """Generate a secure, time-limited presigned GET URL or accessible path."""
+        pass
+
 
 class LocalFileStorage(StorageProvider):
     """Local filesystem storage provider with path traversal and signature protection."""
@@ -430,6 +435,10 @@ class LocalFileStorage(StorageProvider):
             return True
         return False
 
+    def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
+        clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
+        return f"/uploads/{clean_key}"
+
 
 class S3StorageProvider(StorageProvider):
     """
@@ -479,6 +488,20 @@ class S3StorageProvider(StorageProvider):
         if self.endpoint_url:
             return f"{self.endpoint_url.rstrip('/')}/{self.bucket_name}/{storage_key}"
         return f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{storage_key}"
+
+    def _extract_storage_key(self, key_or_url: str) -> str:
+        """Extract object storage key from key, relative path, or full S3/CDN URL."""
+        from urllib.parse import urlsplit
+
+        if not key_or_url:
+            return ""
+        parsed = urlsplit(key_or_url)
+        if parsed.scheme and parsed.netloc:
+            path = parsed.path.lstrip("/")
+            if self.bucket_name and path.startswith(f"{self.bucket_name}/"):
+                path = path[len(self.bucket_name) + 1 :]
+            return path
+        return key_or_url.removeprefix("/uploads/").lstrip("/")
 
     def _validate_extension(self, filename: str, content_type: str) -> str:
         ext = Path(filename).suffix.lower()
@@ -620,15 +643,27 @@ class S3StorageProvider(StorageProvider):
             validate_file_structure(temp_file_path, ext)
 
             client = self._get_client()
+            extra_args = {}
+            if content_type:
+                extra_args["ContentType"] = content_type
             with open(temp_file_path, "rb") as body_stream:
-                body_bytes = body_stream.read()
-                await asyncio.to_thread(
-                    client.put_object,
-                    Bucket=self.bucket_name,
-                    Key=storage_key,
-                    Body=body_bytes,
-                    ContentType=content_type,
-                )
+                if hasattr(client, "upload_fileobj"):
+                    await asyncio.to_thread(
+                        client.upload_fileobj,
+                        Fileobj=body_stream,
+                        Bucket=self.bucket_name,
+                        Key=storage_key,
+                        ExtraArgs=extra_args or None,
+                    )
+                else:
+                    body_bytes = body_stream.read()
+                    await asyncio.to_thread(
+                        client.put_object,
+                        Bucket=self.bucket_name,
+                        Key=storage_key,
+                        Body=body_bytes,
+                        ContentType=content_type,
+                    )
         except HTTPException:
             raise
         except Exception as exc:
@@ -649,6 +684,7 @@ class S3StorageProvider(StorageProvider):
         )
 
     async def delete_file(self, storage_key: str) -> bool:
+        clean_key = self._extract_storage_key(storage_key)
         if not (self.access_key_id and self.secret_access_key):
             if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
@@ -658,9 +694,8 @@ class S3StorageProvider(StorageProvider):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Production object storage is misconfigured: S3 credentials are required.",
                 )
-            return await self._local_fallback.delete_file(storage_key)
+            return await self._local_fallback.delete_file(clean_key)
 
-        clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
         try:
             client = self._get_client()
             await asyncio.to_thread(
@@ -675,6 +710,7 @@ class S3StorageProvider(StorageProvider):
 
     def generate_presigned_url(self, storage_key: str, expires_in: int = 3600) -> str:
         """Generate a secure, time-limited presigned GET URL for private buckets."""
+        clean_key = self._extract_storage_key(storage_key)
         if not (self.access_key_id and self.secret_access_key):
             if settings.ENVIRONMENT.strip().lower() in ("production", "prod"):
                 logger.critical(
@@ -684,8 +720,7 @@ class S3StorageProvider(StorageProvider):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Production object storage is misconfigured: S3 credentials are required.",
                 )
-            return f"/uploads/{storage_key.removeprefix('/uploads/').lstrip('/')}"
-        clean_key = storage_key.removeprefix("/uploads/").lstrip("/")
+            return f"/uploads/{clean_key}"
         client = self._get_client()
         return client.generate_presigned_url(
             "get_object",

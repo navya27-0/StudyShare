@@ -276,7 +276,7 @@ export const ResourceDetailView: React.FC = () => {
       setIsDownloaded(true);
 
       // Open or trigger download
-      const targetUrl = resolveFileUrl(resource.file_url);
+      const targetUrl = resolveFileUrl(resource.download_url || resource.file_url);
       if (resource.type === 'link') {
         window.open(targetUrl, '_blank', 'noopener,noreferrer');
       } else {
@@ -294,7 +294,7 @@ export const ResourceDetailView: React.FC = () => {
       try {
         markResourceDownloaded(resource.id);
         setIsDownloaded(true);
-        window.open(resolveFileUrl(resource.file_url), '_blank');
+        window.open(resolveFileUrl(resource.download_url || resource.file_url), '_blank');
       } catch {
         showToast(err instanceof Error ? err.message : 'Failed to download resource file.', 'error');
       }
@@ -458,7 +458,7 @@ export const ResourceDetailView: React.FC = () => {
   }
 
   const badge = getTypeBadge(resource.type);
-  const fileUrl = resolveFileUrl(resource.file_url);
+  const fileUrl = resource.presigned_url || resolveFileUrl(resource.download_url || resource.file_url);
   const isPdf = resource.type === 'pdf' || resource.file_url.toLowerCase().endsWith('.pdf');
   const isImage = ['.png', '.jpg', '.jpeg'].some((ext) =>
     resource.file_url.toLowerCase().endsWith(ext)
@@ -1271,7 +1271,7 @@ export const ResourceDetailView: React.FC = () => {
                 .sort((a, b) => b.version_number - a.version_number)
                 .map((ver) => {
                   const isActive = resource.current_version?.id === ver.id;
-                  const verUrl = resolveFileUrl(ver.file_url);
+                  const verUrl = resolveFileUrl(ver.download_url || ver.file_url);
 
                   return (
                     <div

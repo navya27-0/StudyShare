@@ -93,10 +93,19 @@ async def test_admin_reports_and_moderation_lifecycle(
     3. Admin removes a resource (soft-delete), verifying it disappears from public listings.
     4. Admin restores the resource, verifying it reappears.
     """
-    # 1. List reports
+    # 1. List reports (ensuring at least one open report exists for test isolation)
     rep_res = await client.get("/api/admin/reports?status=open", headers=admin_auth_headers)
     assert rep_res.status_code == 200, rep_res.text
     reports = rep_res.json()["items"]
+    if not reports:
+        create_rep = await client.post(
+            "/api/resources/1/report",
+            json={"reason": "Outdated curriculum content."},
+            headers=admin_auth_headers,
+        )
+        assert create_rep.status_code == 201
+        rep_res = await client.get("/api/admin/reports?status=open", headers=admin_auth_headers)
+        reports = rep_res.json()["items"]
     assert len(reports) >= 1
     target_report = reports[0]
     report_id = target_report["id"]

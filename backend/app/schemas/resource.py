@@ -91,6 +91,7 @@ class ResourceVersionResponse(BaseModel):
     resource_id: int
     version_number: int
     file_url: str
+    download_url: str | None = None
     changelog: str | None = None
     file_size_bytes: int | None = None
     page_count: int | None = None
@@ -107,6 +108,7 @@ class ResourceListItemResponse(BaseModel):
     title: str
     description: str | None = None
     file_url: str
+    download_url: str | None = None
     file_size_bytes: int | None = None
     page_count: int | None = None
     semester: int
@@ -133,6 +135,7 @@ class ResourceListItemResponse(BaseModel):
 class ResourceDetailResponse(ResourceListItemResponse):
     current_version: ResourceVersionResponse | None = None
     versions: list[ResourceVersionResponse] = []
+    presigned_url: str | None = None
 
 
 class ResourceListResponse(BaseModel):

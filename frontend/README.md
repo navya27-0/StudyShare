@@ -60,7 +60,7 @@ frontend/src/
 ## Security & Token Storage Model (`src/services/httpClient.ts`)
 
 - **Short-Lived Access Token**: Stored in memory (`inMemoryAccessToken`) and tab-scoped `sessionStorage` (`studyshare_access_token`) so page reloads stay authenticated within the active tab without persisting tokens in `localStorage`.
-- **Long-Lived Refresh Token**: Issued by the FastAPI backend as an `HttpOnly`, `SameSite=Lax` cookie (`studyshare_refresh_token`) and rotated on every `/api/auth/refresh` call. Never written to `localStorage` or `sessionStorage`.
+- **Long-Lived Refresh Token**: Issued by the FastAPI backend as an `HttpOnly`, `SameSite=Lax` (or `SameSite=None` + `Secure` in cross-site deployments) cookie (`studyshare_refresh_token`) and rotated on every `/api/auth/refresh` call. Never written to `localStorage` or `sessionStorage`.
 
 ---
 

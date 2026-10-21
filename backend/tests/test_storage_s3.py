@@ -78,9 +78,9 @@ async def test_s3_save_file_calls_put_object_and_computes_url():
 
 @pytest.mark.asyncio
 async def test_s3_save_upload_file_streaming():
-    """Verify save_upload_file streams UploadFile chunks and uploads to S3."""
+    """Verify save_upload_file streams UploadFile chunks and uploads to S3 using upload_fileobj."""
     mock_s3 = MagicMock()
-    mock_s3.put_object.return_value = {}
+    mock_s3.upload_fileobj.return_value = None
 
     with patch("boto3.client", return_value=mock_s3):
         provider = S3StorageProvider(
@@ -102,7 +102,7 @@ async def test_s3_save_upload_file_streaming():
         assert result.file_url.startswith(
             "https://my-academic-bucket.s3.us-east-1.amazonaws.com/cs204/"
         )
-        mock_s3.put_object.assert_called_once()
+        mock_s3.upload_fileobj.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -110,6 +110,7 @@ async def test_s3_upload_failure_triggers_502_and_cleanup():
     """Verify S3 exceptions are wrapped into HTTP 502 with tempfile cleanup."""
     mock_s3 = MagicMock()
     mock_s3.put_object.side_effect = Exception("AWS Service Unavailable (500)")
+    mock_s3.upload_fileobj.side_effect = Exception("AWS Service Unavailable (500)")
 
     with patch("boto3.client", return_value=mock_s3):
         provider = S3StorageProvider(
@@ -172,3 +173,63 @@ def test_s3_presigned_url_generation():
             Params={"Bucket": "my-academic-bucket", "Key": "resources/midterm.pdf"},
             ExpiresIn=1800,
         )
+
+
+def test_s3_presigned_url_generation_from_full_url():
+    """Verify presigned GET URLs can be generated when given full S3/CDN URLs."""
+    mock_s3 = MagicMock()
+    mock_s3.generate_presigned_url.return_value = (
+        "https://my-academic-bucket.s3.amazonaws.com/resources/midterm.pdf?Signature=XYZ"
+    )
+
+    with patch("boto3.client", return_value=mock_s3):
+        provider = S3StorageProvider(
+            bucket_name="my-academic-bucket",
+            access_key_id="mock_key",
+            secret_access_key="mock_secret",
+        )
+        # Passing full AWS S3 URL
+        full_url = "https://my-academic-bucket.s3.us-east-1.amazonaws.com/resources/midterm.pdf"
+        url = provider.generate_presigned_url(full_url, expires_in=3600)
+        assert "Signature=XYZ" in url
+        mock_s3.generate_presigned_url.assert_called_once_with(
+            "get_object",
+            Params={"Bucket": "my-academic-bucket", "Key": "resources/midterm.pdf"},
+            ExpiresIn=3600,
+        )
+
+
+def test_s3_key_extraction_utility():
+    """Verify _extract_storage_key correctly parses all variants of object references."""
+    provider = S3StorageProvider(
+        bucket_name="my-bucket",
+        endpoint_url="http://localhost:9000",
+    )
+    assert provider._extract_storage_key("resources/abc.pdf") == "resources/abc.pdf"
+    assert provider._extract_storage_key("/uploads/resources/abc.pdf") == "resources/abc.pdf"
+    assert (
+        provider._extract_storage_key(
+            "https://my-bucket.s3.us-east-1.amazonaws.com/resources/abc.pdf"
+        )
+        == "resources/abc.pdf"
+    )
+    assert (
+        provider._extract_storage_key("http://localhost:9000/my-bucket/resources/abc.pdf")
+        == "resources/abc.pdf"
+    )
+    assert (
+        provider._extract_storage_key("https://cdn.studyshare.edu/cs301/lecture.pdf")
+        == "cs301/lecture.pdf"
+    )
+    assert provider._extract_storage_key("") == ""
+
+
+def test_local_storage_generate_presigned_url():
+    """Verify LocalFileStorage returns clean /uploads path from generate_presigned_url."""
+    from app.core.storage import LocalFileStorage
+
+    local = LocalFileStorage()
+    assert local.generate_presigned_url("resources/demo.pdf") == "/uploads/resources/demo.pdf"
+    assert (
+        local.generate_presigned_url("/uploads/resources/demo.pdf") == "/uploads/resources/demo.pdf"
+    )
