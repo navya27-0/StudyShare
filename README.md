@@ -18,7 +18,7 @@
 | **Cloud Blueprint (Render)** | [`render.yaml`](render.yaml) | Full-stack blueprint: FastAPI backend with 10 GB persistent disk (`/app/uploads`), managed PostgreSQL 16, and static React 19 frontend with S3/R2 object storage slots |
 | **Production Compose** | [`infra/docker-compose.prod.yml`](infra/docker-compose.prod.yml) | Multi-container Docker deployment with PostgreSQL 16 health checks, volume persistence, and network isolation |
 | **API Namespace Design** | Reverse Proxy (`/api/...`) | Clean unified API namespace routing `/api/...` to the backend service and root traffic to the React SPA |
-| **Automated Database Backup** | [`infra/backup.sh`](infra/backup.sh) | Daily `pg_dump` cron script with 14-day retention cycle and automated status alerts |
+| **Database Backup & Recovery** | [`infra/backup.sh`](infra/backup.sh), [`infra/restore.sh`](infra/restore.sh) | Production-aware `pg_dump` snapshots with 14-day retention cycle, webhook alerts, and restore automation |
 
 ### Demo Accounts (Seeded by [`python -m app.seed`](backend/app/seed.py))
 
@@ -297,8 +297,16 @@ TOTAL                          2293    280    88%
    The application refuses to start in `ENVIRONMENT=production` if `JWT_SECRET_KEY` is set to the default dev secret, has fewer than 32 characters, contains `dev_key`, or if `DATABASE_URL` contains `studyshare_dev`.
 3. **Structured Observability ([`backend/app/core/logging.py`](backend/app/core/logging.py))**:
    Requests receive a unique `X-Request-ID` and log in structured JSON format during production runs for easy ingest by Datadog, CloudWatch, or Grafana Loki.
-4. **Automated Database Backup Strategy ([`infra/backup.sh`](infra/backup.sh))**:
-   Automated bash script taking compressed `pg_dump` snapshots with a 14-day retention cycle.
+4. **Automated Database Backup & Disaster Recovery Strategy ([`infra/backup.sh`](infra/backup.sh), [`infra/restore.sh`](infra/restore.sh))**:
+   - **Backup**: Production-aware bash script (`infra/backup.sh`) that auto-detects `studyshare-prod-postgres` (`studyshare_prod_db`) vs development `studyshare-postgres` (`studyshare_db`), applies a 14-day retention rotation, and optionally dispatches status notifications via `ALERT_WEBHOOK_URL`.
+   - **Scheduling**: Automated via standard cron:
+     ```bash
+     0 2 * * * cd /path/to/StudyShare && ./infra/backup.sh >> /var/log/studyshare-backup.log 2>&1
+     ```
+   - **Restore**: Point-in-time recovery script (`infra/restore.sh`) validating gzip stream integrity before streaming into Docker or direct `DATABASE_URL`:
+     ```bash
+     ./infra/restore.sh ./backups/studyshare_prod_db_YYYYMMDD_HHMMSS.sql.gz
+     ```
 
 ---
 
