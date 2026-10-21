@@ -3,7 +3,7 @@
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 [![Backend Tests](https://img.shields.io/badge/Pytest-73%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
-[![Code Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen?style=flat-square)](backend/tests/)
+[![Code Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
 [![Storage Engine](https://img.shields.io/badge/Storage-Boto3%20S3%20%2B%20R2%20%2B%20Disk-orange?style=flat-square)](backend/app/core/storage.py)
 
@@ -57,7 +57,7 @@
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
 | **Automated Test Suite** | **82 Tests** | 73 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
-| **Backend Code Coverage** | **89% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
+| **Backend Code Coverage** | **88% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
 | **Upload Processing** | **50 MB Limit** | Chunked upload validation (64 KB chunks) with temporary-file staging, SHA-256 integrity check & magic-byte scanning |
@@ -234,36 +234,43 @@ erDiagram
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **82** | **100% PASS** | **89% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **82** | **100% PASS** | **88% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
 ```text
 Name                          Stmts   Miss  Cover
 -------------------------------------------------
-app/api/admin.py                162     19    88%
-app/api/auth.py                  99     13    87%
-app/api/deps.py                  55     14    75%
-app/api/health.py                21      4    81%
-app/api/resources.py            382     59    85%
+app/api/__init__.py               6      0   100%
+app/api/admin.py                167     19    89%
+app/api/auth.py                 155     14    91%
+app/api/deps.py                  76     16    79%
+app/api/health.py                28      5    82%
+app/api/resources.py            408     74    82%
 app/api/users.py                 57      3    95%
-app/config.py                    45      1    98%
+app/config.py                    50      1    98%
 app/core/logging.py              28     12    57%
-app/core/ranking.py              51      2    96%
-app/core/rate_limit.py           97     15    85%
+app/core/ranking.py              51      3    94%
+app/core/rate_limit.py          241     35    85%
 app/core/security.py             30      2    93%
-app/core/storage.py             235     27    89%
+app/core/storage.py             324     45    86%
+app/database.py                  14      4    71%
+app/main.py                     104     34    67%
+app/models/__init__.py            9      0   100%
+app/models/enums.py              19      0   100%
 app/models/interactions.py       72      5    93%
 app/models/profile.py            20      1    95%
 app/models/resource.py           57      2    96%
+app/models/security.py           15      0   100%
 app/models/taxonomy.py           42      3    93%
 app/models/user.py               28      1    96%
-app/schemas/admin.py             33      0   100%
-app/schemas/auth.py              21      0   100%
-app/schemas/interactions.py      28      1    96%
-app/schemas/resource.py          64      0   100%
+app/schemas/__init__.py           4      0   100%
+app/schemas/admin.py             55      0   100%
+app/schemas/auth.py              54      0   100%
+app/schemas/interactions.py      57      1    98%
+app/schemas/resource.py         122      0   100%
 -------------------------------------------------
-TOTAL                          1758    200    89%
+TOTAL                          2293    280    88%
 ```
 
 ---
