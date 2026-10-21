@@ -18,7 +18,7 @@ from app.models.user import User
 async def seed_data(session: AsyncSession) -> None:
     settings = get_settings()
     if (
-        settings.ENVIRONMENT.lower() in ("production", "prod")
+        settings.ENVIRONMENT.strip().lower() in ("production", "prod")
         and not settings.ALLOW_PRODUCTION_SEED
     ):
         raise RuntimeError(

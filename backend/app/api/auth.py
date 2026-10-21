@@ -42,7 +42,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=settings.ENVIRONMENT == "production",
+        secure=settings.ENVIRONMENT.strip().lower() in ("production", "prod"),
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         path="/api/auth",
@@ -89,7 +89,7 @@ def _get_allowed_origins() -> set[str]:
         if canon:
             allowed.add(canon)
     # Only allow synthetic test ASGI transport origin in non-production environments
-    if settings.ENVIRONMENT.lower() != "production":
+    if settings.ENVIRONMENT.strip().lower() not in {"production", "prod"}:
         allowed.add("http://test")
     return allowed
 

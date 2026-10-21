@@ -35,6 +35,7 @@ services:
       SCHEDULED_CLEANUP_ENABLED: "True"
       SECURITY_CLEANUP_INTERVAL_SECONDS: 21600
       LOGIN_ATTEMPT_RETENTION_HOURS: 24
+      ALLOW_PRODUCTION_SEED: "False"
     expose:
       - "8000"
     volumes:

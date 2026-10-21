@@ -1,7 +1,7 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
 [![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-73%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![Backend Tests](https://img.shields.io/badge/Pytest-75%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
@@ -27,6 +27,9 @@
 | **Student Contributor** | `arvind.raman@student.univ.edu` | `StudyShare2024!` | Upload notes/PYQs, create units/topics, earn reputation |
 | **Student Peer** | `sneha.rao@student.univ.edu` | `StudyShare2024!` | Search syllabus, upvote/downvote, 1–5★ rating, bookmarks |
 | **Faculty Moderator** | `prof.sharma@university.edu` | `StudyShare2024!` | Admin review dashboard, verify assets, ban abusers, audit log |
+
+> [!IMPORTANT]
+> **Production Isolation Safeguard**: These demo accounts and shared default passwords are strictly restricted to local development, CI test suites, and preview environments. Database seeding with demo accounts is strictly blocked in production (`ALLOW_PRODUCTION_SEED=False` by default in [`backend/app/seed.py`](backend/app/seed.py)), ensuring default demo credentials are never present on public production deployments.
 
 ---
 
@@ -56,7 +59,7 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **82 Tests** | 73 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
+| **Automated Test Suite** | **84 Tests** | 75 backend async Pytests + 9 frontend Vitest component tests (100% passing) |
 | **Backend Code Coverage** | **88% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
@@ -220,21 +223,21 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (82 Passed Tests)
+## Test Suites Breakdown (84 Passed Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
 | **Admin & Ranking** | [`backend/tests/test_admin_and_ranking.py`](backend/tests/test_admin_and_ranking.py) | 6 | PASSED | Role gating, report triage, bans, warnings, ranking math, validated security table retention cleanup |
-| **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 14 | PASSED | Registration, login, atomic single-use refresh rotation, concurrent rotation race tests, strict CSRF exact origin/referer validation with malformed port defense & production test-origin rejection |
+| **Auth & Taxonomy** | [`backend/tests/test_auth_taxonomy_and_users.py`](backend/tests/test_auth_taxonomy_and_users.py) | 15 | PASSED | Registration, login, atomic single-use refresh rotation, concurrent rotation race tests, strict CSRF exact origin/referer validation with malformed port defense & production/prod test-origin rejection |
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
-| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 23 | PASSED | Magic bytes, Windows paths, null-byte traversal, zip-bombs, entry limits, malformed OpenXML, fail-closed revocation & rate limiting, canonical port safety, S3 fallback |
+| **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 24 | PASSED | Magic bytes, Windows paths, null-byte traversal, zip-bombs, entry limits, malformed OpenXML, fail-closed revocation & rate limiting, canonical port safety, production seed prevention, S3 fallback |
 | **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
 | **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 3 | PASSED | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **82** | **100% PASS** | **88% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **84** | **100% PASS** | **88% Backend Coverage, 0 Lint Errors, 0 Warnings** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 

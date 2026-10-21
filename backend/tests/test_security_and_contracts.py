@@ -720,3 +720,27 @@ def test_canonical_origin_malformed_ports_handled_safely():
     assert _canonical_origin("http://localhost:80") == "http://localhost"
     assert _canonical_origin("https://studyshare.pages.dev:443") == "https://studyshare.pages.dev"
     assert _canonical_origin("https://studyshare.pages.dev") == "https://studyshare.pages.dev"
+
+
+@pytest.mark.asyncio
+async def test_production_seeding_disabled_by_default():
+    """Verify that seed_data strictly raises RuntimeError when ENVIRONMENT is 'production' or 'prod' with ALLOW_PRODUCTION_SEED=False."""
+    from unittest.mock import AsyncMock
+
+    from app.config import get_settings
+    from app.seed import seed_data
+
+    settings = get_settings()
+    original_env = settings.ENVIRONMENT
+    original_allow = settings.ALLOW_PRODUCTION_SEED
+    try:
+        settings.ALLOW_PRODUCTION_SEED = False
+        mock_session = AsyncMock()
+        for prod_env in ("production", "prod", "PROD", " Production "):
+            settings.ENVIRONMENT = prod_env
+            with pytest.raises(RuntimeError) as exc_info:
+                await seed_data(mock_session)
+            assert "strictly disabled in production" in str(exc_info.value)
+    finally:
+        settings.ENVIRONMENT = original_env
+        settings.ALLOW_PRODUCTION_SEED = original_allow

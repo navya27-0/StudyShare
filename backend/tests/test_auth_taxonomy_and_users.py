@@ -300,7 +300,7 @@ async def test_auth_logout_db_outage_fails_closed(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_production_environment_rejects_test_origin(client: AsyncClient):
     """
-    Verify that in production environments (ENVIRONMENT='production'),
+    Verify that in production environments (both 'production' and 'prod' aliases),
     synthetic test origin 'http://test' is strictly excluded from trusted origins
     and rejected with HTTP 403 Forbidden.
     """
@@ -308,19 +308,44 @@ async def test_production_environment_rejects_test_origin(client: AsyncClient):
 
     settings = get_settings()
     original_env = settings.ENVIRONMENT
-    try:
-        settings.ENVIRONMENT = "production"
-        res = await client.post(
-            "/api/auth/refresh",
-            headers={
-                "Origin": "http://test",
-                "Cookie": "studyshare_refresh_token=any.token.value",
-            },
-        )
-        assert res.status_code == 403
-        assert "Untrusted origin" in res.json()["detail"]
-    finally:
-        settings.ENVIRONMENT = original_env
+    for prod_alias in ("production", "prod", "PROD", " Production "):
+        try:
+            settings.ENVIRONMENT = prod_alias
+            res = await client.post(
+                "/api/auth/refresh",
+                headers={
+                    "Origin": "http://test",
+                    "Cookie": "studyshare_refresh_token=any.token.value",
+                },
+            )
+            assert res.status_code == 403, (
+                f"Origin 'http://test' was unexpectedly allowed in ENVIRONMENT='{prod_alias}'"
+            )
+            assert "Untrusted origin" in res.json()["detail"]
+        finally:
+            settings.ENVIRONMENT = original_env
+
+
+def test_refresh_cookie_secure_flag_in_production_and_prod():
+    """Verify refresh cookie has secure=True under both 'production' and 'prod' aliases."""
+    from fastapi import Response
+
+    from app.api.auth import _set_refresh_cookie
+    from app.config import get_settings
+
+    settings = get_settings()
+    original_env = settings.ENVIRONMENT
+    for prod_alias in ("production", "prod", "PROD", " Production "):
+        try:
+            settings.ENVIRONMENT = prod_alias
+            res = Response()
+            _set_refresh_cookie(res, "sample_refresh_token")
+            set_cookie_header = res.headers.get("set-cookie", "")
+            assert "secure" in set_cookie_header.lower()
+            assert "httponly" in set_cookie_header.lower()
+            assert "samesite=lax" in set_cookie_header.lower()
+        finally:
+            settings.ENVIRONMENT = original_env
 
 
 @pytest.mark.asyncio
