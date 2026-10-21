@@ -205,7 +205,7 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     # 6c. Admin Moderation: Soft-delete / Remove Resource
     remove_res = await client.post(
         f"/api/admin/resources/{resource_id}/remove",
-        json={"reason": "Curriculum verification hold during live smoke test"},
+        json={"note": "Curriculum verification hold during live smoke test"},
         headers=admin_headers,
     )
     assert remove_res.status_code == 200
@@ -226,6 +226,7 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     # 6f. Admin Moderation: Restore Resource
     restore_res = await client.post(
         f"/api/admin/resources/{resource_id}/restore",
+        json={"note": "Restored after live smoke verification"},
         headers=admin_headers,
     )
     assert restore_res.status_code == 200
@@ -247,5 +248,5 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     )
     assert actions_res.status_code == 200
     recorded_actions = [a["action"] for a in actions_res.json()["items"]]
-    assert "remove_resource" in recorded_actions, "Audit log must record 'remove_resource'"
-    assert "restore_resource" in recorded_actions, "Audit log must record 'restore_resource'"
+    assert "resource_removed" in recorded_actions, "Audit log must record 'resource_removed'"
+    assert "resource_restored" in recorded_actions, "Audit log must record 'resource_restored'"

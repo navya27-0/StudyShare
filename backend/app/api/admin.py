@@ -174,9 +174,9 @@ async def action_report(
 @router.post("/resources/{resource_id}/remove", response_model=AdminActionSuccessResponse)
 async def remove_resource(
     resource_id: int,
-    payload: ResourceModerationRequest | None,
     current_admin: Annotated[User, Depends(get_current_admin)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    payload: ResourceModerationRequest | None = None,
 ):
     """
     Soft-remove a resource from public access due to moderation policy violations.
@@ -211,9 +211,9 @@ async def remove_resource(
 @router.post("/resources/{resource_id}/restore", response_model=AdminActionSuccessResponse)
 async def restore_resource(
     resource_id: int,
-    payload: ResourceModerationRequest | None,
     current_admin: Annotated[User, Depends(get_current_admin)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    payload: ResourceModerationRequest | None = None,
 ):
     """
     Restore a previously removed resource to public access.
