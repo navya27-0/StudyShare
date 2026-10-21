@@ -1,7 +1,19 @@
 import type { AuthTokens } from '../types';
 import { logDiagnosticWarning } from './localStorage';
 
-export const API_BASE = import.meta.env.VITE_API_URL || '';
+/**
+ * Normalize VITE_API_URL for deployment platforms that expose a hostname without a scheme
+ * (for example, Render's service host reference). An empty value keeps same-origin proxy mode.
+ */
+export function normalizeApiBase(value: string | undefined): string {
+  const base = value?.trim();
+  if (!base) return '';
+  if (/^https?:\/\//i.test(base)) return base.replace(/\/+$/, '');
+  if (base.startsWith('//')) return `https:${base}`.replace(/\/+$/, '');
+  return `https://${base}`.replace(/\/+$/, '');
+}
+
+export const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 const ACCESS_TOKEN_SESSION_KEY = 'studyshare_access_token';
 const LEGACY_REFRESH_TOKEN_KEY = 'studyshare_refresh_token';
