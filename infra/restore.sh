@@ -8,8 +8,22 @@
 #   POSTGRES_DB        - Database name (default: auto-detected)
 #   POSTGRES_USER      - Database user (default: studyshare)
 #   DATABASE_URL       - Fallback direct connection URL if running outside Docker
+#   ALERT_WEBHOOK_URL  - Optional Slack/Discord/HTTP webhook URL for status alerts
 # ==============================================================================
 set -euo pipefail
+
+send_alert() {
+    local status="$1"
+    local message="$2"
+    if [ -n "${ALERT_WEBHOOK_URL:-}" ] && command -v curl >/dev/null 2>&1; then
+        local payload
+        payload=$(printf '{"status":"%s","service":"StudyShare-Database-Restore","message":"%s","timestamp":"%s"}' \
+            "$status" "$message" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")")
+        curl -s -X POST -H "Content-Type: application/json" -d "$payload" "${ALERT_WEBHOOK_URL}" >/dev/null 2>&1 || true
+    fi
+}
+
+trap 'send_alert "FAILURE" "Restore script failed on line $LINENO."' ERR
 
 if [ -z "${1:-}" ]; then
     echo "Usage: $0 <path_to_backup.sql.gz> [container_name] [database_name]"
@@ -18,6 +32,18 @@ if [ -z "${1:-}" ]; then
 fi
 
 BACKUP_FILE="$1"
+
+if [ ! -f "$BACKUP_FILE" ]; then
+    # Fallback: normalize Windows drive letters if running under MSYS/Git Bash (e.g. C:/path -> /c/path)
+    if echo "$BACKUP_FILE" | grep -qE '^[a-zA-Z]:[/\]'; then
+        DRIVE_LETTER=$(echo "$BACKUP_FILE" | cut -c1 | tr '[:upper:]' '[:lower:]')
+        REST_OF_PATH=$(echo "$BACKUP_FILE" | cut -c4- | tr '\\' '/')
+        ALT_PATH="/${DRIVE_LETTER}/${REST_OF_PATH}"
+        if [ -f "$ALT_PATH" ]; then
+            BACKUP_FILE="$ALT_PATH"
+        fi
+    fi
+fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
     echo "[ERROR] Backup file not found: ${BACKUP_FILE}"
@@ -66,15 +92,19 @@ fi
 echo "[INFO] Restoring database '${DB_NAME}' (User: '${DB_USER}') from '${BACKUP_FILE}' via '${CONTAINER_NAME}'..."
 
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${CONTAINER_NAME}$"; then
-    gunzip -c "${BACKUP_FILE}" | docker exec -i "${CONTAINER_NAME}" psql -U "${DB_USER}" -d "${DB_NAME}"
+    gunzip -c "${BACKUP_FILE}" | docker exec -i "${CONTAINER_NAME}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -d "${DB_NAME}"
     echo "[SUCCESS] Database '${DB_NAME}' restored successfully from ${BACKUP_FILE}."
+    send_alert "SUCCESS" "Database '${DB_NAME}' restored successfully from ${BACKUP_FILE}."
 else
     if [ -n "${DATABASE_URL:-}" ]; then
         echo "[INFO] Restoring via DATABASE_URL..."
-        gunzip -c "${BACKUP_FILE}" | psql "${DATABASE_URL}"
+        TARGET_DB_URL=$(echo "${DATABASE_URL}" | sed -E 's/^postgresql\+[a-zA-Z0-9_]+:\/\//postgresql:\/\//')
+        gunzip -c "${BACKUP_FILE}" | psql -v ON_ERROR_STOP=1 "${TARGET_DB_URL}"
         echo "[SUCCESS] Database restored successfully via DATABASE_URL."
+        send_alert "SUCCESS" "Database restored successfully via DATABASE_URL from ${BACKUP_FILE}."
     else
         echo "[ERROR] Cannot restore: Docker container '${CONTAINER_NAME}' is not running and DATABASE_URL is not set."
+        send_alert "FAILURE" "Restore failed: container '${CONTAINER_NAME}' not running and no DATABASE_URL."
         exit 1
     fi
 fi

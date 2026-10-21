@@ -88,7 +88,8 @@ if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/n
 else
     echo "[WARN] Docker container '${CONTAINER_NAME}' is not running locally. Attempting pg_dump via DATABASE_URL if configured."
     if [ -n "${DATABASE_URL:-}" ]; then
-        pg_dump "${DATABASE_URL}" --clean --if-exists | gzip > "${BACKUP_FILE}"
+        TARGET_DB_URL=$(echo "${DATABASE_URL}" | sed -E 's/^postgresql\+[a-zA-Z0-9_]+:\/\//postgresql:\/\//')
+        pg_dump "${TARGET_DB_URL}" --clean --if-exists | gzip > "${BACKUP_FILE}"
         echo "[SUCCESS] Backup written to ${BACKUP_FILE} via DATABASE_URL"
         send_alert "SUCCESS" "Backup succeeded via DATABASE_URL: ${BACKUP_FILE}"
     else
