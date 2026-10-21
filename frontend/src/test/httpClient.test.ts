@@ -5,6 +5,24 @@ import {
   clearStoredTokens,
 } from '../services/httpClient';
 
+describe('API base URL normalization', () => {
+  it('adds HTTPS when deployment providers supply only a hostname', () => {
+    expect(normalizeApiBase('studyshare-backend.onrender.com')).toBe(
+      'https://studyshare-backend.onrender.com'
+    );
+  });
+
+  it('preserves explicit HTTP(S) schemes and removes trailing slashes', () => {
+    expect(normalizeApiBase('https://api.example.com/')).toBe('https://api.example.com');
+    expect(normalizeApiBase('http://localhost:8000/')).toBe('http://localhost:8000');
+  });
+
+  it('keeps an empty value for same-origin reverse-proxy deployments', () => {
+    expect(normalizeApiBase(undefined)).toBe('');
+    expect(normalizeApiBase('  ')).toBe('');
+  });
+});
+
 describe('httpClient token security storage model', () => {
   beforeEach(() => {
     clearStoredTokens();
