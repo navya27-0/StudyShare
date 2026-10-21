@@ -90,7 +90,17 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     refreshed_body = fresh_tab_refresh_res.json()
     access_token_2 = refreshed_body["access_token"]
     assert access_token_2 is not None
-    assert access_token_2 != access_token_1, "Rotated access token must be unique"
+
+    rotated_refresh_cookie = fresh_tab_refresh_res.cookies.get("studyshare_refresh_token")
+    assert rotated_refresh_cookie is not None
+    assert rotated_refresh_cookie != refresh_cookie_1, "Refresh token cookie must be rotated"
+
+    # Verify consumed cookie cannot be replayed (single-use anti-replay defense)
+    replay_res = await client.post(
+        "/api/auth/refresh",
+        cookies={"studyshare_refresh_token": refresh_cookie_1},
+    )
+    assert replay_res.status_code == 401
 
     # Verify the fresh session can query /api/auth/me seamlessly
     me_res_2 = await client.get(
