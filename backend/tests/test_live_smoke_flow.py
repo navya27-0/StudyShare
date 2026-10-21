@@ -143,7 +143,7 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     created_resource = create_res.json()
     resource_id = created_resource["id"]
     assert created_resource["title"] == upload_form["title"]
-    assert created_resource["uploader_id"] == student_user_id
+    assert created_resource["uploader"]["id"] == student_user_id
     assert created_resource["views_count"] == 0
     assert created_resource["downloads_count"] == 0
 
