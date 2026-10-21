@@ -29,7 +29,7 @@ def test_backup_script_fails_gracefully_when_no_docker_and_no_db_url():
 
     # 1. Dev container test
     res_dev = subprocess.run(
-        ["bash", "-c", "./infra/backup.sh nonexistent-dev-container /tmp/backups"],
+        ["bash", "infra/backup.sh", "nonexistent-dev-container", "/tmp/backups"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -42,7 +42,7 @@ def test_backup_script_fails_gracefully_when_no_docker_and_no_db_url():
 
     # 2. Production container test
     res_prod = subprocess.run(
-        ["bash", "-c", "./infra/backup.sh studyshare-prod-postgres /tmp/backups"],
+        ["bash", "infra/backup.sh", "studyshare-prod-postgres", "/tmp/backups"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -59,7 +59,7 @@ def test_restore_script_validates_backup_file_existence():
     """Verify restore.sh requires an existing backup archive."""
     # 1. No arguments provided
     res_no_arg = subprocess.run(
-        ["bash", "-c", "./infra/restore.sh"],
+        ["bash", "infra/restore.sh"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -69,7 +69,7 @@ def test_restore_script_validates_backup_file_existence():
 
     # 2. Non-existent file specified
     res_missing = subprocess.run(
-        ["bash", "-c", "./infra/restore.sh /tmp/nonexistent_backup_file.sql.gz"],
+        ["bash", "infra/restore.sh", "/tmp/nonexistent_backup_file.sql.gz"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
