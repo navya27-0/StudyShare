@@ -465,7 +465,7 @@ async def test_user_profile_and_activity_feed(
     assert "items" in act_data
     assert isinstance(act_data["items"], list)
     for item in act_data["items"]:
-        assert item["action"] == "upload", (
+        assert item["action"] == "uploaded", (
             "Anonymous activity feed must only display public uploads"
         )
 
@@ -473,7 +473,7 @@ async def test_user_profile_and_activity_feed(
     other_act_res = await client.get("/api/users/1/activity", headers=other_auth_headers)
     assert other_act_res.status_code == 200
     for item in other_act_res.json()["items"]:
-        assert item["action"] == "upload", (
+        assert item["action"] == "uploaded", (
             "Third-party activity feed must only display public uploads"
         )
 
@@ -490,20 +490,25 @@ async def test_user_bookmarks_list_endpoint(
     admin_auth_headers: dict,
 ):
     """Test GET /api/users/{id}/bookmarks pagination, response schema, and access boundaries."""
+    # Resolve user IDs dynamically from session
+    me_res = await client.get("/api/auth/me", headers=auth_headers)
+    assert me_res.status_code == 200
+    my_user_id = me_res.json()["id"]
+
     # 1. Unauthenticated request must return 401 Unauthorized
-    unauth_res = await client.get("/api/users/1/bookmarks?page=1&page_size=10")
+    unauth_res = await client.get(f"/api/users/{my_user_id}/bookmarks?page=1&page_size=10")
     assert unauth_res.status_code == 401
 
     # 2. Third-party authenticated user must return 403 Forbidden
     forbidden_res = await client.get(
-        "/api/users/1/bookmarks?page=1&page_size=10",
+        f"/api/users/{my_user_id}/bookmarks?page=1&page_size=10",
         headers=other_auth_headers,
     )
     assert forbidden_res.status_code == 403
 
     # 3. Owner access succeeds with 200 OK
     res = await client.get(
-        "/api/users/1/bookmarks?page=1&page_size=10",
+        f"/api/users/{my_user_id}/bookmarks?page=1&page_size=10",
         headers=auth_headers,
     )
     assert res.status_code == 200
@@ -518,7 +523,7 @@ async def test_user_bookmarks_list_endpoint(
 
     # 4. Admin access also succeeds with 200 OK
     admin_res = await client.get(
-        "/api/users/1/bookmarks?page=1&page_size=10",
+        f"/api/users/{my_user_id}/bookmarks?page=1&page_size=10",
         headers=admin_auth_headers,
     )
     assert admin_res.status_code == 200

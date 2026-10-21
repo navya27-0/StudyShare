@@ -63,7 +63,12 @@ async def get_user_activity(
         )
 
     is_owner_or_admin = bool(
-        current_user and (current_user.id == user_id or current_user.role == UserRole.ADMIN)
+        current_user
+        and (
+            current_user.id == user_id
+            or current_user.role == UserRole.ADMIN
+            or current_user.is_superuser
+        )
     )
 
     # 1. Recent public uploads (always visible)
@@ -163,7 +168,11 @@ async def get_user_bookmarks(
     Retrieve all bookmarked resources for a specified user, ordered by most recently bookmarked.
     Requires authentication. Access is strictly restricted to the user themselves and platform administrators.
     """
-    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+    if (
+        current_user.id != user_id
+        and current_user.role != UserRole.ADMIN
+        and not current_user.is_superuser
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to view another user's saved library bookmarks.",
