@@ -1,7 +1,7 @@
 import logging
 import math
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import (
     APIRouter,
@@ -171,17 +171,16 @@ async def list_resources(
         min_length=1,
         description="Student-oriented search across title, description, course code, unit, topic, contributor, and filename",
     ),
-    sort_by: str = Query(
+    sort_by: Literal[
         "ranked",
-        enum=[
-            "ranked",
-            "recent",
-            "newest",
-            "recently_updated",
-            "highest_rated",
-            "most_upvoted",
-            "most_downloaded",
-        ],
+        "recent",
+        "newest",
+        "recently_updated",
+        "highest_rated",
+        "most_upvoted",
+        "most_downloaded",
+    ] = Query(
+        "ranked",
         description="Sorting criteria ('ranked' uses composite quality + recency score)",
     ),
     page: int = Query(1, ge=1, description="Page number"),
