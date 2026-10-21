@@ -23,6 +23,7 @@ import {
   resourcesApi,
   getDownloadedIds,
   markResourceDownloaded,
+  API_BASE,
 } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -59,11 +60,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   );
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
   const targetPath = resource.download_url || resource.file_url;
-  const downloadUrl = targetPath.startsWith('http')
-    ? targetPath
-    : `${apiUrl}${targetPath}`;
+  const downloadUrl =
+    targetPath.startsWith('http://') || targetPath.startsWith('https://')
+      ? targetPath
+      : `${API_BASE}${targetPath.startsWith('/') ? '' : '/'}${targetPath}`;
 
   // Format file size
   const formatFileSize = (bytes: number | null): string => {

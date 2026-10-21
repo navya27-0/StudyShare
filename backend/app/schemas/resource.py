@@ -1,6 +1,7 @@
 from datetime import datetime
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import ResourceType
 
@@ -163,6 +164,24 @@ class ResourceCreateForm(BaseModel):
     page_count: int | None = Field(None, ge=1, description="Page count of document")
     changelog: str | None = Field("Initial upload", description="Version changelog note")
 
+    @field_validator("external_url")
+    @classmethod
+    def validate_external_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        if not cleaned:
+            return None
+        try:
+            parsed = urlsplit(cleaned)
+        except ValueError as exc:
+            raise ValueError(f"Malformed URL: {exc}") from exc
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError("External URL must use http:// or https:// protocol.")
+        if not parsed.netloc or not parsed.hostname:
+            raise ValueError("External URL must contain a valid hostname.")
+        return cleaned
+
 
 class ResourceUpdateForm(BaseModel):
     title: str | None = Field(None, min_length=3, max_length=255)
@@ -172,3 +191,21 @@ class ResourceUpdateForm(BaseModel):
         ..., min_length=3, max_length=500, description="Summary of changes in this version"
     )
     external_url: str | None = None
+
+    @field_validator("external_url")
+    @classmethod
+    def validate_external_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        if not cleaned:
+            return None
+        try:
+            parsed = urlsplit(cleaned)
+        except ValueError as exc:
+            raise ValueError(f"Malformed URL: {exc}") from exc
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError("External URL must use http:// or https:// protocol.")
+        if not parsed.netloc or not parsed.hostname:
+            raise ValueError("External URL must contain a valid hostname.")
+        return cleaned

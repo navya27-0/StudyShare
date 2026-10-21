@@ -4,6 +4,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from fastapi import (
     APIRouter,
@@ -76,6 +77,39 @@ async def _get_active_resource_or_404(
             detail=f"Resource with ID {resource_id} was not found.",
         )
     return resource
+
+
+def _validate_external_url(raw_url: str | None) -> str:
+    """
+    Validate external resource URLs for link resources.
+    Accepts only valid http:// or https:// URLs with a non-empty hostname.
+    Rejects malformed schemes, javascript:, file:, data:, or missing hostnames with HTTP 422.
+    """
+    if not raw_url or not raw_url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="External URL is required when resource type is 'link'.",
+        )
+    cleaned = raw_url.strip()
+    try:
+        parsed = urlsplit(cleaned)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Malformed external URL: {exc}",
+        ) from exc
+
+    if parsed.scheme.lower() not in ("http", "https"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="External URL must use http:// or https:// protocol.",
+        )
+    if not parsed.netloc or not parsed.hostname:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="External URL must contain a valid hostname.",
+        )
+    return cleaned
 
 
 def _build_breadcrumbs(topic: Topic) -> BreadcrumbHierarchy:
@@ -154,19 +188,11 @@ def _serialize_resource_detail(
         ver_resp.download_url = f"/api/resources/{resource.id}/versions/{v.id}/file"
         versions_list.append(ver_resp)
 
+    # Security & Moderation Enforcement:
+    # Direct presigned URLs are not exposed in detail responses. All file downloads
+    # and previews are governed through /api/resources/{id}/file, ensuring immediate
+    # revocation when an admin removes/flags a resource, and tracking download metrics.
     presigned_url = None
-    if (
-        settings.STORAGE_BACKEND.lower() in ("s3", "r2", "minio")
-        and resource.type != ResourceType.LINK
-    ):
-        try:
-            storage_provider = get_storage_provider()
-            presigned_url = storage_provider.generate_presigned_url(
-                resource.file_url, expires_in=3600
-            )
-        except Exception as exc:
-            logger.warning("Failed to generate presigned URL for resource %s: %s", resource.id, exc)
-            presigned_url = None
 
     return ResourceDetailResponse(
         **base_item.model_dump(),
@@ -680,12 +706,7 @@ async def create_resource(
     storage_result: StorageResult | None = None
 
     if type == ResourceType.LINK:
-        if not external_url or not external_url.strip():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="External URL is required when resource type is 'link'.",
-            )
-        file_url = external_url.strip()
+        file_url = _validate_external_url(external_url)
         file_size_bytes = 0
     else:
         if not file or not file.filename:
@@ -821,8 +842,8 @@ async def update_resource(
     storage_result: StorageResult | None = None
 
     if resource.type == ResourceType.LINK:
-        if external_url and external_url.strip():
-            file_url = external_url.strip()
+        if external_url is not None:
+            file_url = _validate_external_url(external_url)
             file_size_bytes = 0
     elif file and file.filename:
         storage_result = await storage.save_upload_file(

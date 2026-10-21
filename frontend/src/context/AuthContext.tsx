@@ -48,6 +48,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           authApi.logout();
           setUser(null);
         }
+      } else {
+        // Fresh browser tab or reload without stored access token:
+        // Attempt cookie-based refresh flow before treating user as logged out
+        try {
+          const refreshed = await authApi.refreshToken();
+          if (refreshed) {
+            const currentUser = await authApi.getMe();
+            setUser(currentUser);
+          } else {
+            setUser(null);
+          }
+        } catch {
+          setUser(null);
+        }
       }
       setIsLoading(false);
     };

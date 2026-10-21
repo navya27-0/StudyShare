@@ -543,3 +543,60 @@ async def test_interaction_validation_bounds(client: AsyncClient, auth_headers: 
         headers=auth_headers,
     )
     assert rep_empty.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_external_url_validation_link_resources(client: AsyncClient, auth_headers: dict):
+    """Test strict backend URL scheme and hostname validation on link resources."""
+    base_data = {
+        "topic_id": "1",
+        "type": "link",
+        "title": "URL Validation Test Resource",
+        "semester": "3",
+        "changelog": "Testing URL validation",
+    }
+
+    # 1. Reject dangerous and non-http(s) schemes
+    for bad_url in [
+        "javascript:alert(document.cookie)",
+        "file:///etc/passwd",
+        "data:text/html;base64,PHNjcmlwdD4=",
+        "ftp://example.com/file.pdf",
+        "http://",
+        "https://",
+        "just-a-plain-string",
+        "http://[invalid-ipv6",
+    ]:
+        data = {**base_data, "external_url": bad_url}
+        res = await client.post("/api/resources", data=data, headers=auth_headers)
+        assert res.status_code == 422, (
+            f"Expected 422 for bad URL '{bad_url}', got {res.status_code}"
+        )
+
+    # 2. Accept valid http/https URLs with hostnames
+    valid_data = {**base_data, "external_url": "https://ocw.mit.edu/courses/electrical-engineering"}
+    res_ok = await client.post("/api/resources", data=valid_data, headers=auth_headers)
+    assert res_ok.status_code == 201
+    created_id = res_ok.json()["id"]
+
+    # 3. Reject invalid external_url on version updates
+    bad_update = await client.put(
+        f"/api/resources/{created_id}",
+        data={"changelog": "Attempting invalid url", "external_url": "javascript:void(0)"},
+        headers=auth_headers,
+    )
+    assert bad_update.status_code == 422
+
+    # 4. Accept valid external_url on version updates
+    good_update = await client.put(
+        f"/api/resources/{created_id}",
+        data={"changelog": "Valid url update", "external_url": "https://cs61c.org/resources"},
+        headers=auth_headers,
+    )
+    assert good_update.status_code == 200
+    assert good_update.json()["file_url"] == "https://cs61c.org/resources"
+
+    # 5. Detail response must NOT return direct presigned_url (governed download enforcement)
+    detail_res = await client.get(f"/api/resources/{created_id}", headers=auth_headers)
+    assert detail_res.status_code == 200
+    assert detail_res.json()["presigned_url"] is None

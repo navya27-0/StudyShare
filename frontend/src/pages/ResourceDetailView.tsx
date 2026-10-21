@@ -27,7 +27,12 @@ import {
   Eye,
   ShieldCheck,
 } from 'lucide-react';
-import { resourcesApi, getDownloadedIds, markResourceDownloaded } from '../services/api';
+import {
+  resourcesApi,
+  getDownloadedIds,
+  markResourceDownloaded,
+  API_BASE,
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -160,8 +165,7 @@ export const ResourceDetailView: React.FC = () => {
   const resolveFileUrl = (url: string): string => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const apiBase = import.meta.env.VITE_API_URL || '';
-    return `${apiBase}${url}`;
+    return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
   // Format file size
@@ -458,7 +462,7 @@ export const ResourceDetailView: React.FC = () => {
   }
 
   const badge = getTypeBadge(resource.type);
-  const fileUrl = resource.presigned_url || resolveFileUrl(resource.download_url || resource.file_url);
+  const fileUrl = resolveFileUrl(resource.download_url || resource.file_url);
   const isPdf = resource.type === 'pdf' || resource.file_url.toLowerCase().endsWith('.pdf');
   const isImage = ['.png', '.jpg', '.jpeg'].some((ext) =>
     resource.file_url.toLowerCase().endsWith(ext)

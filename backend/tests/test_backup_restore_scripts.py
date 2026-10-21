@@ -258,3 +258,34 @@ def test_restore_script_live_database_failure_and_success():
         assert "Database restored successfully" in res_ok.stdout
     finally:
         shutil.rmtree(scratch_dir, ignore_errors=True)
+
+
+def test_validate_external_url_helper_unit():
+    """Unit test _validate_external_url for link resources rejecting unsafe or malformed schemes."""
+    from fastapi import HTTPException
+
+    from app.api.resources import _validate_external_url
+
+    # 1. Valid URLs with schemes and hostnames
+    assert (
+        _validate_external_url("https://ocw.mit.edu/courses/electrical-engineering")
+        == "https://ocw.mit.edu/courses/electrical-engineering"
+    )
+    assert _validate_external_url("http://example.com:8080/path") == "http://example.com:8080/path"
+
+    # 2. Reject unsafe, non-http, or malformed URLs
+    unsafe_candidates = [
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "data:text/html;base64,PHNjcmlwdD4=",
+        "ftp://mirror.cs.uchicago.edu/pub/",
+        "http://",
+        "https://",
+        "missing-scheme.org",
+        "",
+        "   ",
+    ]
+    for candidate in unsafe_candidates:
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_external_url(candidate)
+        assert exc_info.value.status_code == 422
