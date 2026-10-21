@@ -166,16 +166,10 @@ async def test_live_smoke_user_journey_e2e(client: AsyncClient):
     assert detail_res.status_code == 200
     assert detail_res.json()["id"] == resource_id
 
-    # 5b. Governed preview stream (disposition=inline)
-    preview_res = await client.get(f"/api/resources/{resource_id}/file?disposition=inline")
-    assert preview_res.status_code == 200, f"Preview fetch failed: {preview_res.status_code}"
-    assert "application/pdf" in preview_res.headers.get("content-type", "")
-    assert "inline" in preview_res.headers.get("content-disposition", "")
-    assert preview_res.content == sample_pdf_bytes
-
-    # 5c. Governed attachment download (disposition=attachment)
-    download_res = await client.get(f"/api/resources/{resource_id}/file?disposition=attachment")
+    # 5b. Governed file stream (attachment disposition with safe filename and nosniff)
+    download_res = await client.get(f"/api/resources/{resource_id}/file")
     assert download_res.status_code == 200, f"Download fetch failed: {download_res.status_code}"
+    assert "application/pdf" in download_res.headers.get("content-type", "")
     assert "attachment" in download_res.headers.get("content-disposition", "")
     assert download_res.content == sample_pdf_bytes
 
