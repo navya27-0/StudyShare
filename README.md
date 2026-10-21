@@ -59,7 +59,7 @@
 
 | Metric | Verified Value | Engineering Details |
 | :--- | :---: | :--- |
-| **Automated Test Suite** | **91 Tests** | 79 backend async Pytests + 12 frontend Vitest tests (100% passing) |
+| **Automated Test Suite** | **91 Tests** | 79 backend async Pytests + 12 frontend Vitest tests; current PR CI is pending |
 | **Backend Code Coverage** | **88% Coverage** | Measured across all API routers, models, schemas, and core services via `pytest-cov` |
 | **CI Validation Pipeline** | **5 Stages** | Lint/format check, migrations, test database seeding, pytest suite with coverage, vitest suite, docker validation |
 | **Object Storage Engine** | **Local Disk & S3 / R2** | Pluggable `StorageProvider` abstraction with local disk and S3-compatible (boto3) implementations |
