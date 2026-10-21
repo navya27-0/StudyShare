@@ -1,7 +1,7 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
-[![CI Status](https://img.shields.io/badge/CI-Passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-79%20Passed-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![CI Status](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml)
+[![Backend Tests](https://img.shields.io/badge/Pytest-79%20Tests-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-9%20Passed-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
@@ -223,7 +223,7 @@ erDiagram
 
 ---
 
-## Test Suites Breakdown (88 Passed Tests)
+## Test Suites Breakdown (88 Tests)
 
 | Test Suite | File Location | Tests | Status | Scope |
 | :--- | :--- | :---: | :---: | :--- |
@@ -232,13 +232,13 @@ erDiagram
 | **Interactions** | [`backend/tests/test_interactions.py`](backend/tests/test_interactions.py) | 6 | PASSED | Vote switches, star ratings, bookmarks, report submission, aliases |
 | **Catalog, Formats & Duplicate Check** | [`backend/tests/test_resources.py`](backend/tests/test_resources.py) | 18 | PASSED | Multi-level filtering, synonym search, version updates, .docx, .pptx, .zip, .png, .md |
 | **Security & Contracts** | [`backend/tests/test_security_and_contracts.py`](backend/tests/test_security_and_contracts.py) | 24 | PASSED | Magic bytes, Windows paths, null-byte traversal, zip-bombs, entry limits, malformed OpenXML, fail-closed revocation & rate limiting, canonical port safety, production seed prevention, S3 fallback |
-| **Production Configuration Security** | [`backend/tests/test_config_security.py`](backend/tests/test_config_security.py) | 4 | ADDED | Ensures case/whitespace variants of production environment names cannot bypass startup security validation |
+| **Production Configuration Security** | [`backend/tests/test_config_security.py`](backend/tests/test_config_security.py) | 4 | CI PENDING | Ensures case/whitespace variants of production environment names cannot bypass startup security validation |
 | **S3-Compatible Storage Provider** | [`backend/tests/test_storage_s3.py`](backend/tests/test_storage_s3.py) | 6 | PASSED | Put object, delete object, presigned URLs, tempfile staging, fallback error handling |
 | **Frontend Token Security** | [`frontend/src/test/httpClient.test.ts`](frontend/src/test/httpClient.test.ts) | 3 | PASSED | In-memory token isolation, HttpOnly refresh cookie exclusivity, sessionStorage sync |
 | **Frontend Student Guide** | [`frontend/src/test/StudentFlowGuide.test.tsx`](frontend/src/test/StudentFlowGuide.test.tsx) | 1 | PASSED | 4-step 10-second onboarding workflow guide rendering |
 | **Frontend Duplicate Triage** | [`frontend/src/test/DuplicateWarning.test.tsx`](frontend/src/test/DuplicateWarning.test.tsx) | 3 | PASSED | Duplicate course resource warning & 1-click update vN action |
 | **Frontend Type Selector** | [`frontend/src/test/ResourceTypeSelector.test.tsx`](frontend/src/test/ResourceTypeSelector.test.tsx) | 2 | PASSED | Academic format selection (Notes, PYQs, Guides, Code, Papers) |
-| **TOTAL** | — | **88** | **100% PASS** | **88% Backend Coverage, 0 Lint Errors, 0 Warnings** |
+| **TOTAL** | — | **88** | **CI PENDING** | **Previously reported 88% backend coverage; latest regression tests await CI confirmation** |
 
 ### Backend Test Coverage Report (`pytest --cov=app`)
 
