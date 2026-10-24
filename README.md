@@ -1,7 +1,7 @@
 # StudyShare — Course-Organized Academic Study Resource Platform
 
 [![CI Status](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/navya27-0/StudyShare/actions/workflows/ci.yml)
-[![Backend Tests](https://img.shields.io/badge/Pytest-80%20Tests-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
+[![Backend Tests](https://img.shields.io/badge/Pytest-79%20Tests-blue?style=flat-square&logo=pytest&logoColor=white)](backend/tests/)
 [![Frontend Tests](https://img.shields.io/badge/Vitest-12%20Tests-success?style=flat-square&logo=vitest&logoColor=white)](frontend/src/test/)
 [![Code Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)](backend/tests/)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA--Oriented-purple?style=flat-square)](frontend/src/styles/accessibility.css)
